@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Life Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #e0e0f0;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      background: rgba(15, 12, 41, 0.6);
+    }
+
+    .logo {
+      font-weight: 700;
+      font-size: 1rem;
+      color: #7c6ff7;
+      letter-spacing: 0.02em;
+    }
+
+    .btn-logout {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #9090b0;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.45rem 1rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .btn-logout:hover { color: #f87171; border-color: #f8717155; }
+
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+    }
+
+    .greeting-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 1.25rem;
+      padding: 2.5rem;
+      backdrop-filter: blur(12px);
+      margin-bottom: 2rem;
+    }
+
+    .greeting-card .tag {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #7c6ff7;
+      margin-bottom: 0.75rem;
+    }
+
+    .greeting-card h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.5rem;
+      min-height: 2.5rem;
+    }
+
+    .greeting-card p {
+      color: #8080a0;
+      font-size: 0.95rem;
+    }
+
+    .modules {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .module-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .module-card:hover { border-color: rgba(255,255,255,0.2); transform: translateY(-2px); }
+
+    .module-card .icon { font-size: 1.75rem; margin-bottom: 0.75rem; }
+    .module-card h3   { font-size: 1rem; font-weight: 600; color: #e0e0f0; margin-bottom: 0.3rem; }
+    .module-card p    { font-size: 0.82rem; color: #7070a0; }
+
+    .skeleton {
+      display: inline-block;
+      background: linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 0.4rem;
+      height: 1em;
+      width: 220px;
+    }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="logo">Life Admin Orchestrator</span>
+    <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+  </header>
+
+  <main>
+    <div class="greeting-card">
+      <div class="tag">Panel de control</div>
+      <h1 id="greeting"><span class="skeleton"></span></h1>
+      <p>Este es tu espacio personal. Los agentes IA están listos para ayudarte.</p>
+    </div>
+
+    <div class="modules">
+      <div class="module-card">
+        <div class="icon">💰</div>
+        <h3>Finanzas</h3>
+        <p>Facturas, gastos y reportes mensuales.</p>
+      </div>
+      <div class="module-card">
+        <div class="icon">📅</div>
+        <h3>Agenda</h3>
+        <p>Citas, recordatorios y conflictos.</p>
+      </div>
+      <div class="module-card">
+        <div class="icon">📄</div>
+        <h3>Documentos</h3>
+        <p>Clasificación y extracción de metadatos.</p>
+      </div>
+      <div class="module-card">
+        <div class="icon">👥</div>
+        <h3>Contactos</h3>
+        <p>Personas e historial de interacciones.</p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    async function loadProfile() {
+      try {
+        const res  = await fetch('/api/auth/me');
+        const data = await res.json();
+
+        if (res.ok) {
+          const first = data.full_name.split(' ')[0];
+          document.getElementById('greeting').textContent = `¡Hola, ${first}! Bienvenido a tu panel de control.`;
+          document.title = `${first} — Life Admin`;
+        } else {
+          window.location.href = '/login/';
+        }
+      } catch {
+        window.location.href = '/login/';
+      }
+    }
+
+    document.getElementById('btn-logout').addEventListener('click', async () => {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/';
+    });
+
+    loadProfile();
+  </script>
+</body>
+</html>

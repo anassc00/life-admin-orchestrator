@@ -15,6 +15,10 @@ class AuthenticateUserCommand(BaseModel):
     password: str
 
 
+class GetUserProfileQuery(BaseModel):
+    user_id: UUID
+
+
 class UserRegisteredResponse(BaseModel):
     user_id: UUID
     email: str
@@ -23,6 +27,13 @@ class UserRegisteredResponse(BaseModel):
 
 
 class AuthenticatedUserResponse(BaseModel):
+    user_id: UUID
+    email: str
+    full_name: str
+    is_admin: bool
+
+
+class UserProfileResponse(BaseModel):
     user_id: UUID
     email: str
     full_name: str

@@ -5,8 +5,6 @@ before injecting them into use cases. All factory functions are
 intentionally stateless — they create fresh instances on each call.
 For performance-critical paths, introduce a request-scoped cache here.
 """
-from application.use_cases.users.authenticate_user import AuthenticateUserUseCase
-from application.use_cases.users.register_user import RegisterUserUseCase
 from application.use_cases.calendar.detect_conflict import DetectConflictUseCase
 from application.use_cases.calendar.schedule_appointment import ScheduleAppointmentUseCase
 from application.use_cases.calendar.send_reminder import SendReminderUseCase
@@ -20,12 +18,14 @@ from application.use_cases.finance.categorize_expense import CategorizeExpenseUs
 from application.use_cases.finance.create_invoice import CreateInvoiceUseCase
 from application.use_cases.finance.generate_monthly_report import GenerateMonthlyReportUseCase
 from application.use_cases.finance.process_invoice import ProcessInvoiceUseCase
+from application.use_cases.users.authenticate_user import AuthenticateUserUseCase
+from application.use_cases.users.get_user_profile import GetUserProfileUseCase
+from application.use_cases.users.register_user import RegisterUserUseCase
 from infrastructure.repositories.calendar import DjangoAppointmentRepository
 from infrastructure.repositories.contact import DjangoContactRepository, DjangoInteractionRepository
 from infrastructure.repositories.document import DjangoDocumentRepository
 from infrastructure.repositories.finance import DjangoExpenseRepository, DjangoInvoiceRepository
 from infrastructure.repositories.user import DjangoPasswordHasher, DjangoUserRepository
-
 
 # --- Auth / Users ---
 
@@ -41,6 +41,10 @@ def get_authenticate_user_use_case() -> AuthenticateUserUseCase:
         user_repo=DjangoUserRepository(),
         password_hasher=DjangoPasswordHasher(),
     )
+
+
+def get_user_profile_use_case() -> GetUserProfileUseCase:
+    return GetUserProfileUseCase(user_repo=DjangoUserRepository())
 
 
 # --- Finance ---

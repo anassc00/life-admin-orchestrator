@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from django.contrib.auth.hashers import check_password, make_password
 
 from domain.entities.user import User
@@ -9,6 +11,13 @@ class DjangoUserRepository(UserRepository):
     def get_by_email(self, email: str) -> User | None:
         try:
             record = UserModel.objects.get(email=email)
+            return self._to_entity(record)
+        except UserModel.DoesNotExist:
+            return None
+
+    def get_by_id(self, user_id: UUID) -> User | None:
+        try:
+            record = UserModel.objects.get(pk=user_id)
             return self._to_entity(record)
         except UserModel.DoesNotExist:
             return None

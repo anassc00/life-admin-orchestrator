@@ -1,4 +1,5 @@
 import pytest
+from uuid import UUID
 
 from application.dtos.user import AuthenticateUserCommand, RegisterUserCommand
 from application.use_cases.users.authenticate_user import AuthenticateUserUseCase
@@ -10,13 +11,18 @@ from domain.repositories.user import PasswordHasher, UserRepository
 
 class InMemoryUserRepository(UserRepository):
     def __init__(self) -> None:
-        self._store: dict[str, User] = {}
+        self._by_email: dict[str, User] = {}
+        self._by_id: dict[UUID, User] = {}
 
     def get_by_email(self, email: str) -> User | None:
-        return self._store.get(email)
+        return self._by_email.get(email)
+
+    def get_by_id(self, user_id: UUID) -> User | None:
+        return self._by_id.get(user_id)
 
     def save(self, user: User) -> None:
-        self._store[user.email] = user
+        self._by_email[user.email] = user
+        self._by_id[user.id] = user
 
 
 class FakePasswordHasher(PasswordHasher):

@@ -7,7 +7,7 @@ from adapters.api.calendar.views import router as calendar_router
 from adapters.api.document.views import router as document_router
 from adapters.api.contact.views import router as contact_router
 from adapters.api.users.views import router as users_router
-from infrastructure.django_app import views as template_views
+from infrastructure.django_app import views as v
 
 api = NinjaAPI(
     title="Life Admin Orchestrator API",
@@ -22,7 +22,10 @@ api.add_router("/documents", document_router)
 api.add_router("/contacts", contact_router)
 
 urlpatterns = [
-    path("", template_views.home, name="home"),
-    path("admin/", admin.site.urls),
-    path("api/", api.urls),
+    path("",           v.landing,       name="landing"),
+    path("register/",  v.register_page, name="register"),
+    path("login/",     v.login_page,    name="login"),
+    path("dashboard/", v.dashboard,     name="dashboard"),
+    path("admin/",     admin.site.urls),
+    path("api/",       api.urls),
 ]
