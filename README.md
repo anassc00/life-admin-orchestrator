@@ -34,55 +34,121 @@ No imports     Agent Graphs       Schemas           Repositories
 
 ## Quick start
 
+### Prerequisites
+
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/) — `pip install uv`
+- Docker (only for the local DB option)
+
+---
+
+### Option A — Neon (cloud PostgreSQL, recommended)
+
 ```bash
-# 1. Copy environment file
+# 1. Clone and enter the project
+git clone <repo-url>
+cd life-admin-orchestrator
+
+# 2. Copy the environment template and fill in your Neon credentials
 cp .env.example .env
-# Edit .env with your credentials
+# Set DATABASE_URL=postgresql://<user>:<password>@<host>/<db>?sslmode=require
 
-# 2. Start infrastructure services
-docker compose up db redis -d
+# 3. Install all dependencies (including dev tools)
+uv sync --extra dev
 
-# 3. Install dependencies
-pip install -e ".[dev]"
+# 4. Apply migrations
+uv run python manage.py migrate
 
-# 4. Run migrations
-python manage.py migrate
-
-# 5. Create superuser
-python manage.py createsuperuser
-
-# 6. Start the API
-python manage.py runserver
-
-# 7. Start Celery worker (separate terminal)
-celery -A config worker --loglevel=info
+# 5. Start the API
+uv run python manage.py runserver
 ```
 
-API docs available at `http://localhost:8000/api/docs`.
+---
+
+### Option B — Local Docker (PostgreSQL + Redis)
+
+```bash
+# 1. Clone and enter the project
+git clone <repo-url>
+cd life-admin-orchestrator
+
+# 2. Start database and Redis
+docker compose up db redis -d
+
+# 3. Copy the environment template
+cp .env.example .env
+# Leave DATABASE_URL commented out; the individual DB_* defaults point to localhost
+
+# 4. Install all dependencies
+uv sync --extra dev
+
+# 5. Apply migrations
+uv run python manage.py migrate
+
+# 6. Start the API
+uv run python manage.py runserver
+
+# 7. (Optional) Start Celery worker — required for agent tasks
+uv run celery -A config worker --loglevel=info
+```
+
+---
+
+Once running, open:
+
+| URL | Description |
+|---|---|
+| `http://localhost:8000/` | Home — register or log in |
+| `http://localhost:8000/api/docs` | Interactive API docs (Swagger UI) |
+| `http://localhost:8000/admin/` | Django admin panel |
 
 ## Running tests
 
-```bash
-# Unit tests (no database required)
-USE_SQLITE=true pytest tests/unit/ -v
+Unit tests run with **no database** — domain and application logic is tested with in-memory fakes.
 
-# All tests (requires PostgreSQL)
-pytest -v
+```bash
+# Unit tests only (fast, no DB required)
+uv run pytest tests/unit/ -v
+
+# Full suite
+uv run pytest tests/ -v
 ```
+
+## API endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/auth/register` | Create a new admin user |
+| `POST` | `/api/auth/login` | Authenticate and return user info |
+| `POST` | `/api/finance/invoices` | Create invoice |
+| `POST` | `/api/finance/invoices/{id}/process` | Mark invoice as paid |
+| `POST` | `/api/calendar/appointments` | Schedule appointment |
+| `POST` | `/api/documents/` | Register document |
+| `POST` | `/api/contacts/` | Create contact |
 
 ## Project structure
 
 ```
 life-admin-orchestrator/
 ├── domain/                # Entities, repository interfaces, exceptions
-├── application/           # Use cases, DTOs, LangGraph agent orchestrators
+│   ├── entities/          # User, Invoice, Appointment, Document, Contact
+│   ├── repositories/      # Abstract ports (UserRepository, PasswordHasher, …)
+│   └── exceptions/        # Typed domain exceptions
+├── application/
+│   ├── use_cases/         # RegisterUser, AuthenticateUser, ProcessInvoice, …
+│   ├── dtos/              # Command / Response DTOs per module
+│   └── agents/            # LangGraph orchestrators (Finance, Calendar, …)
 ├── adapters/api/          # Django Ninja schemas + thin HTTP controllers
 ├── infrastructure/
-│   ├── django_app/        # Django ORM models, admin, migrations
-│   ├── repositories/      # Concrete repository implementations
+│   ├── django_app/
+│   │   ├── models/        # Django ORM models (UserModel, InvoiceModel, …)
+│   │   ├── migrations/    # Auto-generated Django migrations
+│   │   ├── templates/     # home.html (register + login frontend)
+│   │   └── views.py       # Template-based view (serves home.html at /)
+│   ├── repositories/      # Concrete ORM + hasher implementations
 │   ├── tasks/             # Celery tasks (agent dispatch)
 │   └── di.py              # Dependency injection wiring
-├── config/                # Django settings, urls, wsgi, celery
+├── config/                # Django settings (base / dev / prod), urls, celery
 └── tests/
     ├── fakes/             # In-memory repositories for unit testing
     ├── unit/              # Domain and use case tests (no DB)

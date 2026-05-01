@@ -1,6 +1,5 @@
 import uuid
 
-from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 
@@ -10,7 +9,7 @@ class ContactModel(models.Model):
     email = models.CharField(max_length=320, blank=True, default="")
     phone = models.CharField(max_length=50, blank=True, default="")
     company = models.CharField(max_length=255, blank=True, default="")
-    tags = ArrayField(models.CharField(max_length=100), default=list, blank=True)
+    tags = models.JSONField(default=list, blank=True)
     notes = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

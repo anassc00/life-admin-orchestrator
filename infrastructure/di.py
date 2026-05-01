@@ -5,6 +5,8 @@ before injecting them into use cases. All factory functions are
 intentionally stateless — they create fresh instances on each call.
 For performance-critical paths, introduce a request-scoped cache here.
 """
+from application.use_cases.users.authenticate_user import AuthenticateUserUseCase
+from application.use_cases.users.register_user import RegisterUserUseCase
 from application.use_cases.calendar.detect_conflict import DetectConflictUseCase
 from application.use_cases.calendar.schedule_appointment import ScheduleAppointmentUseCase
 from application.use_cases.calendar.send_reminder import SendReminderUseCase
@@ -22,6 +24,23 @@ from infrastructure.repositories.calendar import DjangoAppointmentRepository
 from infrastructure.repositories.contact import DjangoContactRepository, DjangoInteractionRepository
 from infrastructure.repositories.document import DjangoDocumentRepository
 from infrastructure.repositories.finance import DjangoExpenseRepository, DjangoInvoiceRepository
+from infrastructure.repositories.user import DjangoPasswordHasher, DjangoUserRepository
+
+
+# --- Auth / Users ---
+
+def get_register_user_use_case() -> RegisterUserUseCase:
+    return RegisterUserUseCase(
+        user_repo=DjangoUserRepository(),
+        password_hasher=DjangoPasswordHasher(),
+    )
+
+
+def get_authenticate_user_use_case() -> AuthenticateUserUseCase:
+    return AuthenticateUserUseCase(
+        user_repo=DjangoUserRepository(),
+        password_hasher=DjangoPasswordHasher(),
+    )
 
 
 # --- Finance ---

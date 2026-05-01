@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Life Admin — Orchestrator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .hero h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+
+    .hero p {
+      margin-top: 0.75rem;
+      color: #a0a0c0;
+      font-size: 1.05rem;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+
+    @media (max-width: 640px) {
+      .cards { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 1.8rem; }
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 1.25rem;
+      padding: 2rem;
+      backdrop-filter: blur(12px);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .card:hover { transform: translateY(-3px); border-color: rgba(255, 255, 255, 0.25); }
+
+    .card h2 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #e2e2f0;
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group { margin-bottom: 1rem; }
+
+    label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #9090b0;
+      margin-bottom: 0.4rem;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.65rem 0.9rem;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 0.6rem;
+      color: #fff;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input::placeholder { color: #606080; }
+    input:focus { border-color: #7c6ff7; }
+
+    .btn {
+      width: 100%;
+      padding: 0.75rem;
+      margin-top: 0.5rem;
+      border: none;
+      border-radius: 0.6rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+
+    .btn:active { transform: scale(0.98); }
+
+    .btn-register {
+      background: linear-gradient(135deg, #7c6ff7, #5b58e0);
+      color: #fff;
+    }
+
+    .btn-login {
+      background: linear-gradient(135deg, #1db97b, #14a36a);
+      color: #fff;
+    }
+
+    .btn:hover { opacity: 0.9; }
+
+    .message {
+      margin-top: 1rem;
+      padding: 0.7rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.88rem;
+      display: none;
+    }
+
+    .message.success { background: rgba(29, 185, 123, 0.15); color: #1db97b; border: 1px solid #1db97b55; }
+    .message.error   { background: rgba(239, 68, 68, 0.15);  color: #f87171; border: 1px solid #f8717155; }
+    .message.show    { display: block; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <h1>Life Admin Orchestrator</h1>
+      <p>Tu asistente personal con IA — gestiona finanzas, agenda, documentos y contactos.</p>
+    </div>
+
+    <div class="cards">
+
+      <!-- REGISTER -->
+      <div class="card">
+        <h2>Crear mi administrador</h2>
+        <form id="register-form" novalidate>
+          <div class="form-group">
+            <label for="reg-first-name">Nombre</label>
+            <input id="reg-first-name" type="text" placeholder="Ana" required />
+          </div>
+          <div class="form-group">
+            <label for="reg-last-name">Apellido</label>
+            <input id="reg-last-name" type="text" placeholder="Santos" required />
+          </div>
+          <div class="form-group">
+            <label for="reg-email">Correo electrónico</label>
+            <input id="reg-email" type="email" placeholder="ana@ejemplo.com" required />
+          </div>
+          <div class="form-group">
+            <label for="reg-password">Contraseña</label>
+            <input id="reg-password" type="password" placeholder="••••••••" required />
+          </div>
+          <button type="submit" class="btn btn-register">Crear cuenta</button>
+          <div id="register-msg" class="message"></div>
+        </form>
+      </div>
+
+      <!-- LOGIN -->
+      <div class="card">
+        <h2>Iniciar sesión</h2>
+        <form id="login-form" novalidate>
+          <div class="form-group">
+            <label for="login-email">Correo electrónico</label>
+            <input id="login-email" type="email" placeholder="ana@ejemplo.com" required />
+          </div>
+          <div class="form-group">
+            <label for="login-password">Contraseña</label>
+            <input id="login-password" type="password" placeholder="••••••••" required />
+          </div>
+          <button type="submit" class="btn btn-login">Entrar</button>
+          <div id="login-msg" class="message"></div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const API = '/api/auth';
+
+    function showMessage(id, text, type) {
+      const el = document.getElementById(id);
+      el.textContent = text;
+      el.className = `message ${type} show`;
+    }
+
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const body = {
+        first_name: document.getElementById('reg-first-name').value.trim(),
+        last_name:  document.getElementById('reg-last-name').value.trim(),
+        email:      document.getElementById('reg-email').value.trim(),
+        password:   document.getElementById('reg-password').value,
+      };
+
+      try {
+        const res = await fetch(`${API}/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+
+        if (res.status === 201) {
+          showMessage('register-msg', `Bienvenido, ${data.full_name}. Cuenta creada.`, 'success');
+          e.target.reset();
+        } else {
+          showMessage('register-msg', data.detail || 'Error al registrar.', 'error');
+        }
+      } catch {
+        showMessage('register-msg', 'Error de red. Intenta de nuevo.', 'error');
+      }
+    });
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const body = {
+        email:    document.getElementById('login-email').value.trim(),
+        password: document.getElementById('login-password').value,
+      };
+
+      try {
+        const res = await fetch(`${API}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          localStorage.setItem('user', JSON.stringify(data));
+          showMessage('login-msg', `Bienvenido de vuelta, ${data.full_name}.`, 'success');
+        } else {
+          showMessage('login-msg', data.detail || 'Credenciales inválidas.', 'error');
+        }
+      } catch {
+        showMessage('login-msg', 'Error de red. Intenta de nuevo.', 'error');
+      }
+    });
+  </script>
+</body>
+</html>
