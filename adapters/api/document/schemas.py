@@ -29,9 +29,7 @@ class ClassifyDocumentRequest(Schema):
     metadata: dict = {}
 
     def to_command(self, document_id: UUID) -> ClassifyDocumentCommand:
-        return ClassifyDocumentCommand(
-            document_id=document_id, **self.model_dump()
-        )
+        return ClassifyDocumentCommand(document_id=document_id, **self.model_dump())
 
 
 class DocumentClassifiedResponseSchema(Schema):
@@ -44,9 +42,7 @@ class ArchiveDocumentRequest(Schema):
     storage_path: str
 
     def to_command(self, document_id: UUID) -> ArchiveDocumentCommand:
-        return ArchiveDocumentCommand(
-            document_id=document_id, storage_path=self.storage_path
-        )
+        return ArchiveDocumentCommand(document_id=document_id, storage_path=self.storage_path)
 
 
 class DocumentArchivedResponseSchema(Schema):

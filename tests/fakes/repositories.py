@@ -3,6 +3,7 @@
 These satisfy the domain repository interfaces without touching
 the database, so use cases can be tested in complete isolation.
 """
+
 from datetime import date, datetime
 from uuid import UUID
 
@@ -64,10 +65,7 @@ class InMemoryAppointmentRepository(AppointmentRepository):
         self._store[appointment.id] = appointment
 
     def list_by_range(self, start: datetime, end: datetime) -> list[Appointment]:
-        return [
-            a for a in self._store.values()
-            if a.start_time < end and a.end_time > start
-        ]
+        return [a for a in self._store.values() if a.start_time < end and a.end_time > start]
 
     def delete(self, appointment_id: UUID) -> None:
         self._store.pop(appointment_id, None)
@@ -106,7 +104,8 @@ class InMemoryContactRepository(ContactRepository):
     def search(self, query: str) -> list[Contact]:
         q = query.lower()
         return [
-            c for c in self._store.values()
+            c
+            for c in self._store.values()
             if q in c.name.lower() or q in c.email.lower() or q in c.company.lower()
         ]
 

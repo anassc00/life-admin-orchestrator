@@ -1,3 +1,5 @@
+from datetime import UTC
+
 from celery import shared_task
 
 from infrastructure.di import (
@@ -23,12 +25,12 @@ def process_event_request_task(self, raw_request: str) -> dict:
 @shared_task(name="tasks.calendar.send_reminders")
 def send_appointment_reminders_task() -> None:
     """Periodic task: find upcoming appointments and dispatch reminder notifications."""
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     from application.dtos.calendar import SendReminderCommand
     from infrastructure.repositories.calendar import DjangoAppointmentRepository
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     upcoming_window = now + timedelta(hours=24)
     repo = DjangoAppointmentRepository()
     appointments = repo.list_by_range(start=now, end=upcoming_window)

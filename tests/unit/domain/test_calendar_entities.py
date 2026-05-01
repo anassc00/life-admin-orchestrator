@@ -1,5 +1,6 @@
+from datetime import UTC, datetime
+
 import pytest
-from datetime import datetime, timezone
 
 from domain.entities.calendar import Appointment
 
@@ -14,16 +15,16 @@ def _make_appointment(
 
 class TestAppointment:
     def test_creation_defaults(self):
-        start = datetime(2026, 5, 1, 10, 0, tzinfo=timezone.utc)
-        end = datetime(2026, 5, 1, 11, 0, tzinfo=timezone.utc)
+        start = datetime(2026, 5, 1, 10, 0, tzinfo=UTC)
+        end = datetime(2026, 5, 1, 11, 0, tzinfo=UTC)
         appt = _make_appointment(start, end)
 
         assert appt.is_confirmed is False
         assert appt.attendees == []
 
     def test_confirm_returns_new_instance(self):
-        start = datetime(2026, 5, 1, 10, 0, tzinfo=timezone.utc)
-        end = datetime(2026, 5, 1, 11, 0, tzinfo=timezone.utc)
+        start = datetime(2026, 5, 1, 10, 0, tzinfo=UTC)
+        end = datetime(2026, 5, 1, 11, 0, tzinfo=UTC)
         appt = _make_appointment(start, end)
         confirmed = appt.confirm()
 
@@ -34,22 +35,22 @@ class TestAppointment:
         with pytest.raises(ValueError):
             Appointment(
                 title="Bad",
-                start_time=datetime(2026, 5, 1, 12, 0, tzinfo=timezone.utc),
-                end_time=datetime(2026, 5, 1, 10, 0, tzinfo=timezone.utc),
+                start_time=datetime(2026, 5, 1, 12, 0, tzinfo=UTC),
+                end_time=datetime(2026, 5, 1, 10, 0, tzinfo=UTC),
             )
 
     def test_overlaps_with(self):
         a = _make_appointment(
-            datetime(2026, 5, 1, 10, 0, tzinfo=timezone.utc),
-            datetime(2026, 5, 1, 12, 0, tzinfo=timezone.utc),
+            datetime(2026, 5, 1, 10, 0, tzinfo=UTC),
+            datetime(2026, 5, 1, 12, 0, tzinfo=UTC),
         )
         b = _make_appointment(
-            datetime(2026, 5, 1, 11, 0, tzinfo=timezone.utc),
-            datetime(2026, 5, 1, 13, 0, tzinfo=timezone.utc),
+            datetime(2026, 5, 1, 11, 0, tzinfo=UTC),
+            datetime(2026, 5, 1, 13, 0, tzinfo=UTC),
         )
         c = _make_appointment(
-            datetime(2026, 5, 1, 13, 0, tzinfo=timezone.utc),
-            datetime(2026, 5, 1, 14, 0, tzinfo=timezone.utc),
+            datetime(2026, 5, 1, 13, 0, tzinfo=UTC),
+            datetime(2026, 5, 1, 14, 0, tzinfo=UTC),
         )
 
         assert a.overlaps_with(b) is True

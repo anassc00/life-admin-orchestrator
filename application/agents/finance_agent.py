@@ -6,11 +6,12 @@ Node flow:
 The agent is intentionally thin: each node delegates to a use case.
 LLM calls are isolated to the extract_data node only.
 """
+
 from typing import Any, TypedDict
 
 from langgraph.graph import END, StateGraph
 
-from application.dtos.finance import CategorizeExpenseCommand, CreateInvoiceCommand
+from application.dtos.finance import CreateInvoiceCommand
 from application.use_cases.finance.categorize_expense import CategorizeExpenseUseCase
 from application.use_cases.finance.create_invoice import CreateInvoiceUseCase
 
@@ -22,7 +23,6 @@ class FinanceAgentState(TypedDict):
 
 
 class FinanceAgentOrchestrator:
-
     def __init__(
         self,
         create_invoice_uc: CreateInvoiceUseCase,

@@ -1,10 +1,9 @@
+from application.dtos.finance import CreateInvoiceCommand, InvoiceCreatedResponse
 from domain.entities.finance import Invoice
 from domain.repositories.finance import InvoiceRepository
-from application.dtos.finance import CreateInvoiceCommand, InvoiceCreatedResponse
 
 
 class CreateInvoiceUseCase:
-
     def __init__(self, invoice_repo: InvoiceRepository) -> None:
         self._repo = invoice_repo
 

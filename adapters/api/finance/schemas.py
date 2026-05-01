@@ -7,8 +7,93 @@ from ninja import Schema
 from application.dtos.finance import (
     CategorizeExpenseCommand,
     CreateInvoiceCommand,
-    ProcessInvoiceCommand,
 )
+from domain.entities.finance import AccountType, Currency, IncomeCategory, TransactionType
+
+
+class RegisterAccountRequest(Schema):
+    name: str
+    type: AccountType
+    supported_currencies: list[Currency]
+    default_currencies: list[Currency]
+
+
+class AccountRegisteredResponseSchema(Schema):
+    account_id: UUID
+    name: str
+    type: AccountType
+
+
+class AccountSummarySchema(Schema):
+    account_id: UUID
+    name: str
+    type: AccountType
+    supported_currencies: list[Currency]
+    default_currencies: list[Currency]
+
+
+class UpdateAccountRequest(Schema):
+    name: str
+    type: AccountType
+    supported_currencies: list[Currency]
+    default_currencies: list[Currency]
+
+
+class AccountUpdatedResponseSchema(Schema):
+    account_id: UUID
+    name: str
+    type: AccountType
+    supported_currencies: list[Currency]
+    default_currencies: list[Currency]
+
+
+class RegisterIncomeRequest(Schema):
+    account_id: UUID
+    amount: Decimal
+    currency: Currency
+    exchange_rate: Decimal
+    category: IncomeCategory
+    date: date
+    notes: str | None = None
+
+
+class IncomeRegisteredResponseSchema(Schema):
+    transaction_id: UUID
+    type: TransactionType
+    amount: Decimal
+    currency: Currency
+    notes: str | None = None
+
+
+class RegisterCurrencyExchangeRequest(Schema):
+    source_account_id: UUID
+    dest_account_id: UUID
+    amount_out: Decimal
+    currency_out: Currency
+    amount_in: Decimal
+    currency_in: Currency
+    exchange_rate: Decimal
+    date: date
+    notes: str | None = None
+
+
+class CurrencyExchangeRegisteredResponseSchema(Schema):
+    tx_out_id: UUID
+    tx_in_id: UUID
+    amount_out: Decimal
+    currency_out: Currency
+    amount_in: Decimal
+    currency_in: Currency
+
+
+class EditTransactionRequest(Schema):
+    notes: str | None = None
+    password: str
+
+
+class TransactionEditedResponseSchema(Schema):
+    transaction_id: UUID
+    notes: str | None = None
 
 
 class CreateInvoiceRequest(Schema):

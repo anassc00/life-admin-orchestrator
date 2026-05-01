@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Finanzas — Life Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #e0e0f0;
+    }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.25rem 2rem;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      backdrop-filter: blur(10px);
+      position: sticky; top: 0;
+      background: rgba(15,12,41,0.6);
+    }
+    .logo { font-weight: 700; font-size: 1rem; color: #7c6ff7; letter-spacing: 0.02em; }
+    .btn-back {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #9090b0; font-size: 0.85rem; font-weight: 600;
+      padding: 0.45rem 1rem; border-radius: 0.5rem; cursor: pointer;
+      transition: color 0.2s, border-color 0.2s; text-decoration: none;
+    }
+    .btn-back:hover { color: #c0c0e0; border-color: rgba(255,255,255,0.3); }
+    main { max-width: 960px; margin: 0 auto; padding: 2.5rem 2rem; }
+    h2 { font-size: 1.5rem; font-weight: 700; color: #fff; margin-bottom: 0.25rem; }
+    .subtitle { color: #8080a0; font-size: 0.9rem; margin-bottom: 2rem; }
+    .actions {
+      display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 2.5rem;
+    }
+    .btn-action {
+      background: rgba(124,111,247,0.15);
+      border: 1px solid rgba(124,111,247,0.35);
+      color: #b0a8ff; font-size: 0.9rem; font-weight: 600;
+      padding: 0.6rem 1.25rem; border-radius: 0.6rem; cursor: pointer;
+      transition: background 0.2s, border-color 0.2s; text-decoration: none;
+      display: inline-block;
+    }
+    .btn-action:hover { background: rgba(124,111,247,0.3); border-color: rgba(124,111,247,0.6); }
+    .section-title {
+      font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: #7c6ff7; margin-bottom: 1rem;
+    }
+    .accounts-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1rem; margin-bottom: 2.5rem;
+    }
+    .account-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 1rem; padding: 1.5rem;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .account-card:hover { border-color: rgba(255,255,255,0.2); transform: translateY(-2px); }
+    .account-card .type-badge {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: #7c6ff7;
+      background: rgba(124,111,247,0.12); padding: 0.2rem 0.5rem;
+      border-radius: 0.3rem; margin-bottom: 0.75rem; display: inline-block;
+    }
+    .account-card h3 { font-size: 1rem; font-weight: 600; color: #e0e0f0; margin-bottom: 0.3rem; }
+    .account-card .currencies { font-size: 0.8rem; color: #7070a0; }
+    .empty { color: #6060a0; font-size: 0.9rem; padding: 1.5rem 0; }
+    #msg { padding: 0.75rem 1rem; border-radius: 0.6rem; margin-bottom: 1.5rem; display: none; font-size: 0.9rem; }
+    #msg.success { background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.3); color: #34d399; }
+    #msg.error   { background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.3); color: #f87171; }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="logo">Life Admin — Finanzas</span>
+    <a class="btn-back" href="/dashboard/">← Volver</a>
+  </header>
+  <main>
+    <h2>Tus cuentas</h2>
+    <p class="subtitle">Administra tus billeteras, cuentas bancarias y efectivo.</p>
+
+    <div id="msg"></div>
+
+    <div class="actions">
+      <a class="btn-action" href="/finance/new-account/">+ Nueva cuenta</a>
+      <a class="btn-action" href="/finance/income/">+ Registrar ingreso</a>
+      <a class="btn-action" href="/finance/exchange/">↔ Cambio de divisas</a>
+    </div>
+
+    <div class="section-title">Cuentas registradas</div>
+    <div class="accounts-grid" id="accounts-grid">
+      <div class="empty">Cargando cuentas...</div>
+    </div>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('created')) showMsg('Cuenta creada exitosamente.', 'success');
+    if (params.get('income')) showMsg('Ingreso registrado exitosamente.', 'success');
+    if (params.get('exchange')) showMsg('Cambio de divisas registrado.', 'success');
+    if (params.get('edited')) showMsg('Transacción actualizada.', 'success');
+
+    function showMsg(text, type) {
+      const el = document.getElementById('msg');
+      el.textContent = text; el.className = type; el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 4000);
+    }
+
+    async function loadAccounts() {
+      try {
+        const res = await fetch('/api/finance/accounts');
+        if (res.status === 401) { window.location.href = '/login/'; return; }
+        const data = await res.json();
+        const grid = document.getElementById('accounts-grid');
+        if (!data.length) {
+          grid.innerHTML = '<div class="empty">No tienes cuentas aún. Crea una para empezar.</div>';
+          return;
+        }
+        grid.innerHTML = data.map(a => `
+          <div class="account-card">
+            <span class="type-badge">${a.type}</span>
+            <h3>${a.name}</h3>
+            <div class="currencies">${a.supported_currencies.join(' · ')}</div>
+          </div>
+        `).join('');
+      } catch {
+        document.getElementById('accounts-grid').innerHTML = '<div class="empty">Error al cargar cuentas.</div>';
+      }
+    }
+
+    loadAccounts();
+  </script>
+</body>
+</html>

@@ -4,7 +4,6 @@ from typing import Any
 
 
 class UnitOfWork(ABC, AbstractContextManager):  # type: ignore[type-arg]
-
     @abstractmethod
     def commit(self) -> None: ...
 

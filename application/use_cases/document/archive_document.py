@@ -1,11 +1,10 @@
+from application.dtos.document import ArchiveDocumentCommand, DocumentArchivedResponse
 from domain.entities.document import DocumentStatus
 from domain.exceptions.document import DocumentAlreadyArchivedError, DocumentNotFoundError
 from domain.repositories.document import DocumentRepository
-from application.dtos.document import ArchiveDocumentCommand, DocumentArchivedResponse
 
 
 class ArchiveDocumentUseCase:
-
     def __init__(self, document_repo: DocumentRepository) -> None:
         self._repo = document_repo
 

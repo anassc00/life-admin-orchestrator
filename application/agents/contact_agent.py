@@ -3,6 +3,7 @@
 Node flow:
   parse_communication → update_contact → log_interaction → END
 """
+
 from typing import Any, TypedDict
 from uuid import UUID
 
@@ -22,7 +23,6 @@ class ContactAgentState(TypedDict):
 
 
 class ContactAgentOrchestrator:
-
     def __init__(
         self,
         update_contact_uc: UpdateContactRecordUseCase,

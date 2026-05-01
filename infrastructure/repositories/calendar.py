@@ -7,7 +7,6 @@ from infrastructure.django_app.models.calendar import AppointmentModel
 
 
 class DjangoAppointmentRepository(AppointmentRepository):
-
     def get_by_id(self, appointment_id: UUID) -> Appointment | None:
         try:
             record = AppointmentModel.objects.get(pk=appointment_id)

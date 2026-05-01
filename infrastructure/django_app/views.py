@@ -2,6 +2,12 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 
 
+def _protected(request: HttpRequest, template: str) -> HttpResponse:
+    if "user_id" not in request.session:
+        return redirect("login")
+    return render(request, template)
+
+
 def landing(request: HttpRequest) -> HttpResponse:
     if "user_id" in request.session:
         return redirect("dashboard")
@@ -21,6 +27,20 @@ def login_page(request: HttpRequest) -> HttpResponse:
 
 
 def dashboard(request: HttpRequest) -> HttpResponse:
-    if "user_id" not in request.session:
-        return redirect("login")
-    return render(request, "dashboard.html")
+    return _protected(request, "dashboard.html")
+
+
+def finance_accounts_page(request: HttpRequest) -> HttpResponse:
+    return _protected(request, "finance_accounts.html")
+
+
+def finance_income_page(request: HttpRequest) -> HttpResponse:
+    return _protected(request, "finance_income.html")
+
+
+def finance_exchange_page(request: HttpRequest) -> HttpResponse:
+    return _protected(request, "finance_exchange.html")
+
+
+def profile_page(request: HttpRequest) -> HttpResponse:
+    return _protected(request, "profile.html")

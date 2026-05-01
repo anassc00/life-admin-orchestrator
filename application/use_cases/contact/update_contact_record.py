@@ -1,11 +1,10 @@
+from application.dtos.contact import ContactUpdatedResponse, UpdateContactRecordCommand
 from domain.entities.contact import Contact
 from domain.exceptions.contact import ContactNotFoundError
 from domain.repositories.contact import ContactRepository
-from application.dtos.contact import ContactUpdatedResponse, UpdateContactRecordCommand
 
 
 class UpdateContactRecordUseCase:
-
     def __init__(self, contact_repo: ContactRepository) -> None:
         self._repo = contact_repo
 

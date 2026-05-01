@@ -6,7 +6,6 @@ from infrastructure.django_app.models.document import DocumentModel
 
 
 class DjangoDocumentRepository(DocumentRepository):
-
     def get_by_id(self, document_id: UUID) -> Document | None:
         try:
             record = DocumentModel.objects.get(pk=document_id)
@@ -21,16 +20,10 @@ class DjangoDocumentRepository(DocumentRepository):
         )
 
     def list_by_status(self, status: DocumentStatus) -> list[Document]:
-        return [
-            self._to_entity(r)
-            for r in DocumentModel.objects.filter(status=status.value)
-        ]
+        return [self._to_entity(r) for r in DocumentModel.objects.filter(status=status.value)]
 
     def list_by_category(self, category: str) -> list[Document]:
-        return [
-            self._to_entity(r)
-            for r in DocumentModel.objects.filter(category=category)
-        ]
+        return [self._to_entity(r) for r in DocumentModel.objects.filter(category=category)]
 
     @staticmethod
     def _to_entity(record: DocumentModel) -> Document:

@@ -4,7 +4,6 @@ from domain.repositories.user import UserRepository
 
 
 class GetUserProfileUseCase:
-
     def __init__(self, user_repo: UserRepository) -> None:
         self._repo = user_repo
 

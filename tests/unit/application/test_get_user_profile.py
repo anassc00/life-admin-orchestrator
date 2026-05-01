@@ -1,5 +1,6 @@
-import pytest
 from uuid import UUID, uuid4
+
+import pytest
 
 from application.dtos.user import GetUserProfileQuery, RegisterUserCommand
 from application.use_cases.users.get_user_profile import GetUserProfileUseCase

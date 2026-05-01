@@ -5,6 +5,7 @@ before injecting them into use cases. All factory functions are
 intentionally stateless — they create fresh instances on each call.
 For performance-critical paths, introduce a request-scoped cache here.
 """
+
 from application.use_cases.calendar.detect_conflict import DetectConflictUseCase
 from application.use_cases.calendar.schedule_appointment import ScheduleAppointmentUseCase
 from application.use_cases.calendar.send_reminder import SendReminderUseCase
@@ -16,18 +17,30 @@ from application.use_cases.document.extract_metadata import ExtractMetadataUseCa
 from application.use_cases.document.register_document import RegisterDocumentUseCase
 from application.use_cases.finance.categorize_expense import CategorizeExpenseUseCase
 from application.use_cases.finance.create_invoice import CreateInvoiceUseCase
+from application.use_cases.finance.edit_transaction import EditTransactionUseCase
 from application.use_cases.finance.generate_monthly_report import GenerateMonthlyReportUseCase
+from application.use_cases.finance.get_accounts_by_user import GetAccountsByUserUseCase
 from application.use_cases.finance.process_invoice import ProcessInvoiceUseCase
+from application.use_cases.finance.register_account import RegisterAccountUseCase
+from application.use_cases.finance.register_currency_exchange import RegisterCurrencyExchangeUseCase
+from application.use_cases.finance.register_income import RegisterIncomeUseCase
+from application.use_cases.finance.update_account import UpdateAccountUseCase
 from application.use_cases.users.authenticate_user import AuthenticateUserUseCase
 from application.use_cases.users.get_user_profile import GetUserProfileUseCase
 from application.use_cases.users.register_user import RegisterUserUseCase
 from infrastructure.repositories.calendar import DjangoAppointmentRepository
 from infrastructure.repositories.contact import DjangoContactRepository, DjangoInteractionRepository
 from infrastructure.repositories.document import DjangoDocumentRepository
-from infrastructure.repositories.finance import DjangoExpenseRepository, DjangoInvoiceRepository
+from infrastructure.repositories.finance import (
+    DjangoAccountRepository,
+    DjangoExpenseRepository,
+    DjangoInvoiceRepository,
+    DjangoTransactionRepository,
+)
 from infrastructure.repositories.user import DjangoPasswordHasher, DjangoUserRepository
 
 # --- Auth / Users ---
+
 
 def get_register_user_use_case() -> RegisterUserUseCase:
     return RegisterUserUseCase(
@@ -48,6 +61,41 @@ def get_user_profile_use_case() -> GetUserProfileUseCase:
 
 
 # --- Finance ---
+
+
+def get_register_account_use_case() -> RegisterAccountUseCase:
+    return RegisterAccountUseCase(account_repo=DjangoAccountRepository())
+
+
+def get_accounts_by_user_use_case() -> GetAccountsByUserUseCase:
+    return GetAccountsByUserUseCase(account_repo=DjangoAccountRepository())
+
+
+def get_update_account_use_case() -> UpdateAccountUseCase:
+    return UpdateAccountUseCase(account_repo=DjangoAccountRepository())
+
+
+def get_register_income_use_case() -> RegisterIncomeUseCase:
+    return RegisterIncomeUseCase(
+        account_repo=DjangoAccountRepository(),
+        transaction_repo=DjangoTransactionRepository(),
+    )
+
+
+def get_register_currency_exchange_use_case() -> RegisterCurrencyExchangeUseCase:
+    return RegisterCurrencyExchangeUseCase(
+        account_repo=DjangoAccountRepository(),
+        transaction_repo=DjangoTransactionRepository(),
+    )
+
+
+def get_edit_transaction_use_case() -> EditTransactionUseCase:
+    return EditTransactionUseCase(
+        transaction_repo=DjangoTransactionRepository(),
+        user_repo=DjangoUserRepository(),
+        password_hasher=DjangoPasswordHasher(),
+    )
+
 
 def get_create_invoice_use_case() -> CreateInvoiceUseCase:
     return CreateInvoiceUseCase(invoice_repo=DjangoInvoiceRepository())
@@ -70,6 +118,7 @@ def get_generate_monthly_report_use_case() -> GenerateMonthlyReportUseCase:
 
 # --- Calendar ---
 
+
 def get_schedule_appointment_use_case() -> ScheduleAppointmentUseCase:
     return ScheduleAppointmentUseCase(appointment_repo=DjangoAppointmentRepository())
 
@@ -83,6 +132,7 @@ def get_send_reminder_use_case() -> SendReminderUseCase:
 
 
 # --- Documents ---
+
 
 def get_register_document_use_case() -> RegisterDocumentUseCase:
     return RegisterDocumentUseCase(document_repo=DjangoDocumentRepository())
@@ -101,6 +151,7 @@ def get_archive_document_use_case() -> ArchiveDocumentUseCase:
 
 
 # --- Contacts ---
+
 
 def get_update_contact_record_use_case() -> UpdateContactRecordUseCase:
     return UpdateContactRecordUseCase(contact_repo=DjangoContactRepository())

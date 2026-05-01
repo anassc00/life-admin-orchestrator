@@ -1,11 +1,10 @@
+from application.dtos.calendar import AppointmentScheduledResponse, ScheduleAppointmentCommand
 from domain.entities.calendar import Appointment
 from domain.exceptions.calendar import AppointmentConflictError
 from domain.repositories.calendar import AppointmentRepository
-from application.dtos.calendar import AppointmentScheduledResponse, ScheduleAppointmentCommand
 
 
 class ScheduleAppointmentUseCase:
-
     def __init__(self, appointment_repo: AppointmentRepository) -> None:
         self._repo = appointment_repo
 

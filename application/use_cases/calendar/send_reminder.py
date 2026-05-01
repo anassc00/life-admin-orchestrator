@@ -1,6 +1,6 @@
+from application.dtos.calendar import ReminderSentResponse, SendReminderCommand
 from domain.exceptions.calendar import AppointmentNotFoundError
 from domain.repositories.calendar import AppointmentRepository
-from application.dtos.calendar import ReminderSentResponse, SendReminderCommand
 
 
 class SendReminderUseCase:

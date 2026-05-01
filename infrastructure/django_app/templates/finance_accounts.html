@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mis cuentas — Life Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #e0e0f0; display: flex;
+    }
+    .sidebar {
+      width: 220px; min-height: 100vh; flex-shrink: 0;
+      background: rgba(15,12,41,0.7); backdrop-filter: blur(12px);
+      border-right: 1px solid rgba(255,255,255,0.07);
+      display: flex; flex-direction: column;
+      padding: 1.5rem 0; position: sticky; top: 0; height: 100vh;
+    }
+    .sidebar-logo { font-weight: 700; font-size: 0.95rem; color: #7c6ff7; padding: 0 1.5rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .sidebar-nav { flex: 1; padding: 1rem 0; }
+    .nav-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.7rem 1.5rem; color: #9090b0; font-size: 0.9rem; font-weight: 500; text-decoration: none; transition: color 0.15s, background 0.15s; border-left: 2px solid transparent; }
+    .nav-item:hover { color: #e0e0f0; background: rgba(255,255,255,0.04); }
+    .nav-item.active { color: #c0b8ff; border-left-color: #7c6ff7; background: rgba(124,111,247,0.08); }
+    .nav-icon { font-size: 1rem; width: 1.25rem; text-align: center; }
+    .sidebar-footer { padding: 1rem 1.5rem; }
+    .btn-logout { width: 100%; background: transparent; border: 1px solid rgba(255,255,255,0.12); color: #9090b0; font-size: 0.82rem; font-weight: 600; padding: 0.5rem; border-radius: 0.5rem; cursor: pointer; transition: color 0.2s, border-color 0.2s; }
+    .btn-logout:hover { color: #f87171; border-color: #f8717155; }
+
+    .main { flex: 1; padding: 2.5rem 2rem; overflow-y: auto; max-width: 900px; }
+    .page-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #7c6ff7; margin-bottom: 0.4rem; }
+    h2 { font-size: 1.4rem; font-weight: 700; color: #fff; margin-bottom: 1.75rem; }
+
+    .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem; }
+    .toolbar-actions { display: flex; gap: 0.75rem; }
+    .btn-primary { background: #7c6ff7; border: none; color: #fff; font-size: 0.9rem; font-weight: 700; padding: 0.55rem 1.2rem; border-radius: 0.6rem; cursor: pointer; transition: background 0.2s; }
+    .btn-primary:hover { background: #6a5fe5; }
+
+    #msg { padding: 0.7rem 1rem; border-radius: 0.6rem; margin-bottom: 1.25rem; display: none; font-size: 0.88rem; }
+    #msg.success { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); color: #34d399; }
+    #msg.error { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: #f87171; }
+
+    .accounts-table { width: 100%; border-collapse: collapse; }
+    .accounts-table th { text-align: left; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #6060a0; padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .accounts-table td { padding: 0.85rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; }
+    .accounts-table tr:last-child td { border-bottom: none; }
+    .accounts-table tr:hover td { background: rgba(255,255,255,0.025); }
+    .type-badge { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; padding: 0.2rem 0.55rem; border-radius: 0.3rem; }
+    .type-badge.wallet { background: rgba(124,111,247,0.15); color: #a89cff; }
+    .type-badge.bank { background: rgba(52,211,153,0.12); color: #34d399; }
+    .type-badge.cash { background: rgba(251,191,36,0.12); color: #fbbf24; }
+    .currencies-pill { font-size: 0.78rem; color: #7070a0; }
+    .btn-edit { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #9090b0; font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.7rem; border-radius: 0.4rem; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+    .btn-edit:hover { color: #c0b8ff; border-color: rgba(124,111,247,0.5); }
+    .empty { color: #6060a0; font-size: 0.9rem; padding: 2rem 0; text-align: center; }
+
+    /* ── Modal ── */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 100; }
+    .modal-backdrop.open { display: flex; }
+    .modal { background: #1a1735; border: 1px solid rgba(255,255,255,0.1); border-radius: 1.25rem; padding: 2rem; width: 100%; max-width: 440px; }
+    .modal h3 { font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 1.5rem; }
+    label { display: block; font-size: 0.78rem; font-weight: 600; color: #9090b0; margin-bottom: 0.35rem; }
+    input, select { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #e0e0f0; border-radius: 0.55rem; padding: 0.6rem 0.85rem; font-size: 0.92rem; margin-bottom: 1rem; outline: none; transition: border-color 0.2s; font-family: inherit; }
+    input:focus, select:focus { border-color: #7c6ff7; }
+    select option { background: #1e1b4b; }
+    .checkboxes { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
+    .checkboxes label { display: flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; font-weight: 500; color: #c0c0e0; margin: 0; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 0.35rem 0.7rem; border-radius: 0.45rem; transition: background 0.15s, border-color 0.15s; }
+    .checkboxes input[type="checkbox"] { width: auto; margin: 0; accent-color: #7c6ff7; }
+    .checkboxes label:has(input:checked) { background: rgba(124,111,247,0.18); border-color: rgba(124,111,247,0.5); }
+    .modal-actions { display: flex; gap: 0.6rem; justify-content: flex-end; margin-top: 0.5rem; }
+    .btn-cancel { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: #9090b0; font-size: 0.88rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; }
+    .btn-cancel:hover { color: #e0e0f0; }
+    .btn-save { background: #7c6ff7; border: none; color: #fff; font-size: 0.88rem; font-weight: 700; padding: 0.5rem 1.25rem; border-radius: 0.5rem; cursor: pointer; transition: background 0.2s; }
+    .btn-save:hover { background: #6a5fe5; }
+    .btn-save:disabled { background: rgba(124,111,247,0.4); cursor: not-allowed; }
+    #modal-error { color: #f87171; font-size: 0.82rem; margin-bottom: 0.75rem; display: none; }
+  </style>
+</head>
+<body>
+  <nav class="sidebar">
+    <div class="sidebar-logo">Life Admin</div>
+    <div class="sidebar-nav">
+      <a href="/dashboard/" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+      <a href="/finance/accounts/" class="nav-item active"><span class="nav-icon">💳</span> Mis cuentas</a>
+      <a href="/profile/" class="nav-item"><span class="nav-icon">👤</span> Mi perfil</a>
+    </div>
+    <div class="sidebar-footer">
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </nav>
+
+  <main class="main">
+    <div class="page-title">Finanzas</div>
+    <h2>Mis cuentas</h2>
+
+    <div id="msg"></div>
+
+    <div class="toolbar">
+      <div style="color:#8080a0;font-size:0.88rem;" id="account-count">Cargando...</div>
+      <div class="toolbar-actions">
+        <a href="/finance/income/" class="btn-primary" style="text-decoration:none;">+ Registrar ingreso</a>
+        <a href="/finance/exchange/" class="btn-primary" style="background:rgba(124,111,247,0.25);border:1px solid rgba(124,111,247,0.5);text-decoration:none;">↔ Cambio de divisas</a>
+        <button class="btn-primary" id="btn-new">+ Nueva cuenta</button>
+      </div>
+    </div>
+
+    <table class="accounts-table" id="accounts-table">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Tipo</th>
+          <th>Divisas soportadas</th>
+          <th>Por defecto</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="accounts-body">
+        <tr><td colspan="5" class="empty">Cargando cuentas...</td></tr>
+      </tbody>
+    </table>
+  </main>
+
+  <!-- Account Modal (create / edit) -->
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal">
+      <h3 id="modal-title">Nueva cuenta</h3>
+      <div id="modal-error"></div>
+
+      <label for="m-name">Nombre</label>
+      <input id="m-name" type="text" placeholder="Ej. Mi Billetera USDT" />
+
+      <label for="m-type">Tipo</label>
+      <select id="m-type">
+        <option value="wallet">Billetera digital</option>
+        <option value="bank">Cuenta bancaria</option>
+        <option value="cash">Efectivo</option>
+      </select>
+
+      <label>Divisas soportadas</label>
+      <div class="checkboxes" id="m-supported">
+        <label><input type="checkbox" value="USD" /> USD</label>
+        <label><input type="checkbox" value="USDT" /> USDT</label>
+        <label><input type="checkbox" value="VES" /> VES</label>
+      </div>
+
+      <label>Divisas por defecto</label>
+      <div class="checkboxes" id="m-defaults">
+        <label><input type="checkbox" value="USD" /> USD</label>
+        <label><input type="checkbox" value="USDT" /> USDT</label>
+        <label><input type="checkbox" value="VES" /> VES</label>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-cancel" id="btn-cancel">Cancelar</button>
+        <button class="btn-save" id="btn-save">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let editingAccountId = null;
+
+    // Show success messages from redirects
+    const _p = new URLSearchParams(window.location.search);
+    if (_p.get('income'))   setTimeout(() => showMsg('Ingreso registrado exitosamente.', 'success'), 50);
+    if (_p.get('exchange')) setTimeout(() => showMsg('Cambio de divisas registrado.', 'success'), 50);
+    if (_p.get('created'))  setTimeout(() => showMsg('Cuenta creada exitosamente.', 'success'), 50);
+
+    function showMsg(text, type) {
+      const el = document.getElementById('msg');
+      el.textContent = text; el.className = type; el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 4000);
+    }
+
+    function typeBadge(t) {
+      const labels = { wallet: 'Billetera', bank: 'Banco', cash: 'Efectivo' };
+      return `<span class="type-badge ${t}">${labels[t] || t}</span>`;
+    }
+
+    async function loadAccounts() {
+      const res = await fetch('/api/finance/accounts');
+      if (res.status === 401) { window.location.href = '/login/'; return; }
+      const data = await res.json();
+      const tbody = document.getElementById('accounts-body');
+      const countEl = document.getElementById('account-count');
+      countEl.textContent = `${data.length} cuenta${data.length !== 1 ? 's' : ''} registrada${data.length !== 1 ? 's' : ''}`;
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">Sin cuentas. Crea una para empezar.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.map(a => `
+        <tr data-id="${a.account_id}" data-name="${a.name}" data-type="${a.type}"
+            data-supported='${JSON.stringify(a.supported_currencies)}'
+            data-defaults='${JSON.stringify(a.default_currencies)}'>
+          <td style="font-weight:600;color:#e0e0f0;">${a.name}</td>
+          <td>${typeBadge(a.type)}</td>
+          <td class="currencies-pill">${a.supported_currencies.join(' · ')}</td>
+          <td class="currencies-pill">${a.default_currencies.join(' · ')}</td>
+          <td><button class="btn-edit" onclick="openEdit(this)">Editar</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function openModal(title, { name = '', type = 'wallet', supported = [], defaults = [] } = {}) {
+      document.getElementById('modal-title').textContent = title;
+      document.getElementById('m-name').value = name;
+      document.getElementById('m-type').value = type;
+      document.querySelectorAll('#m-supported input').forEach(cb => {
+        cb.checked = supported.includes(cb.value);
+      });
+      document.querySelectorAll('#m-defaults input').forEach(cb => {
+        cb.checked = defaults.includes(cb.value);
+      });
+      document.getElementById('modal-error').style.display = 'none';
+      document.getElementById('modal-backdrop').classList.add('open');
+      document.getElementById('m-name').focus();
+    }
+
+    function closeModal() {
+      editingAccountId = null;
+      document.getElementById('modal-backdrop').classList.remove('open');
+    }
+
+    function openEdit(btn) {
+      const row = btn.closest('tr');
+      editingAccountId = row.dataset.id;
+      openModal('Editar cuenta', {
+        name: row.dataset.name,
+        type: row.dataset.type,
+        supported: JSON.parse(row.dataset.supported),
+        defaults: JSON.parse(row.dataset.defaults),
+      });
+    }
+
+    document.getElementById('btn-new').addEventListener('click', () => {
+      editingAccountId = null;
+      openModal('Nueva cuenta');
+    });
+    document.getElementById('btn-cancel').addEventListener('click', closeModal);
+    document.getElementById('modal-backdrop').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+
+    document.getElementById('btn-save').addEventListener('click', async () => {
+      const errEl = document.getElementById('modal-error');
+      const btn = document.getElementById('btn-save');
+      errEl.style.display = 'none';
+
+      const name = document.getElementById('m-name').value.trim();
+      const type = document.getElementById('m-type').value;
+      const supported = [...document.querySelectorAll('#m-supported input:checked')].map(i => i.value);
+      const defaults = [...document.querySelectorAll('#m-defaults input:checked')].map(i => i.value);
+
+      if (!name) { errEl.textContent = 'El nombre es obligatorio.'; errEl.style.display = 'block'; return; }
+      if (!supported.length) { errEl.textContent = 'Selecciona al menos una divisa soportada.'; errEl.style.display = 'block'; return; }
+      if (!defaults.length) { errEl.textContent = 'Selecciona al menos una divisa por defecto.'; errEl.style.display = 'block'; return; }
+
+      const payload = { name, type, supported_currencies: supported, default_currencies: defaults };
+      btn.disabled = true; btn.textContent = 'Guardando...';
+
+      const url = editingAccountId ? `/api/finance/accounts/${editingAccountId}` : '/api/finance/accounts';
+      const method = editingAccountId ? 'PATCH' : 'POST';
+
+      try {
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          closeModal();
+          showMsg(editingAccountId ? 'Cuenta actualizada.' : 'Cuenta creada exitosamente.', 'success');
+          loadAccounts();
+        } else {
+          errEl.textContent = data.detail || 'Error al guardar.';
+          errEl.style.display = 'block';
+        }
+      } catch {
+        errEl.textContent = 'Error de conexión.'; errEl.style.display = 'block';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Guardar';
+      }
+    });
+
+    document.getElementById('btn-logout').addEventListener('click', async () => {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/';
+    });
+
+    function getCookie(name) {
+      return document.cookie.split('; ').find(r => r.startsWith(name + '='))?.split('=')[1] || '';
+    }
+
+    loadAccounts();
+  </script>
+</body>
+</html>

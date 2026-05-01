@@ -3,6 +3,7 @@
 Node flow:
   register → classify → extract_metadata → archive → END
 """
+
 from typing import Any, TypedDict
 from uuid import UUID
 
@@ -32,7 +33,6 @@ class DocumentAgentState(TypedDict):
 
 
 class DocumentAgentOrchestrator:
-
     def __init__(
         self,
         register_uc: RegisterDocumentUseCase,

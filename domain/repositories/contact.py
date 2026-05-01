@@ -5,7 +5,6 @@ from domain.entities.contact import Contact, Interaction
 
 
 class ContactRepository(ABC):
-
     @abstractmethod
     def get_by_id(self, contact_id: UUID) -> Contact | None: ...
 
@@ -20,7 +19,6 @@ class ContactRepository(ABC):
 
 
 class InteractionRepository(ABC):
-
     @abstractmethod
     def save(self, interaction: Interaction) -> None: ...
 

@@ -1,13 +1,12 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
+from application.dtos.contact import InteractionLoggedResponse, LogInteractionCommand
 from domain.entities.contact import Interaction
 from domain.exceptions.contact import ContactNotFoundError
 from domain.repositories.contact import ContactRepository, InteractionRepository
-from application.dtos.contact import InteractionLoggedResponse, LogInteractionCommand
 
 
 class LogInteractionUseCase:
-
     def __init__(
         self,
         contact_repo: ContactRepository,
@@ -25,7 +24,7 @@ class LogInteractionUseCase:
             contact_id=command.contact_id,
             channel=command.channel,
             summary=command.summary,
-            timestamp=command.timestamp or datetime.now(timezone.utc),
+            timestamp=command.timestamp or datetime.now(UTC),
         )
         self._interaction_repo.save(interaction)
         return InteractionLoggedResponse(

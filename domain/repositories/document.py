@@ -5,7 +5,6 @@ from domain.entities.document import Document, DocumentStatus
 
 
 class DocumentRepository(ABC):
-
     @abstractmethod
     def get_by_id(self, document_id: UUID) -> Document | None: ...
 

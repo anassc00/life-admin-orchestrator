@@ -1,10 +1,9 @@
+from application.dtos.finance import CategorizeExpenseCommand, ExpenseCategorizedResponse
 from domain.entities.finance import Expense
 from domain.repositories.finance import ExpenseRepository
-from application.dtos.finance import CategorizeExpenseCommand, ExpenseCategorizedResponse
 
 
 class CategorizeExpenseUseCase:
-
     def __init__(self, expense_repo: ExpenseRepository) -> None:
         self._repo = expense_repo
 

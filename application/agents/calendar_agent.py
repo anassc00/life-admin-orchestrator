@@ -3,6 +3,7 @@
 Node flow:
   parse_event → detect_conflict → schedule → END
 """
+
 from typing import Any, TypedDict
 
 from langgraph.graph import END, StateGraph
@@ -20,7 +21,6 @@ class CalendarAgentState(TypedDict):
 
 
 class CalendarAgentOrchestrator:
-
     def __init__(
         self,
         detect_conflict_uc: DetectConflictUseCase,

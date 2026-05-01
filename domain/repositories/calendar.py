@@ -6,7 +6,6 @@ from domain.entities.calendar import Appointment
 
 
 class AppointmentRepository(ABC):
-
     @abstractmethod
     def get_by_id(self, appointment_id: UUID) -> Appointment | None: ...
 

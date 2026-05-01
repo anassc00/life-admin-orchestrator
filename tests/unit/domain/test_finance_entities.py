@@ -1,8 +1,9 @@
-import pytest
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
 
-from domain.entities.finance import Invoice, Expense
+import pytest
+
+from domain.entities.finance import Expense, Invoice
 
 
 class TestInvoice:

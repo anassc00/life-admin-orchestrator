@@ -8,7 +8,6 @@ from infrastructure.django_app.models.contact import ContactModel, InteractionMo
 
 
 class DjangoContactRepository(ContactRepository):
-
     def get_by_id(self, contact_id: UUID) -> Contact | None:
         try:
             record = ContactModel.objects.get(pk=contact_id)
@@ -29,9 +28,7 @@ class DjangoContactRepository(ContactRepository):
         return [
             self._to_entity(r)
             for r in ContactModel.objects.filter(
-                Q(name__icontains=query)
-                | Q(email__icontains=query)
-                | Q(company__icontains=query)
+                Q(name__icontains=query) | Q(email__icontains=query) | Q(company__icontains=query)
             )
         ]
 
@@ -60,7 +57,6 @@ class DjangoContactRepository(ContactRepository):
 
 
 class DjangoInteractionRepository(InteractionRepository):
-
     def save(self, interaction: Interaction) -> None:
         InteractionModel.objects.update_or_create(
             pk=interaction.id,

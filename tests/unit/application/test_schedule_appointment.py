@@ -1,5 +1,6 @@
+from datetime import UTC, datetime
+
 import pytest
-from datetime import datetime, timezone
 
 from application.dtos.calendar import ScheduleAppointmentCommand
 from application.use_cases.calendar.schedule_appointment import ScheduleAppointmentUseCase
@@ -17,8 +18,8 @@ class TestScheduleAppointmentUseCase:
         uc = ScheduleAppointmentUseCase(appointment_repo=repo)
         command = ScheduleAppointmentCommand(
             title="Team sync",
-            start_time=datetime(2026, 5, 2, 9, 0, tzinfo=timezone.utc),
-            end_time=datetime(2026, 5, 2, 10, 0, tzinfo=timezone.utc),
+            start_time=datetime(2026, 5, 2, 9, 0, tzinfo=UTC),
+            end_time=datetime(2026, 5, 2, 10, 0, tzinfo=UTC),
         )
         response = uc.execute(command)
 
@@ -29,15 +30,15 @@ class TestScheduleAppointmentUseCase:
         uc = ScheduleAppointmentUseCase(appointment_repo=repo)
         base = ScheduleAppointmentCommand(
             title="First meeting",
-            start_time=datetime(2026, 5, 2, 10, 0, tzinfo=timezone.utc),
-            end_time=datetime(2026, 5, 2, 11, 0, tzinfo=timezone.utc),
+            start_time=datetime(2026, 5, 2, 10, 0, tzinfo=UTC),
+            end_time=datetime(2026, 5, 2, 11, 0, tzinfo=UTC),
         )
         uc.execute(base)
 
         overlapping = ScheduleAppointmentCommand(
             title="Overlapping meeting",
-            start_time=datetime(2026, 5, 2, 10, 30, tzinfo=timezone.utc),
-            end_time=datetime(2026, 5, 2, 11, 30, tzinfo=timezone.utc),
+            start_time=datetime(2026, 5, 2, 10, 30, tzinfo=UTC),
+            end_time=datetime(2026, 5, 2, 11, 30, tzinfo=UTC),
         )
         with pytest.raises(AppointmentConflictError):
             uc.execute(overlapping)

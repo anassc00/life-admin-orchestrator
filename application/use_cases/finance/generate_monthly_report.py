@@ -1,11 +1,10 @@
 from decimal import Decimal
 
-from domain.repositories.finance import ExpenseRepository, InvoiceRepository
 from application.dtos.finance import GenerateMonthlyReportQuery, MonthlyReportResponse
+from domain.repositories.finance import ExpenseRepository, InvoiceRepository
 
 
 class GenerateMonthlyReportUseCase:
-
     def __init__(
         self,
         expense_repo: ExpenseRepository,

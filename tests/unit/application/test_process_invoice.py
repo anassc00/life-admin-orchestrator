@@ -1,7 +1,8 @@
-import pytest
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
 from uuid import uuid4
+
+import pytest
 
 from application.dtos.finance import CreateInvoiceCommand, ProcessInvoiceCommand
 from application.use_cases.finance.create_invoice import CreateInvoiceUseCase

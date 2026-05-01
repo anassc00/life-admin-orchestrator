@@ -3,6 +3,7 @@
 Unit tests use in-memory repository fakes — the Django ORM is never exercised.
 Integration tests use pytest-django and a real (test) PostgreSQL database.
 """
+
 import pytest
 
 from tests.fakes.repositories import (
@@ -14,8 +15,8 @@ from tests.fakes.repositories import (
     InMemoryInvoiceRepository,
 )
 
-
 # --- Finance fakes ---
+
 
 @pytest.fixture
 def invoice_repo() -> InMemoryInvoiceRepository:
@@ -29,6 +30,7 @@ def expense_repo() -> InMemoryExpenseRepository:
 
 # --- Calendar fakes ---
 
+
 @pytest.fixture
 def appointment_repo() -> InMemoryAppointmentRepository:
     return InMemoryAppointmentRepository()
@@ -36,12 +38,14 @@ def appointment_repo() -> InMemoryAppointmentRepository:
 
 # --- Document fakes ---
 
+
 @pytest.fixture
 def document_repo() -> InMemoryDocumentRepository:
     return InMemoryDocumentRepository()
 
 
 # --- Contact fakes ---
+
 
 @pytest.fixture
 def contact_repo() -> InMemoryContactRepository:

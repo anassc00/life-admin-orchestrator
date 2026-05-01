@@ -1,10 +1,9 @@
+from application.dtos.document import ExtractMetadataCommand, MetadataExtractedResponse
 from domain.exceptions.document import DocumentNotFoundError
 from domain.repositories.document import DocumentRepository
-from application.dtos.document import ExtractMetadataCommand, MetadataExtractedResponse
 
 
 class ExtractMetadataUseCase:
-
     def __init__(self, document_repo: DocumentRepository) -> None:
         self._repo = document_repo
 

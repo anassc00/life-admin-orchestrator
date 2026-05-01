@@ -1,10 +1,9 @@
+from application.dtos.finance import InvoiceProcessedResponse, ProcessInvoiceCommand
 from domain.exceptions.finance import InvoiceAlreadyPaidError, InvoiceNotFoundError
 from domain.repositories.finance import InvoiceRepository
-from application.dtos.finance import ProcessInvoiceCommand, InvoiceProcessedResponse
 
 
 class ProcessInvoiceUseCase:
-
     def __init__(self, invoice_repo: InvoiceRepository) -> None:
         self._repo = invoice_repo
 

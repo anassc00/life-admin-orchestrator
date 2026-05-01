@@ -1,5 +1,6 @@
-import pytest
 from uuid import UUID
+
+import pytest
 
 from application.dtos.user import AuthenticateUserCommand, RegisterUserCommand
 from application.use_cases.users.authenticate_user import AuthenticateUserUseCase
