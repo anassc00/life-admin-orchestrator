@@ -108,11 +108,19 @@ class EditTransactionCommand(BaseModel):
     user_id: UUID
     transaction_id: UUID
     password: str
+    amount: Decimal | None = None
+    date: str | None = None  # Accept string, parse in use case
+    description: str | None = None
+    exchange_rate: Decimal | None = None
     notes: str | None = None
 
 
 class TransactionEditedResponse(BaseModel):
     transaction_id: UUID
+    amount: Decimal
+    date: date
+    description: str | None = None
+    exchange_rate: Decimal
     notes: str | None = None
 
 

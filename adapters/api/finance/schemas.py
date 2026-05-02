@@ -1,4 +1,4 @@
-from datetime import date
+import datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -54,7 +54,7 @@ class RegisterIncomeRequest(Schema):
     exchange_rate: Decimal
     category: IncomeCategory
     is_base_salary: bool = False
-    date: date
+    date: datetime.date
     notes: str | None = None
 
 
@@ -75,7 +75,7 @@ class RegisterCurrencyExchangeRequest(Schema):
     amount_in: Decimal
     currency_in: Currency
     exchange_rate: Decimal
-    date: date
+    date: datetime.date
     notes: str | None = None
 
 
@@ -89,12 +89,20 @@ class CurrencyExchangeRegisteredResponseSchema(Schema):
 
 
 class EditTransactionRequest(Schema):
+    amount: Decimal | None = None
+    date: datetime.date | None = None
+    description: str | None = None
+    exchange_rate: Decimal | None = None
     notes: str | None = None
     password: str
 
 
 class TransactionEditedResponseSchema(Schema):
     transaction_id: UUID
+    amount: Decimal
+    date: datetime.date
+    description: str | None = None
+    exchange_rate: Decimal
     notes: str | None = None
 
 
@@ -102,7 +110,7 @@ class CreateInvoiceRequest(Schema):
     vendor: str
     amount: Decimal
     currency: str = "MXN"
-    due_date: date
+    due_date: datetime.date
 
     def to_command(self) -> CreateInvoiceCommand:
         return CreateInvoiceCommand(**self.model_dump())
@@ -125,7 +133,7 @@ class CategorizeExpenseRequest(Schema):
     description: str
     amount: Decimal
     currency: str = "MXN"
-    date: date
+    date: datetime.date
     category: str
     invoice_id: UUID | None = None
 
@@ -183,7 +191,7 @@ class DepositToSavingsRequest(Schema):
     account_id: UUID
     amount: Decimal
     currency: Currency
-    date: date
+    date: datetime.date
 
 
 class SavingsDepositResponseSchema(Schema):
@@ -212,7 +220,7 @@ class RegisterExpenseRequest(Schema):
     amount: Decimal
     currency: Currency
     exchange_rate: Decimal
-    date: date
+    date: datetime.date
     description: str | None = None
 
 
@@ -234,6 +242,6 @@ class TransactionListItemSchema(Schema):
     category_id: UUID | None = None
     description: str | None = None
     is_base_salary: bool = False
-    date: date
+    date: datetime.date
     notes: str | None = None
     related_transaction_id: UUID | None = None

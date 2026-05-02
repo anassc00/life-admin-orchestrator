@@ -53,7 +53,11 @@ class ExpenseNotFoundError(Exception):
 
 class ExpenseCategoryNotFoundError(Exception):
     def __init__(self, category_id: UUID | None = None) -> None:
-        msg = f"Expense category '{category_id}' not found." if category_id else "Expense category not found."
+        msg = (
+            f"Expense category '{category_id}' not found."
+            if category_id
+            else "Expense category not found."
+        )
         super().__init__(msg)
 
 
@@ -79,8 +83,7 @@ class InvalidEditionCredentialsError(Exception):
 class SavingsDepositCurrencyError(Exception):
     def __init__(self) -> None:
         super().__init__(
-            "Savings deposits must come from a USD or USDT account. "
-            "VES accounts are not allowed."
+            "Savings deposits must come from a USD or USDT account. VES accounts are not allowed."
         )
 
 

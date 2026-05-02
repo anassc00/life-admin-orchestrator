@@ -31,10 +31,28 @@ class EditTransactionUseCase:
         if user is None or not self._password_hasher.verify(command.password, user.hashed_password):
             raise InvalidEditionCredentialsError()
 
-        updated_tx = tx.model_copy(update={"notes": command.notes})
+        update_fields = {"notes": command.notes}
+        if command.amount is not None:
+            update_fields["amount"] = command.amount
+        if command.date is not None:
+            from datetime import date
+
+            update_fields["date"] = (
+                date.fromisoformat(command.date) if isinstance(command.date, str) else command.date
+            )
+        if command.description is not None:
+            update_fields["description"] = command.description
+        if command.exchange_rate is not None:
+            update_fields["exchange_rate"] = command.exchange_rate
+
+        updated_tx = tx.model_copy(update=update_fields)
         self._transaction_repo.save(updated_tx)
 
         return TransactionEditedResponse(
             transaction_id=updated_tx.id,
+            amount=updated_tx.amount,
+            date=updated_tx.date,
+            description=updated_tx.description,
+            exchange_rate=updated_tx.exchange_rate,
             notes=updated_tx.notes,
         )

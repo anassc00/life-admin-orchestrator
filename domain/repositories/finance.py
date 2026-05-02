@@ -113,9 +113,7 @@ class SavingsDepositRepository(ABC):
 
 class BudgetPlanRepository(ABC):
     @abstractmethod
-    def get_by_user_and_period(
-        self, user_id: UUID, year: int, month: int
-    ) -> BudgetPlan | None: ...
+    def get_by_user_and_period(self, user_id: UUID, year: int, month: int) -> BudgetPlan | None: ...
 
     @abstractmethod
     def save(self, plan: BudgetPlan) -> None: ...

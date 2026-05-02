@@ -357,14 +357,17 @@ def edit_transaction(request, transaction_id: UUID, payload: EditTransactionRequ
     user_id = _UUID(user_id_str)
     uc = get_edit_transaction_use_case()
     try:
-        result = uc.execute(
-            EditTransactionCommand(
-                user_id=user_id,
-                transaction_id=transaction_id,
-                password=payload.password,
-                notes=payload.notes,
-            )
-        )
+        payload_dict = payload.model_dump(exclude_none=True)
+        # Convert date to ISO string if present
+        if 'date' in payload_dict and payload_dict['date'] is not None:
+            if hasattr(payload_dict['date'], 'isoformat'):
+                payload_dict['date'] = payload_dict['date'].isoformat()
+        
+        result = uc.execute(EditTransactionCommand(
+            user_id=user_id,
+            transaction_id=transaction_id,
+            **payload_dict
+        ))
         return HTTPStatus.OK, result.model_dump()
     except TransactionNotFoundError as exc:
         return HTTPStatus.NOT_FOUND, ErrorResponse(detail=str(exc))
@@ -464,6 +467,7 @@ def register_expense(request, payload: RegisterExpenseRequest):
         return HTTPStatus.FORBIDDEN, ErrorResponse(detail=str(exc))
     except ExpenseCategoryNotFoundError as exc:
         return HTTPStatus.NOT_FOUND, ErrorResponse(detail=str(exc))
+
 
 # --- Savings Goals ---
 

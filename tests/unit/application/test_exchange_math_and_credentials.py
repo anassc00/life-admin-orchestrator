@@ -102,21 +102,27 @@ class TestRegisterCurrencyExchangeMathValidation:
     def test_accepts_exact_math(self):
         """100 USD × 36 = 3600 VES — passes."""
         uc, tx_repo, user_id, out_id, in_id = _make_exchange_uc()
-        cmd = _exchange_command(Decimal("100"), Decimal("3600"), Decimal("36"), user_id, out_id, in_id)
+        cmd = _exchange_command(
+            Decimal("100"), Decimal("3600"), Decimal("36"), user_id, out_id, in_id
+        )
         uc.execute(cmd)
         tx_repo.save_exchange_pair.assert_called_once()
 
     def test_accepts_math_within_1pct_tolerance(self):
         """100 USD × 36 = 3600 but user typed 3596 (0.11% deviation) — passes."""
         uc, tx_repo, user_id, out_id, in_id = _make_exchange_uc()
-        cmd = _exchange_command(Decimal("100"), Decimal("3596"), Decimal("36"), user_id, out_id, in_id)
+        cmd = _exchange_command(
+            Decimal("100"), Decimal("3596"), Decimal("36"), user_id, out_id, in_id
+        )
         uc.execute(cmd)
         tx_repo.save_exchange_pair.assert_called_once()
 
     def test_raises_when_math_is_wrong(self):
         """100 USD × 36 = 3600 but user typed 4000 (11% deviation) — fails."""
         uc, tx_repo, user_id, out_id, in_id = _make_exchange_uc()
-        cmd = _exchange_command(Decimal("100"), Decimal("4000"), Decimal("36"), user_id, out_id, in_id)
+        cmd = _exchange_command(
+            Decimal("100"), Decimal("4000"), Decimal("36"), user_id, out_id, in_id
+        )
         with pytest.raises(InvalidExchangeMathError):
             uc.execute(cmd)
         tx_repo.save_exchange_pair.assert_not_called()
@@ -124,7 +130,9 @@ class TestRegisterCurrencyExchangeMathValidation:
     def test_raises_when_amount_in_is_zero_but_rate_is_positive(self):
         """0 received for 100 sent — clearly wrong."""
         uc, tx_repo, user_id, out_id, in_id = _make_exchange_uc()
-        cmd = _exchange_command(Decimal("100"), Decimal("0.01"), Decimal("36"), user_id, out_id, in_id)
+        cmd = _exchange_command(
+            Decimal("100"), Decimal("0.01"), Decimal("36"), user_id, out_id, in_id
+        )
         with pytest.raises(InvalidExchangeMathError):
             uc.execute(cmd)
         tx_repo.save_exchange_pair.assert_not_called()
@@ -162,7 +170,8 @@ class TestEditTransactionInvalidEditionCredentials:
 
         # Simulate user deleted from DB
         from unittest.mock import patch
-        with patch.object(uc, '_user_repo') as mock_user_repo:
+
+        with patch.object(uc, "_user_repo") as mock_user_repo:
             mock_user_repo.get_by_id.return_value = None
             with pytest.raises(InvalidEditionCredentialsError):
                 uc.execute(

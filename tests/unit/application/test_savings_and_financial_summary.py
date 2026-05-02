@@ -5,6 +5,7 @@ Tests for:
   - DepositToSavingsUseCase (validates USD/USDT constraint + creates SAVINGS transaction)
   - Enhanced GetMonthlyFinancialSummaryUseCase (USD-normalised totals + savings)
 """
+
 from datetime import date
 from decimal import Decimal
 from unittest.mock import MagicMock
@@ -185,9 +186,7 @@ def _make_deposit_uc(account_currencies):
 
 class TestDepositToSavingsUseCase:
     def test_usd_account_creates_deposit_and_savings_transaction(self):
-        uc, user_id, goal_id, account_id, deposit_repo, tx_repo = _make_deposit_uc(
-            [Currency.USD]
-        )
+        uc, user_id, goal_id, account_id, deposit_repo, tx_repo = _make_deposit_uc([Currency.USD])
 
         result = uc.execute(
             DepositToSavingsCommand(
@@ -210,9 +209,7 @@ class TestDepositToSavingsUseCase:
         assert saved_tx.currency == Currency.USD
 
     def test_usdt_account_is_accepted(self):
-        uc, user_id, goal_id, account_id, deposit_repo, tx_repo = _make_deposit_uc(
-            [Currency.USDT]
-        )
+        uc, user_id, goal_id, account_id, deposit_repo, tx_repo = _make_deposit_uc([Currency.USDT])
 
         result = uc.execute(
             DepositToSavingsCommand(
@@ -229,9 +226,7 @@ class TestDepositToSavingsUseCase:
         deposit_repo.save.assert_called_once()
 
     def test_ves_account_raises_savings_deposit_currency_error(self):
-        uc, user_id, goal_id, account_id, deposit_repo, tx_repo = _make_deposit_uc(
-            [Currency.VES]
-        )
+        uc, user_id, goal_id, account_id, deposit_repo, tx_repo = _make_deposit_uc([Currency.VES])
 
         with pytest.raises(SavingsDepositCurrencyError):
             uc.execute(
@@ -302,9 +297,7 @@ class TestEnhancedMonthlyFinancialSummary:
             savings_deposit_repo=savings_repo,
         )
 
-        result = uc.execute(
-            GetMonthlyFinancialSummaryQuery(user_id=uuid4(), year=2026, month=5)
-        )
+        result = uc.execute(GetMonthlyFinancialSummaryQuery(user_id=uuid4(), year=2026, month=5))
 
         assert isinstance(result, MonthlyFinancialSummaryResponse)
         assert result.total_income_usd == Decimal("400")
@@ -324,9 +317,7 @@ class TestEnhancedMonthlyFinancialSummary:
             savings_deposit_repo=savings_repo,
         )
 
-        result = uc.execute(
-            GetMonthlyFinancialSummaryQuery(user_id=uuid4(), year=2026, month=5)
-        )
+        result = uc.execute(GetMonthlyFinancialSummaryQuery(user_id=uuid4(), year=2026, month=5))
 
         assert result.total_income_usd == Decimal("0")
         assert result.total_expenses_usd == Decimal("0")

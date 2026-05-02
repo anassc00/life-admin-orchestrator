@@ -6,35 +6,42 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('life_admin', '0003_add_is_base_salary_to_transaction'),
+        ("life_admin", "0003_add_is_base_salary_to_transaction"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='transactionmodel',
-            name='category_id',
+            model_name="transactionmodel",
+            name="category_id",
             field=models.UUIDField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='transactionmodel',
-            name='description',
+            model_name="transactionmodel",
+            name="description",
             field=models.CharField(blank=True, max_length=500, null=True),
         ),
         migrations.CreateModel(
-            name='ExpenseCategoryModel',
+            name="ExpenseCategoryModel",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('user_id', models.UUIDField(db_index=True)),
-                ('name', models.CharField(max_length=255)),
-                ('is_fixed_expense', models.BooleanField(default=False)),
-                ('default_amount_usd', models.DecimalField(decimal_places=2, default=0, max_digits=14)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
+                ("user_id", models.UUIDField(db_index=True)),
+                ("name", models.CharField(max_length=255)),
+                ("is_fixed_expense", models.BooleanField(default=False)),
+                (
+                    "default_amount_usd",
+                    models.DecimalField(decimal_places=2, default=0, max_digits=14),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'db_table': 'expense_categories',
-                'unique_together': {('user_id', 'name')},
+                "db_table": "expense_categories",
+                "unique_together": {("user_id", "name")},
             },
         ),
     ]

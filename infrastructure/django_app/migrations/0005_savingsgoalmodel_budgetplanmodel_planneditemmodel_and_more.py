@@ -7,69 +7,109 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('life_admin', '0004_add_expense_category_and_transaction_fields'),
+        ("life_admin", "0004_add_expense_category_and_transaction_fields"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='SavingsGoalModel',
+            name="SavingsGoalModel",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('user_id', models.UUIDField(db_index=True)),
-                ('motive', models.CharField(max_length=500)),
-                ('target_amount_usd', models.DecimalField(decimal_places=2, max_digits=14)),
-                ('is_completed', models.BooleanField(default=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
+                ("user_id", models.UUIDField(db_index=True)),
+                ("motive", models.CharField(max_length=500)),
+                ("target_amount_usd", models.DecimalField(decimal_places=2, max_digits=14)),
+                ("is_completed", models.BooleanField(default=False)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'db_table': 'savings_goals',
+                "db_table": "savings_goals",
             },
         ),
         migrations.CreateModel(
-            name='BudgetPlanModel',
+            name="BudgetPlanModel",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('user_id', models.UUIDField(db_index=True)),
-                ('year', models.IntegerField()),
-                ('month', models.IntegerField()),
-                ('budget_usd', models.DecimalField(decimal_places=2, default=500, max_digits=14)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
+                ("user_id", models.UUIDField(db_index=True)),
+                ("year", models.IntegerField()),
+                ("month", models.IntegerField()),
+                ("budget_usd", models.DecimalField(decimal_places=2, default=500, max_digits=14)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'db_table': 'budget_plans',
-                'unique_together': {('user_id', 'year', 'month')},
+                "db_table": "budget_plans",
+                "unique_together": {("user_id", "year", "month")},
             },
         ),
         migrations.CreateModel(
-            name='PlannedItemModel',
+            name="PlannedItemModel",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('category_id', models.UUIDField(blank=True, null=True)),
-                ('planned_amount_usd', models.DecimalField(decimal_places=2, max_digits=14)),
-                ('plan', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='planned_items', to='life_admin.budgetplanmodel')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
+                ("category_id", models.UUIDField(blank=True, null=True)),
+                ("planned_amount_usd", models.DecimalField(decimal_places=2, max_digits=14)),
+                (
+                    "plan",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="planned_items",
+                        to="life_admin.budgetplanmodel",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'planned_items',
+                "db_table": "planned_items",
             },
         ),
         migrations.CreateModel(
-            name='SavingsDepositModel',
+            name="SavingsDepositModel",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('user_id', models.UUIDField(db_index=True)),
-                ('amount', models.DecimalField(decimal_places=6, max_digits=14)),
-                ('currency', models.CharField(max_length=10)),
-                ('date', models.DateField()),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('account', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='savings_deposits', to='life_admin.accountmodel')),
-                ('goal', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='deposits', to='life_admin.savingsgoalmodel')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
+                ("user_id", models.UUIDField(db_index=True)),
+                ("amount", models.DecimalField(decimal_places=6, max_digits=14)),
+                ("currency", models.CharField(max_length=10)),
+                ("date", models.DateField()),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "account",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="savings_deposits",
+                        to="life_admin.accountmodel",
+                    ),
+                ),
+                (
+                    "goal",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="deposits",
+                        to="life_admin.savingsgoalmodel",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'savings_deposits',
+                "db_table": "savings_deposits",
             },
         ),
     ]

@@ -404,9 +404,7 @@ class DjangoSavingsDepositRepository(SavingsDepositRepository):
 
 
 class DjangoBudgetPlanRepository(BudgetPlanRepository):
-    def get_by_user_and_period(
-        self, user_id: UUID, year: int, month: int
-    ) -> BudgetPlan | None:
+    def get_by_user_and_period(self, user_id: UUID, year: int, month: int) -> BudgetPlan | None:
         try:
             record = BudgetPlanModel.objects.get(user_id=user_id, year=year, month=month)
             return self._to_entity(record)

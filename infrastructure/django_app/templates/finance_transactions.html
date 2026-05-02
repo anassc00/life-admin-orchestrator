@@ -109,12 +109,20 @@
       </div>
     </div>
 
-    <!-- Edit Notes Modal -->
+    <!-- Edit Transaction Modal -->
     <div class="modal-backdrop" id="edit-modal">
       <div class="modal">
         <div class="modal-title">Editar transacción</div>
-        <div class="modal-sub" id="edit-modal-sub">Puedes modificar las notas de esta transacción.</div>
+        <div class="modal-sub" id="edit-modal-sub">Puedes modificar los campos de esta transacción.</div>
         <div class="modal-error" id="edit-error"></div>
+        <label for="edit-amount">Monto</label>
+        <input id="edit-amount" type="number" step="0.01" placeholder="0.00" />
+        <label for="edit-date">Fecha</label>
+        <input id="edit-date" type="date" />
+        <label for="edit-description">Descripción</label>
+        <input id="edit-description" type="text" placeholder="Descripción..." />
+        <label for="edit-exchange-rate">Tasa de cambio</label>
+        <input id="edit-exchange-rate" type="number" step="0.0001" placeholder="1.0" />
         <label for="edit-notes">Notas</label>
         <textarea id="edit-notes" placeholder="Agregar o modificar notas..."></textarea>
         <div class="modal-actions">
@@ -161,8 +169,66 @@
     let allTx = [];
     let editingTx = null;
     let pendingNotes = null;
+    let pendingAmount = null;
+    let pendingDate = null;
+    let pendingDescription = null;
+    let pendingExchangeRate = null;
 
-    async function loadTransactions() {
+
+
+
+
+    
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(//</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function escAttr(str) {
+      return String(str).replace(/"//g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace/(</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function escAttr(str) {
+      return String(str).replace(/"//g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace/(</g,'&lt;').replace(/>/g,'&gt;').replace(/"//g,'&quot;');
+    }
+    function escAttr(str) {
+      return String(str).replace(/"//g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace/(</g,'&lt;').replace(/>/g,'&gt;').replace(/"//g,'&quot;');
+    }
+    function escAttr(str) {
+      return String(str).replace(/"//g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace/(</g,'&lt;').replace(/>/g,'&gt;').replace(/"//g,'&quot;');
+    }
+    function escAttr(str) {
+      return String(str).replace(/"//g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace/(</g,'&lt;').replace(/>/g,'&gt;').replace(/"//g,'&quot;');
+    }
+    function escAttr(str) {
+      return String(str).replace(/"//g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"//g,'&quot;');
+    }
+    function escAttr(str) {
+      return String(str).replace(/"//g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+async function loadTransactions() {
       const res = await fetch('/api/finance/transactions');
       if (res.status === 401) { window.location.href = '/login/'; return; }
       allTx = await res.json();
@@ -212,7 +278,7 @@
       }).join('');
 
       tbody.querySelectorAll('.btn-edit').forEach(btn => {
-        btn.addEventListener('click', () => openEditModal(btn.dataset.id, btn.dataset.notes));
+        btn.addEventListener('click', () => openEditModal(btn.dataset.id));
       });
     }
 
@@ -236,16 +302,26 @@
       document.getElementById(id).addEventListener('change', applyFilters));
     document.getElementById('filter-search').addEventListener('input', applyFilters);
 
-    function openEditModal(txId, currentNotes) {
+    function openEditModal(txId) {
       editingTx = txId;
+      console.log('openEditModal called with txId:', txId);
+      console.log('editingTx set to:', editingTx);
       pendingNotes = null;
       const tx = allTx.find(t => t.transaction_id === txId);
+      if (!tx) return;
+      
       document.getElementById('edit-modal-sub').textContent =
-        tx ? `Transacción del ${tx.date} · ${TYPE_LABELS[tx.type] || tx.type}` : 'Modifica las notas.';
-      document.getElementById('edit-notes').value = currentNotes || '';
+        `Transacción del ${tx.date} · ${TYPE_LABELS[tx.type] || tx.type}`;
+      
+      document.getElementById('edit-amount').value = tx.amount || '';
+      document.getElementById('edit-date').value = tx.date || '';
+      document.getElementById('edit-description').value = tx.description || '';
+      document.getElementById('edit-exchange-rate').value = tx.exchange_rate !== 1 ? tx.exchange_rate : '';
+      document.getElementById('edit-notes').value = tx.notes || '';
+      
       document.getElementById('edit-error').style.display = 'none';
       document.getElementById('edit-modal').classList.add('open');
-      document.getElementById('edit-notes').focus();
+      document.getElementById('edit-amount').focus();
     }
 
     document.getElementById('edit-cancel').addEventListener('click', closeEditModal);
@@ -260,15 +336,16 @@
 
     document.getElementById('edit-next').addEventListener('click', () => {
       pendingNotes = document.getElementById('edit-notes').value.trim() || null;
+      if (!pendingNotes) { alert('Añade una nota.'); return; }
+      pendingAmount = document.getElementById('edit-amount').value;
+      pendingDate = document.getElementById('edit-date').value;
+      pendingDescription = document.getElementById('edit-description').value.trim();
+      pendingExchangeRate = document.getElementById('edit-exchange-rate').value;
       closeEditModal();
       openPwdModal();
     });
 
     function openPwdModal() {
-      const notes = document.getElementById('edit-notes').value.trim();
-      if (!notes) { alert('Añade una nota.'); return; }
-      pendingNotes = notes;
-      document.getElementById('edit-modal').classList.remove('open');
       document.getElementById('edit-password').value = '';
       document.getElementById('pwd-error').style.display = 'none';
       document.getElementById('pwd-modal').classList.add('open');
@@ -287,22 +364,52 @@
       if (e.key === 'Enter') document.getElementById('pwd-confirm').click();
     });
 
+    function formatApiError(data) {
+      if (typeof data === 'string') return data;
+      if (data && typeof data === 'object') {
+        if (data.detail) return typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
+        if (data.message) return typeof data.message === 'string' ? data.message : JSON.stringify(data.message);
+      }
+      return 'Error inesperado.';
+    }
+
     document.getElementById('pwd-confirm').addEventListener('click', async () => {
+      console.log('pwd-confirm clicked, editingTx:', editingTx);
+      if (!editingTx) {
+        showModalError('pwd-error', 'Error: No se ha seleccionado ninguna transacción.');
+        return;
+      }
       const password = document.getElementById('edit-password').value;
       if (!password) { showModalError('pwd-error', 'Introduce tu contraseña.'); return; }
       const btn = document.getElementById('pwd-confirm');
       btn.disabled = true; btn.textContent = 'Guardando...';
 
+      const payload = { password };
+      if (pendingNotes !== null && pendingNotes !== '') payload.notes = pendingNotes;
+      if (pendingAmount) payload.amount = parseFloat(pendingAmount);
+      if (pendingDate) payload.date = pendingDate;
+      if (pendingDescription) payload.description = pendingDescription;
+      if (pendingExchangeRate) payload.exchange_rate = parseFloat(pendingExchangeRate);
+
+      console.log("Datos enviados al editar:", payload);
+      console.log("URL:", `/api/finance/transactions/${editingTx}`);
+
       try {
         const res = await fetch(`/api/finance/transactions/${editingTx}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-          body: JSON.stringify({ notes: pendingNotes, password }),
+          body: JSON.stringify(payload),
         });
         const data = await res.json();
         if (res.ok) {
           const idx = allTx.findIndex(t => t.transaction_id === editingTx);
-          if (idx !== -1) allTx[idx] = { ...allTx[idx], notes: pendingNotes };
+          if (idx !== -1) {
+            if (payload.amount) allTx[idx].amount = payload.amount;
+            if (payload.date) allTx[idx].date = payload.date;
+            if (payload.description !== undefined) allTx[idx].description = payload.description;
+            if (payload.exchange_rate) allTx[idx].exchange_rate = payload.exchange_rate;
+            allTx[idx].notes = pendingNotes;
+          }
           closePwdModal();
           applyFilters();
           showToast();
@@ -317,7 +424,6 @@
         showModalError('pwd-error', 'Error de conexión.');
         return;
       }
-      editingTx = null;
     });
 
     function showModalError(id, msg) {
@@ -335,17 +441,26 @@
       return document.cookie.split('; ').find(r => r.startsWith(name + '='))?.split('=')[1] || '';
     }
 
-    function escHtml(str) {
-      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-    function escAttr(str) {
-      return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    }
 
     if (new URLSearchParams(location.search).get('exchange') === '1') {
       history.replaceState(null, '', '/finance/transactions/');
       document.getElementById('toast').textContent = 'Cambio de divisas registrado correctamente';
       showToast();
+    }
+
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace/(</g,'&lt;').replace(/>/g,'&gt;').replace(/"//g,'&quot;');
+    }
+    function escAttr(str) {
+      return String(str).replace(/"//g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace/(</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function escAttr(str) {
+      return String(str).replace(/"//g, '&quot;').replace(/'/g, '&#39;');
     }
 
     loadTransactions();
