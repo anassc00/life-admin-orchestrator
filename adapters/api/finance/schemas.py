@@ -143,3 +143,11 @@ class MonthlyReportResponseSchema(Schema):
     total_invoices: int
     unpaid_invoices: int
     expenses_by_category: dict[str, Decimal]
+
+
+class MonthlyFinancialSummarySchema(Schema):
+    year: int
+    month: int
+    total_income: Decimal
+    total_expenses: Decimal
+    savings: Decimal

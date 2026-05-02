@@ -1,3 +1,4 @@
+from decimal import Decimal
 from http import HTTPStatus
 from uuid import UUID
 
@@ -15,6 +16,7 @@ from adapters.api.finance.schemas import (
     IncomeRegisteredResponseSchema,
     InvoiceCreatedResponseSchema,
     InvoiceProcessedResponseSchema,
+    MonthlyFinancialSummarySchema,
     MonthlyReportResponseSchema,
     RegisterAccountRequest,
     RegisterCurrencyExchangeRequest,
@@ -27,6 +29,7 @@ from application.dtos.finance import (
     EditTransactionCommand,
     GenerateMonthlyReportQuery,
     GetAccountsByUserQuery,
+    GetMonthlyFinancialSummaryQuery,
     ProcessInvoiceCommand,
     RegisterAccountCommand,
     RegisterCurrencyExchangeCommand,
@@ -47,6 +50,7 @@ from infrastructure.di import (
     get_create_invoice_use_case,
     get_edit_transaction_use_case,
     get_generate_monthly_report_use_case,
+    get_monthly_financial_summary_use_case,
     get_process_invoice_use_case,
     get_register_account_use_case,
     get_register_currency_exchange_use_case,
@@ -79,6 +83,37 @@ def categorize_expense(request, payload: CategorizeExpenseRequest):
 def monthly_report(request, year: int, month: int):
     uc = get_generate_monthly_report_use_case()
     return uc.execute(GenerateMonthlyReportQuery(year=year, month=month)).model_dump()
+
+
+@router.get(
+    "/summary/current",
+    response=MonthlyFinancialSummarySchema,
+    summary="Get the financial summary (income, expenses, savings) for the current month",
+)
+def monthly_financial_summary(request):
+    from datetime import date
+
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return MonthlyFinancialSummarySchema(
+            year=0,
+            month=0,
+            total_income=Decimal("0"),
+            total_expenses=Decimal("0"),
+            savings=Decimal("0"),
+        )
+    from uuid import UUID
+
+    today = date.today()
+    uc = get_monthly_financial_summary_use_case()
+    result = uc.execute(
+        GetMonthlyFinancialSummaryQuery(
+            user_id=UUID(user_id_str),
+            year=today.year,
+            month=today.month,
+        )
+    )
+    return result.model_dump()
 
 
 # --- Accounts ---

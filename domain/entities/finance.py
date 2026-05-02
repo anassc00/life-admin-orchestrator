@@ -22,6 +22,7 @@ class Currency(StrEnum):
 
 class TransactionType(StrEnum):
     INCOME = "income"
+    EXPENSE = "expense"
     EXCHANGE_OUT = "exchange_out"
     EXCHANGE_IN = "exchange_in"
 

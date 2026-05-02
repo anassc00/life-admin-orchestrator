@@ -67,27 +67,55 @@
       margin-bottom: 0.4rem; min-height: 2.2rem;
     }
     .greeting-card p { color: #8080a0; font-size: 0.9rem; }
-    .modules {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-      gap: 1rem;
+
+    /* ── Section header ── */
+    .section-header {
+      display: flex; align-items: baseline; gap: 0.75rem;
+      margin-bottom: 1rem;
     }
-    .module-card {
+    .section-label {
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: #7c6ff7;
+    }
+    .section-month {
+      font-size: 0.82rem; font-weight: 500; color: #6060a0;
+    }
+
+    /* ── Metric cards ── */
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .metric-card {
       background: rgba(255,255,255,0.04);
       border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 1rem; padding: 1.5rem; cursor: pointer;
-      transition: border-color 0.2s, transform 0.2s; text-decoration: none;
-      display: block;
+      border-radius: 1rem; padding: 1.5rem;
     }
-    .module-card:hover { border-color: rgba(255,255,255,0.2); transform: translateY(-2px); }
-    .module-card .icon { font-size: 1.75rem; margin-bottom: 0.75rem; }
-    .module-card h3 { font-size: 1rem; font-weight: 600; color: #e0e0f0; margin-bottom: 0.3rem; }
-    .module-card p { font-size: 0.82rem; color: #7070a0; }
+    .metric-card .metric-label {
+      font-size: 0.78rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: #7070a0; margin-bottom: 0.6rem;
+    }
+    .metric-card .metric-value {
+      font-size: 1.65rem; font-weight: 700; color: #fff; min-height: 2rem;
+    }
+    .metric-card.income  { border-color: rgba(52, 211, 153, 0.2); }
+    .metric-card.expense { border-color: rgba(248, 113, 113, 0.2); }
+    .metric-card.savings { border-color: rgba(124, 111, 247, 0.25); }
+    .metric-card.income  .metric-value { color: #34d399; }
+    .metric-card.expense .metric-value { color: #f87171; }
+    .metric-card.savings .metric-value { color: #a78bfa; }
+
+    /* ── Skeleton ── */
     .skeleton {
       display: inline-block;
       background: linear-gradient(90deg,rgba(255,255,255,0.06) 25%,rgba(255,255,255,0.12) 50%,rgba(255,255,255,0.06) 75%);
       background-size: 200% 100%; animation: shimmer 1.4s infinite;
-      border-radius: 0.4rem; height: 1em; width: 240px;
+      border-radius: 0.4rem;
     }
+    .skeleton-text { height: 1em; width: 240px; }
+    .skeleton-value { height: 1.65rem; width: 120px; }
     @keyframes shimmer { to { background-position: -200% 0; } }
   </style>
 </head>
@@ -113,35 +141,48 @@
   <main class="main">
     <div class="page-title">Panel de control</div>
     <div class="greeting-card">
-      <h1 id="greeting"><span class="skeleton"></span></h1>
+      <h1 id="greeting"><span class="skeleton skeleton-text"></span></h1>
       <p>Los agentes IA están listos para ayudarte a gestionar tu vida personal.</p>
     </div>
 
-    <div class="modules">
-      <a class="module-card" href="/finance/accounts/">
-        <div class="icon">💰</div>
-        <h3>Finanzas</h3>
-        <p>Cuentas, ingresos y cambio de divisas.</p>
-      </a>
-      <a class="module-card" href="#">
-        <div class="icon">📅</div>
-        <h3>Agenda</h3>
-        <p>Citas, recordatorios y conflictos.</p>
-      </a>
-      <a class="module-card" href="#">
-        <div class="icon">📄</div>
-        <h3>Documentos</h3>
-        <p>Clasificación y extracción de metadatos.</p>
-      </a>
-      <a class="module-card" href="#">
-        <div class="icon">👥</div>
-        <h3>Contactos</h3>
-        <p>Personas e historial de interacciones.</p>
-      </a>
+    <div class="section-header">
+      <span class="section-label">Finanzas</span>
+      <span class="section-month" id="month-label"></span>
+    </div>
+    <div class="metrics">
+      <div class="metric-card income">
+        <div class="metric-label">Ingresos totales</div>
+        <div class="metric-value" id="val-income">
+          <span class="skeleton skeleton-value"></span>
+        </div>
+      </div>
+      <div class="metric-card expense">
+        <div class="metric-label">Egresos totales</div>
+        <div class="metric-value" id="val-expenses">
+          <span class="skeleton skeleton-value"></span>
+        </div>
+      </div>
+      <div class="metric-card savings">
+        <div class="metric-label">Ahorros</div>
+        <div class="metric-value" id="val-savings">
+          <span class="skeleton skeleton-value"></span>
+        </div>
+      </div>
     </div>
   </main>
 
   <script>
+    const MONTHS_ES = [
+      'enero','febrero','marzo','abril','mayo','junio',
+      'julio','agosto','septiembre','octubre','noviembre','diciembre'
+    ];
+
+    function fmt(amount) {
+      return new Intl.NumberFormat('es-MX', {
+        style: 'currency', currency: 'MXN', maximumFractionDigits: 2
+      }).format(amount);
+    }
+
     async function loadProfile() {
       try {
         const res  = await fetch('/api/auth/me');
@@ -156,12 +197,37 @@
       } catch { window.location.href = '/login/'; }
     }
 
+    async function loadSummary() {
+      const now = new Date();
+      document.getElementById('month-label').textContent =
+        MONTHS_ES[now.getMonth()] + ' ' + now.getFullYear();
+
+      try {
+        const res  = await fetch('/api/finance/summary/current');
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('val-income').textContent   = fmt(data.total_income);
+          document.getElementById('val-expenses').textContent = fmt(data.total_expenses);
+          document.getElementById('val-savings').textContent  = fmt(data.savings);
+        } else {
+          ['val-income','val-expenses','val-savings'].forEach(id => {
+            document.getElementById(id).textContent = '—';
+          });
+        }
+      } catch {
+        ['val-income','val-expenses','val-savings'].forEach(id => {
+          document.getElementById(id).textContent = '—';
+        });
+      }
+    }
+
     document.getElementById('btn-logout').addEventListener('click', async () => {
       await fetch('/api/auth/logout', { method: 'POST' });
       window.location.href = '/';
     });
 
     loadProfile();
+    loadSummary();
   </script>
 </body>
 </html>

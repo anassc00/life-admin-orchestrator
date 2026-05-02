@@ -20,6 +20,9 @@ from application.use_cases.finance.create_invoice import CreateInvoiceUseCase
 from application.use_cases.finance.edit_transaction import EditTransactionUseCase
 from application.use_cases.finance.generate_monthly_report import GenerateMonthlyReportUseCase
 from application.use_cases.finance.get_accounts_by_user import GetAccountsByUserUseCase
+from application.use_cases.finance.get_monthly_financial_summary import (
+    GetMonthlyFinancialSummaryUseCase,
+)
 from application.use_cases.finance.process_invoice import ProcessInvoiceUseCase
 from application.use_cases.finance.register_account import RegisterAccountUseCase
 from application.use_cases.finance.register_currency_exchange import RegisterCurrencyExchangeUseCase
@@ -114,6 +117,10 @@ def get_generate_monthly_report_use_case() -> GenerateMonthlyReportUseCase:
         expense_repo=DjangoExpenseRepository(),
         invoice_repo=DjangoInvoiceRepository(),
     )
+
+
+def get_monthly_financial_summary_use_case() -> GetMonthlyFinancialSummaryUseCase:
+    return GetMonthlyFinancialSummaryUseCase(transaction_repo=DjangoTransactionRepository())
 
 
 # --- Calendar ---

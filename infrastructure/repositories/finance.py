@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from uuid import UUID
 
 from django.db import transaction
@@ -93,6 +94,22 @@ class DjangoTransactionRepository(TransactionRepository):
                 "-date", "-created_at"
             )
         ]
+
+    def get_monthly_totals(self, user_id: UUID, year: int, month: int) -> tuple[Decimal, Decimal]:
+        from django.db.models import Q, Sum
+
+        result = TransactionModel.objects.filter(
+            user_id=user_id,
+            date__year=year,
+            date__month=month,
+        ).aggregate(
+            income=Sum("amount", filter=Q(type=TransactionType.INCOME.value)),
+            expenses=Sum("amount", filter=Q(type=TransactionType.EXPENSE.value)),
+        )
+        return (
+            result["income"] or Decimal("0"),
+            result["expenses"] or Decimal("0"),
+        )
 
     @staticmethod
     def _to_entity(record: TransactionModel) -> Transaction:

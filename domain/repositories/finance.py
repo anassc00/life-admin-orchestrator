@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import date
+from decimal import Decimal
 from uuid import UUID
 
 from domain.entities.finance import Account, Expense, Invoice, Transaction
@@ -31,6 +32,11 @@ class TransactionRepository(ABC):
 
     @abstractmethod
     def list_by_user(self, user_id: UUID) -> list[Transaction]: ...
+
+    @abstractmethod
+    def get_monthly_totals(self, user_id: UUID, year: int, month: int) -> tuple[Decimal, Decimal]:
+        """Return (total_income, total_expenses) for the given user/month."""
+        ...
 
 
 class InvoiceRepository(ABC):

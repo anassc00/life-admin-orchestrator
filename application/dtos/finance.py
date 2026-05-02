@@ -158,6 +158,23 @@ class ExpenseCategorizedResponse(BaseModel):
     category: str
 
 
+# --- Monthly Financial Summary ---
+
+
+class GetMonthlyFinancialSummaryQuery(BaseModel):
+    user_id: UUID
+    year: int
+    month: int
+
+
+class MonthlyFinancialSummaryResponse(BaseModel):
+    year: int
+    month: int
+    total_income: Decimal
+    total_expenses: Decimal
+    savings: Decimal
+
+
 # --- Reports ---
 
 
