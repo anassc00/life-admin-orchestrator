@@ -296,6 +296,21 @@
       }
     });
 
+    // ── Format API errors (handles Pydantic array and plain string) ──
+    function formatApiError(data) {
+      if (!data) return 'Error desconocido.';
+      if (typeof data.detail === 'string') return data.detail;
+      if (Array.isArray(data.detail)) {
+        return data.detail
+          .map(e => {
+            const field = e.loc ? e.loc[e.loc.length - 1] : 'campo';
+            return `${field}: ${e.msg}`;
+          })
+          .join(' | ');
+      }
+      return 'Error al procesar la solicitud.';
+    }
+
     // ── Expense form submit ──
     document.getElementById('form').addEventListener('submit', async e => {
       e.preventDefault();
@@ -305,30 +320,49 @@
       errEl.style.display = 'none';
       successEl.style.display = 'none';
 
-      const accountId = document.getElementById('account_id').value;
+      // ── Client-side validation ──
+      const accountId = String(document.getElementById('account_id').value).trim();
       if (!accountId) {
         errEl.textContent = 'No hay cuenta configurada para esta moneda. Configura una cuenta predeterminada.';
         errEl.style.display = 'block';
         return;
       }
-      const categoryId = document.getElementById('category').value;
+      const categoryId = String(document.getElementById('category').value).trim();
       if (!categoryId) {
         errEl.textContent = 'Selecciona una categoría.';
         errEl.style.display = 'block';
         return;
       }
 
-      btn.disabled = true; btn.textContent = 'Registrando...';
+      const amount = parseFloat(document.getElementById('amount').value);
+      if (isNaN(amount) || amount <= 0) {
+        errEl.textContent = 'Ingresa un monto válido mayor que cero.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      const exchangeRate = parseFloat(document.getElementById('exchange_rate').value);
+      if (isNaN(exchangeRate) || exchangeRate <= 0) {
+        errEl.textContent = 'La tasa de cambio debe ser un número mayor que cero.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      // ── Sanitised payload ──
+      const rawDate = document.getElementById('date').value; // already YYYY-MM-DD from <input type="date">
+      const isoDate = rawDate || new Date().toISOString().split('T')[0];
 
       const payload = {
-        account_id: accountId,
-        category_id: categoryId,
-        amount: parseFloat(document.getElementById('amount').value),
+        account_id: accountId,          // string UUID
+        category_id: categoryId,        // string UUID
+        amount: amount,                 // float
         currency: document.getElementById('currency').value,
-        exchange_rate: parseFloat(document.getElementById('exchange_rate').value),
-        date: document.getElementById('date').value,
+        exchange_rate: exchangeRate,    // float
+        date: isoDate,                  // ISO 8601 YYYY-MM-DD
         description: document.getElementById('description').value.trim() || null,
       };
+
+      btn.disabled = true; btn.textContent = 'Registrando...';
 
       try {
         const res = await fetch('/api/finance/expenses', {
@@ -347,7 +381,7 @@
           updateAccountByCurrency();
           updateExchangeRate();
         } else {
-          errEl.textContent = data.detail || 'Error al registrar egreso.';
+          errEl.textContent = formatApiError(data);
           errEl.style.display = 'block';
         }
       } catch {
