@@ -1,28 +1,6 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Registrar egreso — Life Admin</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      min-height: 100vh;
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-      color: #e0e0f0; display: flex;
-    }
-    .sidebar { width: 220px; min-height: 100vh; flex-shrink: 0; background: rgba(15,12,41,0.7); backdrop-filter: blur(12px); border-right: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: column; padding: 1.5rem 0; position: sticky; top: 0; height: 100vh; }
-    .sidebar-logo { font-weight: 700; font-size: 0.95rem; color: #7c6ff7; padding: 0 1.5rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.07); }
-    .sidebar-nav { flex: 1; padding: 1rem 0; }
-    .nav-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.7rem 1.5rem; color: #9090b0; font-size: 0.9rem; font-weight: 500; text-decoration: none; transition: color 0.15s, background 0.15s; border-left: 2px solid transparent; }
-    .nav-item:hover { color: #e0e0f0; background: rgba(255,255,255,0.04); }
-    .nav-item.active { color: #c0b8ff; border-left-color: #7c6ff7; background: rgba(124,111,247,0.08); }
-    .nav-icon { font-size: 1rem; width: 1.25rem; text-align: center; }
-    .sidebar-footer { padding: 1rem 1.5rem; }
-    .btn-logout { width: 100%; background: transparent; border: 1px solid rgba(255,255,255,0.12); color: #9090b0; font-size: 0.82rem; font-weight: 600; padding: 0.5rem; border-radius: 0.5rem; cursor: pointer; transition: color 0.2s, border-color 0.2s; }
-    .btn-logout:hover { color: #f87171; border-color: #f8717155; }
-
+{% extends 'base.html' %}
+{% block title %}Registrar egreso — Life Admin{% endblock %}
+{% block extra_style %}
     .main { flex: 1; display: flex; align-items: flex-start; justify-content: center; padding: 3rem 2rem; }
     .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 1.25rem; padding: 2.25rem; width: 100%; max-width: 460px; backdrop-filter: blur(12px); }
     .page-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #7c6ff7; margin-bottom: 0.3rem; }
@@ -45,8 +23,6 @@
     .success-banner { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); color: #34d399; padding: 0.65rem 0.9rem; border-radius: 0.55rem; font-size: 0.83rem; margin-bottom: 1rem; display: none; }
     .no-accounts-note { background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25); color: #fbbf24; padding: 0.65rem 0.9rem; border-radius: 0.55rem; font-size: 0.83rem; margin-bottom: 1rem; display: none; }
     .no-accounts-note a { color: #fbbf24; }
-
-    /* ── Modal ── */
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 100; display: none; align-items: center; justify-content: center; }
     .overlay.open { display: flex; }
     .modal { background: #1a1740; border: 1px solid rgba(255,255,255,0.1); border-radius: 1.25rem; padding: 2rem; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
@@ -66,23 +42,8 @@
     .category-badge { font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 1rem; background: rgba(124,111,247,0.2); color: #a78bfa; }
     .category-badge.fixed { background: rgba(251,191,36,0.15); color: #fbbf24; }
     #modal-error { color: #f87171; font-size: 0.8rem; margin-bottom: 0.5rem; display: none; }
-  </style>
-</head>
-<body>
-  <nav class="sidebar">
-    <div class="sidebar-logo">Life Admin</div>
-    <div class="sidebar-nav">
-      <a href="/dashboard/" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
-      <a href="/finance/accounts/" class="nav-item"><span class="nav-icon">💳</span> Mis cuentas</a>
-      <a href="/finance/expenses/" class="nav-item active"><span class="nav-icon">💸</span> Egresos</a>
-      <a href="/profile/" class="nav-item"><span class="nav-icon">👤</span> Mi perfil</a>
-    </div>
-    <div class="sidebar-footer">
-      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
-    </div>
-  </nav>
-
-  <main class="main">
+{% endblock %}
+{% block content %}
     <div class="card">
       <div class="page-title">Finanzas</div>
       <div class="card-header">
@@ -134,42 +95,41 @@
         <button class="btn-submit" type="submit" id="btn-submit">Registrar egreso</button>
       </form>
     </div>
-  </main>
 
-  <!-- Categories modal -->
-  <div class="overlay" id="modal-overlay">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>Categorías de gastos</h3>
-        <button class="btn-close" id="btn-close-modal">✕</button>
+    <!-- Categories modal -->
+    <div class="overlay" id="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>Categorías de gastos</h3>
+          <button class="btn-close" id="btn-close-modal">✕</button>
+        </div>
+
+        <div id="modal-error"></div>
+
+        <label for="cat-name">Nombre</label>
+        <input id="cat-name" type="text" placeholder="Ej: Alimentación" maxlength="255" />
+
+        <label class="checkbox-row">
+          <input type="checkbox" id="cat-fixed" />
+          <span>Gasto fijo</span>
+        </label>
+
+        <label for="cat-amount">Monto estimado (USD)</label>
+        <input id="cat-amount" type="number" step="0.01" min="0" value="0" />
+
+        <button class="btn-modal-submit" id="btn-save-cat">+ Crear categoría</button>
+
+        <div class="category-list" id="cat-list"></div>
       </div>
-
-      <div id="modal-error"></div>
-
-      <label for="cat-name">Nombre</label>
-      <input id="cat-name" type="text" placeholder="Ej: Alimentación" maxlength="255" />
-
-      <label class="checkbox-row">
-        <input type="checkbox" id="cat-fixed" />
-        <span>Gasto fijo</span>
-      </label>
-
-      <label for="cat-amount">Monto estimado (USD)</label>
-      <input id="cat-amount" type="number" step="0.01" min="0" value="0" />
-
-      <button class="btn-modal-submit" id="btn-save-cat">+ Crear categoría</button>
-
-      <div class="category-list" id="cat-list"></div>
     </div>
-  </div>
-
-  <script>
+{% endblock %}
+{% block extra_script %}
+<script>
     const accounts = [];
     const categories = [];
 
     document.getElementById('date').value = new Date().toISOString().split('T')[0];
 
-    // ── Account auto-selection by currency ──
     function updateAccountByCurrency() {
       const currency = document.getElementById('currency').value;
       const match = accounts.find(a => a.default_currencies.includes(currency));
@@ -186,7 +146,6 @@
       }
     }
 
-    // ── Exchange rate auto-lock for USD/USDT ──
     function updateExchangeRate() {
       const cur = document.getElementById('currency').value;
       const rateField = document.getElementById('exchange_rate');
@@ -215,7 +174,7 @@
         }
         updateAccountByCurrency();
         updateExchangeRate();
-      } catch { /* silent */ }
+      } catch { }
     }
 
     async function loadCategories() {
@@ -226,7 +185,7 @@
         categories.push(...data);
         rebuildCategorySelect();
         renderCategoryList();
-      } catch { /* silent */ }
+      } catch { }
     }
 
     function rebuildCategorySelect() {
@@ -255,7 +214,6 @@
         </div>`).join('');
     }
 
-    // ── Modal ──
     document.getElementById('btn-open-cats').addEventListener('click', () => {
       document.getElementById('modal-overlay').classList.add('open');
     });
@@ -296,22 +254,22 @@
       }
     });
 
-    // ── Format API errors (handles Pydantic array and plain string) ──
     function formatApiError(data) {
       if (!data) return 'Error desconocido.';
-      if (typeof data.detail === 'string') return data.detail;
-      if (Array.isArray(data.detail)) {
-        return data.detail
+      // FastAPI/Ninja validation errors: { detail: [...] }
+      const detail = data.detail || data;
+      if (typeof detail === 'string') return detail;
+      if (Array.isArray(detail)) {
+        return detail
           .map(e => {
-            const field = e.loc ? e.loc[e.loc.length - 1] : 'campo';
-            return `${field}: ${e.msg}`;
+            const field = e.loc ? e.loc[e.loc.length - 1] : (e.field || 'campo');
+            return `${field}: ${e.msg || e.message || 'error de validación'}`;
           })
           .join(' | ');
       }
       return 'Error al procesar la solicitud.';
     }
 
-    // ── Expense form submit ──
     document.getElementById('form').addEventListener('submit', async e => {
       e.preventDefault();
       const btn = document.getElementById('btn-submit');
@@ -320,10 +278,9 @@
       errEl.style.display = 'none';
       successEl.style.display = 'none';
 
-      // ── Client-side validation ──
       const accountId = String(document.getElementById('account_id').value).trim();
       if (!accountId) {
-        errEl.textContent = 'No hay cuenta configurada para esta moneda. Configura una cuenta predeterminada.';
+        errEl.textContent = 'No hay cuenta configurada para esta moneda.';
         errEl.style.display = 'block';
         return;
       }
@@ -348,17 +305,16 @@
         return;
       }
 
-      // ── Sanitised payload ──
-      const rawDate = document.getElementById('date').value; // already YYYY-MM-DD from <input type="date">
+      const rawDate = document.getElementById('date').value;
       const isoDate = rawDate || new Date().toISOString().split('T')[0];
 
       const payload = {
-        account_id: accountId,          // string UUID
-        category_id: categoryId,        // string UUID
-        amount: amount,                 // float
+        account_id: accountId,
+        category_id: categoryId,
+        amount: amount,
         currency: document.getElementById('currency').value,
-        exchange_rate: exchangeRate,    // float
-        date: isoDate,                  // ISO 8601 YYYY-MM-DD
+        exchange_rate: exchangeRate,
+        date: isoDate,
         description: document.getElementById('description').value.trim() || null,
       };
 
@@ -392,11 +348,6 @@
       }
     });
 
-    document.getElementById('btn-logout').addEventListener('click', async () => {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      window.location.href = '/';
-    });
-
     function getCookie(name) {
       return document.cookie.split('; ').find(r => r.startsWith(name + '='))?.split('=')[1] || '';
     }
@@ -404,5 +355,4 @@
     loadAccounts();
     loadCategories();
   </script>
-</body>
-</html>
+{% endblock %}
