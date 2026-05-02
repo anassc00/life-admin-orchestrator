@@ -6,7 +6,11 @@ from application.dtos.finance import (
     RegisterCurrencyExchangeCommand,
 )
 from domain.entities.finance import Transaction, TransactionType
-from domain.exceptions.finance import AccountAccessForbiddenError, AccountNotFoundError
+from domain.exceptions.finance import (
+    AccountAccessForbiddenError,
+    AccountNotFoundError,
+    InvalidExchangeMathError,
+)
 from domain.repositories.finance import AccountRepository, TransactionRepository
 
 
@@ -35,6 +39,11 @@ class RegisterCurrencyExchangeUseCase:
 
         if dest.user_id != command.user_id:
             raise AccountAccessForbiddenError()
+
+        # Math validation: amount_in must equal amount_out × exchange_rate within 1%
+        expected = command.amount_out * command.exchange_rate
+        if expected == 0 or abs(command.amount_in - expected) / expected > Decimal("0.01"):
+            raise InvalidExchangeMathError()
 
         out_id = uuid4()
         in_id = uuid4()

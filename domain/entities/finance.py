@@ -25,6 +25,7 @@ class TransactionType(StrEnum):
     EXPENSE = "expense"
     EXCHANGE_OUT = "exchange_out"
     EXCHANGE_IN = "exchange_in"
+    SAVINGS = "savings"
 
 
 class IncomeCategory(StrEnum):
@@ -58,9 +59,22 @@ class Transaction(BaseModel):
     currency: Currency
     exchange_rate: Decimal
     category: IncomeCategory | None = None
+    is_base_salary: bool = False
+    category_id: UUID | None = None
+    description: str | None = None
     date: date
     notes: str | None = None
     related_transaction_id: UUID | None = None
+
+
+class ExpenseCategory(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: UUID = Field(default_factory=uuid4)
+    user_id: UUID
+    name: str
+    is_fixed_expense: bool = False
+    default_amount_usd: Decimal = Decimal("0")
 
 
 class Invoice(BaseModel):
@@ -75,6 +89,47 @@ class Invoice(BaseModel):
 
     def mark_as_paid(self) -> "Invoice":
         return self.model_copy(update={"is_paid": True})
+
+
+class SavingsGoal(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: UUID = Field(default_factory=uuid4)
+    user_id: UUID
+    motive: str
+    target_amount_usd: Decimal
+    is_completed: bool = False
+
+
+class SavingsDeposit(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: UUID = Field(default_factory=uuid4)
+    user_id: UUID
+    goal_id: UUID
+    account_id: UUID
+    amount: Decimal
+    currency: Currency
+    date: date
+
+
+class BudgetPlan(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: UUID = Field(default_factory=uuid4)
+    user_id: UUID
+    year: int
+    month: int
+    budget_usd: Decimal = Decimal("500")
+
+
+class PlannedItem(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: UUID = Field(default_factory=uuid4)
+    plan_id: UUID
+    category_id: UUID | None = None  # None = savings bucket
+    planned_amount_usd: Decimal
 
 
 class Expense(BaseModel):

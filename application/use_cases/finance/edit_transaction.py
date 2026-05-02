@@ -1,6 +1,9 @@
 from application.dtos.finance import EditTransactionCommand, TransactionEditedResponse
-from domain.exceptions.finance import TransactionNotFoundError, UnauthorizedEditError
-from domain.exceptions.user import InvalidCredentialsError
+from domain.exceptions.finance import (
+    InvalidEditionCredentialsError,
+    TransactionNotFoundError,
+    UnauthorizedEditError,
+)
 from domain.repositories.finance import TransactionRepository
 from domain.repositories.user import PasswordHasher, UserRepository
 
@@ -26,7 +29,7 @@ class EditTransactionUseCase:
 
         user = self._user_repo.get_by_id(command.user_id)
         if user is None or not self._password_hasher.verify(command.password, user.hashed_password):
-            raise InvalidCredentialsError()
+            raise InvalidEditionCredentialsError()
 
         updated_tx = tx.model_copy(update={"notes": command.notes})
         self._transaction_repo.save(updated_tx)

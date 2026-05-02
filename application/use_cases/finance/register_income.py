@@ -29,6 +29,7 @@ class RegisterIncomeUseCase:
             currency=command.currency,
             exchange_rate=command.exchange_rate,
             category=command.category,
+            is_base_salary=command.is_base_salary,
             date=command.date,
             notes=command.notes,
         )
@@ -39,5 +40,6 @@ class RegisterIncomeUseCase:
             type=tx.type,
             amount=tx.amount,
             currency=tx.currency,
+            is_base_salary=tx.is_base_salary,
             notes=tx.notes,
         )

@@ -53,6 +53,7 @@ class RegisterIncomeRequest(Schema):
     currency: Currency
     exchange_rate: Decimal
     category: IncomeCategory
+    is_base_salary: bool = False
     date: date
     notes: str | None = None
 
@@ -62,6 +63,7 @@ class IncomeRegisteredResponseSchema(Schema):
     type: TransactionType
     amount: Decimal
     currency: Currency
+    is_base_salary: bool = False
     notes: str | None = None
 
 
@@ -148,6 +150,90 @@ class MonthlyReportResponseSchema(Schema):
 class MonthlyFinancialSummarySchema(Schema):
     year: int
     month: int
-    total_income: Decimal
-    total_expenses: Decimal
-    savings: Decimal
+    total_income_usd: Decimal
+    total_expenses_usd: Decimal
+    total_savings_usd: Decimal
+    budget_usd: Decimal
+    balance_usd: Decimal
+
+
+class CreateSavingsGoalRequest(Schema):
+    motive: str
+    target_amount_usd: Decimal
+
+
+class SavingsGoalResponseSchema(Schema):
+    goal_id: UUID
+    user_id: UUID
+    motive: str
+    target_amount_usd: Decimal
+    is_completed: bool
+
+
+class SavingsGoalSummaryResponseSchema(Schema):
+    goal_id: UUID
+    motive: str
+    target_amount_usd: Decimal
+    deposited_usd: Decimal
+    is_completed: bool
+
+
+class DepositToSavingsRequest(Schema):
+    goal_id: UUID
+    account_id: UUID
+    amount: Decimal
+    currency: Currency
+    date: date
+
+
+class SavingsDepositResponseSchema(Schema):
+    deposit_id: UUID
+    goal_id: UUID
+    amount: Decimal
+    currency: Currency
+
+
+class CreateExpenseCategoryRequest(Schema):
+    name: str
+    is_fixed_expense: bool = False
+    default_amount_usd: Decimal = Decimal("0")
+
+
+class ExpenseCategoryResponseSchema(Schema):
+    category_id: UUID
+    name: str
+    is_fixed_expense: bool
+    default_amount_usd: Decimal
+
+
+class RegisterExpenseRequest(Schema):
+    account_id: UUID
+    category_id: UUID
+    amount: Decimal
+    currency: Currency
+    exchange_rate: Decimal
+    date: date
+    description: str | None = None
+
+
+class ExpenseRegisteredResponseSchema(Schema):
+    transaction_id: UUID
+    amount: Decimal
+    currency: Currency
+    category_id: UUID
+    description: str | None = None
+
+
+class TransactionListItemSchema(Schema):
+    transaction_id: UUID
+    type: TransactionType
+    amount: Decimal
+    currency: Currency
+    exchange_rate: Decimal
+    category: IncomeCategory | None = None
+    category_id: UUID | None = None
+    description: str | None = None
+    is_base_salary: bool = False
+    date: date
+    notes: str | None = None
+    related_transaction_id: UUID | None = None

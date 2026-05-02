@@ -8,8 +8,11 @@ import pytest
 from application.dtos.finance import EditTransactionCommand, TransactionEditedResponse
 from application.use_cases.finance.edit_transaction import EditTransactionUseCase
 from domain.entities.finance import Currency, IncomeCategory, Transaction, TransactionType
-from domain.exceptions.finance import TransactionNotFoundError, UnauthorizedEditError
-from domain.exceptions.user import InvalidCredentialsError
+from domain.exceptions.finance import (
+    InvalidEditionCredentialsError,
+    TransactionNotFoundError,
+    UnauthorizedEditError,
+)
 
 
 class TestEditTransactionUseCase:
@@ -97,7 +100,7 @@ class TestEditTransactionUseCase:
         tx_repo.get_by_id.return_value = tx
         password_hasher.verify.return_value = False
 
-        with pytest.raises(InvalidCredentialsError):
+        with pytest.raises(InvalidEditionCredentialsError):
             uc.execute(
                 EditTransactionCommand(
                     user_id=user_id,

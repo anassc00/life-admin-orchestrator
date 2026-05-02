@@ -9,10 +9,15 @@ from adapters.api.finance.schemas import (
     AccountSummarySchema,
     AccountUpdatedResponseSchema,
     CategorizeExpenseRequest,
+    CreateExpenseCategoryRequest,
     CreateInvoiceRequest,
+    CreateSavingsGoalRequest,
     CurrencyExchangeRegisteredResponseSchema,
+    DepositToSavingsRequest,
     EditTransactionRequest,
     ExpenseCategorizedResponseSchema,
+    ExpenseCategoryResponseSchema,
+    ExpenseRegisteredResponseSchema,
     IncomeRegisteredResponseSchema,
     InvoiceCreatedResponseSchema,
     InvoiceProcessedResponseSchema,
@@ -20,19 +25,31 @@ from adapters.api.finance.schemas import (
     MonthlyReportResponseSchema,
     RegisterAccountRequest,
     RegisterCurrencyExchangeRequest,
+    RegisterExpenseRequest,
     RegisterIncomeRequest,
+    SavingsDepositResponseSchema,
+    SavingsGoalResponseSchema,
+    SavingsGoalSummaryResponseSchema,
     TransactionEditedResponseSchema,
+    TransactionListItemSchema,
     UpdateAccountRequest,
 )
 from adapters.api.users.schemas import ErrorResponse
 from application.dtos.finance import (
+    CreateExpenseCategoryCommand,
+    CreateSavingsGoalCommand,
+    DepositToSavingsCommand,
     EditTransactionCommand,
     GenerateMonthlyReportQuery,
     GetAccountsByUserQuery,
+    GetExpenseCategoriesQuery,
     GetMonthlyFinancialSummaryQuery,
+    GetSavingsGoalsQuery,
+    GetTransactionsByUserQuery,
     ProcessInvoiceCommand,
     RegisterAccountCommand,
     RegisterCurrencyExchangeCommand,
+    RegisterExpenseCommand,
     RegisterIncomeCommand,
     UpdateAccountCommand,
 )
@@ -40,21 +57,33 @@ from domain.exceptions.finance import (
     AccountAccessForbiddenError,
     AccountAlreadyExistsError,
     AccountNotFoundError,
+    ExpenseCategoryAlreadyExistsError,
+    ExpenseCategoryNotFoundError,
+    InvalidEditionCredentialsError,
+    InvalidExchangeMathError,
+    SavingsDepositCurrencyError,
+    SavingsGoalNotFoundError,
     TransactionNotFoundError,
     UnauthorizedEditError,
 )
-from domain.exceptions.user import InvalidCredentialsError
 from infrastructure.di import (
     get_accounts_by_user_use_case,
     get_categorize_expense_use_case,
+    get_create_expense_category_use_case,
     get_create_invoice_use_case,
+    get_create_savings_goal_use_case,
+    get_deposit_to_savings_use_case,
     get_edit_transaction_use_case,
+    get_expense_categories_use_case,
     get_generate_monthly_report_use_case,
     get_monthly_financial_summary_use_case,
     get_process_invoice_use_case,
     get_register_account_use_case,
     get_register_currency_exchange_use_case,
+    get_register_expense_use_case,
     get_register_income_use_case,
+    get_savings_goals_use_case,
+    get_transactions_by_user_use_case,
     get_update_account_use_case,
 )
 
@@ -98,9 +127,11 @@ def monthly_financial_summary(request):
         return MonthlyFinancialSummarySchema(
             year=0,
             month=0,
-            total_income=Decimal("0"),
-            total_expenses=Decimal("0"),
-            savings=Decimal("0"),
+            total_income_usd=Decimal("0"),
+            total_expenses_usd=Decimal("0"),
+            total_savings_usd=Decimal("0"),
+            budget_usd=Decimal("500"),
+            balance_usd=Decimal("0"),
         )
     from uuid import UUID
 
@@ -114,6 +145,22 @@ def monthly_financial_summary(request):
         )
     )
     return result.model_dump()
+
+
+@router.get(
+    "/transactions",
+    response=list[TransactionListItemSchema],
+    summary="List all transactions for the current user, ordered by date descending",
+)
+def list_transactions(request):
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return []
+    from uuid import UUID
+
+    uc = get_transactions_by_user_use_case()
+    results = uc.execute(GetTransactionsByUserQuery(user_id=UUID(user_id_str)))
+    return [r.model_dump() for r in results]
 
 
 # --- Accounts ---
@@ -231,6 +278,7 @@ def register_income(request, payload: RegisterIncomeRequest):
                 currency=payload.currency,
                 exchange_rate=payload.exchange_rate,
                 category=payload.category,
+                is_base_salary=payload.is_base_salary,
                 date=payload.date,
                 notes=payload.notes,
             )
@@ -251,6 +299,7 @@ def register_income(request, payload: RegisterIncomeRequest):
         HTTPStatus.CREATED: CurrencyExchangeRegisteredResponseSchema,
         HTTPStatus.NOT_FOUND: ErrorResponse,
         HTTPStatus.FORBIDDEN: ErrorResponse,
+        HTTPStatus.UNPROCESSABLE_ENTITY: ErrorResponse,
     },
     summary="Register a currency exchange (creates a linked pair of transactions)",
 )
@@ -282,6 +331,8 @@ def register_currency_exchange(request, payload: RegisterCurrencyExchangeRequest
         return HTTPStatus.NOT_FOUND, ErrorResponse(detail=str(exc))
     except AccountAccessForbiddenError as exc:
         return HTTPStatus.FORBIDDEN, ErrorResponse(detail=str(exc))
+    except InvalidExchangeMathError as exc:
+        return HTTPStatus.UNPROCESSABLE_ENTITY, ErrorResponse(detail=str(exc))
 
 
 # --- Edit Transaction ---
@@ -319,5 +370,176 @@ def edit_transaction(request, transaction_id: UUID, payload: EditTransactionRequ
         return HTTPStatus.NOT_FOUND, ErrorResponse(detail=str(exc))
     except UnauthorizedEditError as exc:
         return HTTPStatus.FORBIDDEN, ErrorResponse(detail=str(exc))
-    except InvalidCredentialsError as exc:
+    except InvalidEditionCredentialsError as exc:
         return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail=str(exc))
+
+
+# --- Expense Categories ---
+
+
+@router.post(
+    "/categories",
+    response={
+        HTTPStatus.CREATED: ExpenseCategoryResponseSchema,
+        HTTPStatus.CONFLICT: ErrorResponse,
+    },
+    summary="Create a new expense category",
+)
+def create_expense_category(request, payload: CreateExpenseCategoryRequest):
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
+    from uuid import UUID
+
+    user_id = UUID(user_id_str)
+    uc = get_create_expense_category_use_case()
+    try:
+        result = uc.execute(
+            CreateExpenseCategoryCommand(
+                user_id=user_id,
+                name=payload.name,
+                is_fixed_expense=payload.is_fixed_expense,
+                default_amount_usd=payload.default_amount_usd,
+            )
+        )
+        return HTTPStatus.CREATED, result.model_dump()
+    except ExpenseCategoryAlreadyExistsError as exc:
+        return HTTPStatus.CONFLICT, ErrorResponse(detail=str(exc))
+
+
+@router.get(
+    "/categories",
+    response=list[ExpenseCategoryResponseSchema],
+    summary="List all expense categories for the current user",
+)
+def list_expense_categories(request):
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return []
+    from uuid import UUID
+
+    user_id = UUID(user_id_str)
+    uc = get_expense_categories_use_case()
+    results = uc.execute(GetExpenseCategoriesQuery(user_id=user_id))
+    return [r.model_dump() for r in results]
+
+
+# --- Expenses ---
+
+
+@router.post(
+    "/expenses",
+    response={
+        HTTPStatus.CREATED: ExpenseRegisteredResponseSchema,
+        HTTPStatus.NOT_FOUND: ErrorResponse,
+        HTTPStatus.FORBIDDEN: ErrorResponse,
+    },
+    summary="Register an expense transaction",
+)
+def register_expense(request, payload: RegisterExpenseRequest):
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
+    from uuid import UUID
+
+    user_id = UUID(user_id_str)
+    uc = get_register_expense_use_case()
+    try:
+        result = uc.execute(
+            RegisterExpenseCommand(
+                user_id=user_id,
+                account_id=payload.account_id,
+                category_id=payload.category_id,
+                amount=payload.amount,
+                currency=payload.currency,
+                exchange_rate=payload.exchange_rate,
+                date=payload.date,
+                description=payload.description,
+            )
+        )
+        return HTTPStatus.CREATED, result.model_dump()
+    except AccountNotFoundError as exc:
+        return HTTPStatus.NOT_FOUND, ErrorResponse(detail=str(exc))
+    except AccountAccessForbiddenError as exc:
+        return HTTPStatus.FORBIDDEN, ErrorResponse(detail=str(exc))
+    except ExpenseCategoryNotFoundError as exc:
+        return HTTPStatus.NOT_FOUND, ErrorResponse(detail=str(exc))
+
+# --- Savings Goals ---
+
+
+@router.post(
+    "/savings/goals",
+    response={
+        HTTPStatus.CREATED: SavingsGoalResponseSchema,
+    },
+    summary="Create a new savings goal",
+)
+def create_savings_goal(request, payload: CreateSavingsGoalRequest):
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
+    from uuid import UUID
+
+    user_id = UUID(user_id_str)
+    uc = get_create_savings_goal_use_case()
+    result = uc.execute(
+        CreateSavingsGoalCommand(
+            user_id=user_id,
+            motive=payload.motive,
+            target_amount_usd=payload.target_amount_usd,
+        )
+    )
+    return HTTPStatus.CREATED, result.model_dump()
+
+
+@router.get(
+    "/savings/goals",
+    response=list[SavingsGoalSummaryResponseSchema],
+    summary="List all savings goals for the current user",
+)
+def list_savings_goals(request):
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return []
+    from uuid import UUID
+
+    user_id = UUID(user_id_str)
+    uc = get_savings_goals_use_case()
+    results = uc.execute(GetSavingsGoalsQuery(user_id=user_id))
+    return [r.model_dump() for r in results]
+
+
+@router.post(
+    "/savings/deposits",
+    response={
+        HTTPStatus.CREATED: SavingsDepositResponseSchema,
+        HTTPStatus.NOT_FOUND: ErrorResponse,
+        HTTPStatus.UNPROCESSABLE_ENTITY: ErrorResponse,
+    },
+    summary="Deposit to a savings goal (USD/USDT accounts only)",
+)
+def deposit_to_savings(request, payload: DepositToSavingsRequest):
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
+    from uuid import UUID
+
+    user_id = UUID(user_id_str)
+    uc = get_deposit_to_savings_use_case()
+    try:
+        result = uc.execute(
+            DepositToSavingsCommand(
+                user_id=user_id,
+                goal_id=payload.goal_id,
+                account_id=payload.account_id,
+                amount=payload.amount,
+                currency=payload.currency,
+                date=payload.date,
+            )
+        )
+        return HTTPStatus.CREATED, result.model_dump()
+    except SavingsGoalNotFoundError as exc:
+        return HTTPStatus.NOT_FOUND, ErrorResponse(detail=str(exc))
+    except SavingsDepositCurrencyError as exc:
+        return HTTPStatus.UNPROCESSABLE_ENTITY, ErrorResponse(detail=str(exc))

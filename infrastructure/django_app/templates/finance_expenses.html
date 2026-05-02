@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registrar egreso — Life Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #e0e0f0; display: flex;
+    }
+    .sidebar { width: 220px; min-height: 100vh; flex-shrink: 0; background: rgba(15,12,41,0.7); backdrop-filter: blur(12px); border-right: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: column; padding: 1.5rem 0; position: sticky; top: 0; height: 100vh; }
+    .sidebar-logo { font-weight: 700; font-size: 0.95rem; color: #7c6ff7; padding: 0 1.5rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .sidebar-nav { flex: 1; padding: 1rem 0; }
+    .nav-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.7rem 1.5rem; color: #9090b0; font-size: 0.9rem; font-weight: 500; text-decoration: none; transition: color 0.15s, background 0.15s; border-left: 2px solid transparent; }
+    .nav-item:hover { color: #e0e0f0; background: rgba(255,255,255,0.04); }
+    .nav-item.active { color: #c0b8ff; border-left-color: #7c6ff7; background: rgba(124,111,247,0.08); }
+    .nav-icon { font-size: 1rem; width: 1.25rem; text-align: center; }
+    .sidebar-footer { padding: 1rem 1.5rem; }
+    .btn-logout { width: 100%; background: transparent; border: 1px solid rgba(255,255,255,0.12); color: #9090b0; font-size: 0.82rem; font-weight: 600; padding: 0.5rem; border-radius: 0.5rem; cursor: pointer; transition: color 0.2s, border-color 0.2s; }
+    .btn-logout:hover { color: #f87171; border-color: #f8717155; }
+
+    .main { flex: 1; display: flex; align-items: flex-start; justify-content: center; padding: 3rem 2rem; }
+    .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 1.25rem; padding: 2.25rem; width: 100%; max-width: 460px; backdrop-filter: blur(12px); }
+    .page-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #7c6ff7; margin-bottom: 0.3rem; }
+    .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+    .card-header h2 { font-size: 1.3rem; font-weight: 700; color: #fff; }
+    .btn-cat { background: rgba(124,111,247,0.15); border: 1px solid rgba(124,111,247,0.35); color: #c0b8ff; font-size: 0.78rem; font-weight: 600; padding: 0.4rem 0.8rem; border-radius: 0.5rem; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+    .btn-cat:hover { background: rgba(124,111,247,0.3); }
+    label { display: block; font-size: 0.78rem; font-weight: 600; color: #9090b0; margin-bottom: 0.35rem; }
+    input, select, textarea { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #e0e0f0; border-radius: 0.55rem; padding: 0.6rem 0.85rem; font-size: 0.92rem; margin-bottom: 1rem; outline: none; transition: border-color 0.2s; font-family: inherit; }
+    input:focus, select:focus, textarea:focus { border-color: #7c6ff7; }
+    input:disabled, select:disabled { opacity: 0.55; cursor: not-allowed; }
+    select option { background: #1e1b4b; }
+    textarea { resize: vertical; min-height: 65px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
+    .account-hint { font-size: 0.75rem; color: #6060a0; margin-top: -0.75rem; margin-bottom: 0.85rem; min-height: 1em; }
+    .btn-submit { width: 100%; background: #7c6ff7; border: none; color: #fff; font-size: 0.95rem; font-weight: 700; padding: 0.7rem; border-radius: 0.7rem; cursor: pointer; transition: background 0.2s; margin-top: 0.25rem; }
+    .btn-submit:hover { background: #6a5fe5; }
+    .btn-submit:disabled { background: rgba(124,111,247,0.4); cursor: not-allowed; }
+    #error { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: #f87171; padding: 0.65rem 0.9rem; border-radius: 0.55rem; font-size: 0.83rem; margin-bottom: 1rem; display: none; }
+    .success-banner { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.3); color: #34d399; padding: 0.65rem 0.9rem; border-radius: 0.55rem; font-size: 0.83rem; margin-bottom: 1rem; display: none; }
+    .no-accounts-note { background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25); color: #fbbf24; padding: 0.65rem 0.9rem; border-radius: 0.55rem; font-size: 0.83rem; margin-bottom: 1rem; display: none; }
+    .no-accounts-note a { color: #fbbf24; }
+
+    /* ── Modal ── */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 100; display: none; align-items: center; justify-content: center; }
+    .overlay.open { display: flex; }
+    .modal { background: #1a1740; border: 1px solid rgba(255,255,255,0.1); border-radius: 1.25rem; padding: 2rem; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+    .modal-header h3 { font-size: 1.1rem; font-weight: 700; color: #fff; }
+    .btn-close { background: transparent; border: none; color: #9090b0; font-size: 1.25rem; cursor: pointer; line-height: 1; }
+    .btn-close:hover { color: #f87171; }
+    .modal label { margin-top: 0.5rem; }
+    .modal input, .modal select { margin-bottom: 0.75rem; }
+    .checkbox-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.85rem; cursor: pointer; }
+    .checkbox-row input[type="checkbox"] { width: auto; margin: 0; accent-color: #7c6ff7; }
+    .checkbox-row span { font-size: 0.88rem; color: #c0b8ff; }
+    .btn-modal-submit { background: #7c6ff7; border: none; color: #fff; font-size: 0.88rem; font-weight: 700; padding: 0.55rem 1.2rem; border-radius: 0.6rem; cursor: pointer; transition: background 0.2s; }
+    .btn-modal-submit:hover { background: #6a5fe5; }
+    .category-list { margin-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.07); padding-top: 1rem; }
+    .category-item { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.85rem; color: #c0b8ff; }
+    .category-badge { font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 1rem; background: rgba(124,111,247,0.2); color: #a78bfa; }
+    .category-badge.fixed { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    #modal-error { color: #f87171; font-size: 0.8rem; margin-bottom: 0.5rem; display: none; }
+  </style>
+</head>
+<body>
+  <nav class="sidebar">
+    <div class="sidebar-logo">Life Admin</div>
+    <div class="sidebar-nav">
+      <a href="/dashboard/" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+      <a href="/finance/accounts/" class="nav-item"><span class="nav-icon">💳</span> Mis cuentas</a>
+      <a href="/finance/expenses/" class="nav-item active"><span class="nav-icon">💸</span> Egresos</a>
+      <a href="/profile/" class="nav-item"><span class="nav-icon">👤</span> Mi perfil</a>
+    </div>
+    <div class="sidebar-footer">
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </nav>
+
+  <main class="main">
+    <div class="card">
+      <div class="page-title">Finanzas</div>
+      <div class="card-header">
+        <h2>Registrar egreso</h2>
+        <button class="btn-cat" id="btn-open-cats">⚙ Categorías</button>
+      </div>
+
+      <div id="no-accounts-note" class="no-accounts-note">
+        No tienes cuentas configuradas. <a href="/finance/accounts/">Crea una primero →</a>
+      </div>
+      <div id="success" class="success-banner"></div>
+      <div id="error"></div>
+
+      <form id="form">
+        <div class="row">
+          <div>
+            <label for="currency">Moneda</label>
+            <select id="currency" required>
+              <option value="USD">USD</option>
+              <option value="USDT">USDT</option>
+              <option value="VES">VES</option>
+            </select>
+          </div>
+          <div>
+            <label for="exchange_rate">Tasa vs USD</label>
+            <input id="exchange_rate" type="number" step="0.000001" min="0.000001" value="1.0" required />
+          </div>
+        </div>
+
+        <label>Cuenta origen (auto)</label>
+        <input id="account_display" type="text" disabled placeholder="Se selecciona según la moneda..." />
+        <input id="account_id" type="hidden" />
+        <div class="account-hint" id="account-hint"></div>
+
+        <label for="amount">Monto</label>
+        <input id="amount" type="number" step="0.01" min="0.01" placeholder="0.00" required />
+
+        <label for="category">Categoría</label>
+        <select id="category" required>
+          <option value="">Selecciona una categoría...</option>
+        </select>
+
+        <label for="description">Descripción corta</label>
+        <input id="description" type="text" maxlength="255" placeholder="Ej: mercado semanal" />
+
+        <label for="date">Fecha</label>
+        <input id="date" type="date" required />
+
+        <button class="btn-submit" type="submit" id="btn-submit">Registrar egreso</button>
+      </form>
+    </div>
+  </main>
+
+  <!-- Categories modal -->
+  <div class="overlay" id="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Categorías de gastos</h3>
+        <button class="btn-close" id="btn-close-modal">✕</button>
+      </div>
+
+      <div id="modal-error"></div>
+
+      <label for="cat-name">Nombre</label>
+      <input id="cat-name" type="text" placeholder="Ej: Alimentación" maxlength="255" />
+
+      <label class="checkbox-row">
+        <input type="checkbox" id="cat-fixed" />
+        <span>Gasto fijo</span>
+      </label>
+
+      <label for="cat-amount">Monto estimado (USD)</label>
+      <input id="cat-amount" type="number" step="0.01" min="0" value="0" />
+
+      <button class="btn-modal-submit" id="btn-save-cat">+ Crear categoría</button>
+
+      <div class="category-list" id="cat-list"></div>
+    </div>
+  </div>
+
+  <script>
+    const accounts = [];
+    const categories = [];
+
+    document.getElementById('date').value = new Date().toISOString().split('T')[0];
+
+    // ── Account auto-selection by currency ──
+    function updateAccountByCurrency() {
+      const currency = document.getElementById('currency').value;
+      const match = accounts.find(a => a.default_currencies.includes(currency));
+      const display = document.getElementById('account_display');
+      const hint = document.getElementById('account-hint');
+      if (match) {
+        document.getElementById('account_id').value = match.account_id;
+        display.value = `${match.name} (${match.type})`;
+        hint.textContent = `Cuenta predeterminada para ${currency}`;
+      } else {
+        document.getElementById('account_id').value = '';
+        display.value = '';
+        hint.textContent = `Sin cuenta predeterminada para ${currency}`;
+      }
+    }
+
+    // ── Exchange rate auto-lock for USD/USDT ──
+    function updateExchangeRate() {
+      const cur = document.getElementById('currency').value;
+      const rateField = document.getElementById('exchange_rate');
+      if (cur === 'USD' || cur === 'USDT') {
+        rateField.value = '1.0';
+        rateField.disabled = true;
+      } else {
+        rateField.disabled = false;
+      }
+    }
+
+    document.getElementById('currency').addEventListener('change', () => {
+      updateAccountByCurrency();
+      updateExchangeRate();
+    });
+
+    async function loadAccounts() {
+      try {
+        const res = await fetch('/api/finance/accounts');
+        if (res.status === 401) { window.location.href = '/login/'; return; }
+        const data = await res.json();
+        accounts.push(...data);
+        if (!data.length) {
+          document.getElementById('no-accounts-note').style.display = 'block';
+          document.getElementById('btn-submit').disabled = true;
+        }
+        updateAccountByCurrency();
+        updateExchangeRate();
+      } catch { /* silent */ }
+    }
+
+    async function loadCategories() {
+      try {
+        const res = await fetch('/api/finance/categories');
+        const data = await res.json();
+        categories.length = 0;
+        categories.push(...data);
+        rebuildCategorySelect();
+        renderCategoryList();
+      } catch { /* silent */ }
+    }
+
+    function rebuildCategorySelect() {
+      const sel = document.getElementById('category');
+      const prev = sel.value;
+      sel.innerHTML = '<option value="">Selecciona una categoría...</option>';
+      categories.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c.category_id;
+        o.textContent = c.name + (c.is_fixed_expense ? ' (fijo)' : '');
+        if (c.category_id === prev) o.selected = true;
+        sel.appendChild(o);
+      });
+    }
+
+    function renderCategoryList() {
+      const list = document.getElementById('cat-list');
+      if (!categories.length) { list.innerHTML = '<p style="color:#6060a0;font-size:0.82rem;padding-top:0.5rem;">Aún no tienes categorías.</p>'; return; }
+      list.innerHTML = categories.map(c => `
+        <div class="category-item">
+          <span>${c.name}</span>
+          <div style="display:flex;gap:0.5rem;align-items:center;">
+            ${c.is_fixed_expense ? '<span class="category-badge fixed">Fijo</span>' : '<span class="category-badge">Variable</span>'}
+            <span style="font-size:0.75rem;color:#6060a0;">$${parseFloat(c.default_amount_usd).toFixed(0)}</span>
+          </div>
+        </div>`).join('');
+    }
+
+    // ── Modal ──
+    document.getElementById('btn-open-cats').addEventListener('click', () => {
+      document.getElementById('modal-overlay').classList.add('open');
+    });
+    document.getElementById('btn-close-modal').addEventListener('click', () => {
+      document.getElementById('modal-overlay').classList.remove('open');
+    });
+    document.getElementById('modal-overlay').addEventListener('click', e => {
+      if (e.target === document.getElementById('modal-overlay'))
+        document.getElementById('modal-overlay').classList.remove('open');
+    });
+
+    document.getElementById('btn-save-cat').addEventListener('click', async () => {
+      const name = document.getElementById('cat-name').value.trim();
+      const errEl = document.getElementById('modal-error');
+      errEl.style.display = 'none';
+      if (!name) { errEl.textContent = 'El nombre es obligatorio.'; errEl.style.display = 'block'; return; }
+
+      const payload = {
+        name,
+        is_fixed_expense: document.getElementById('cat-fixed').checked,
+        default_amount_usd: parseFloat(document.getElementById('cat-amount').value) || 0,
+      };
+
+      const res = await fetch('/api/finance/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        document.getElementById('cat-name').value = '';
+        document.getElementById('cat-fixed').checked = false;
+        document.getElementById('cat-amount').value = '0';
+        await loadCategories();
+      } else {
+        errEl.textContent = data.detail || 'Error al crear categoría.';
+        errEl.style.display = 'block';
+      }
+    });
+
+    // ── Expense form submit ──
+    document.getElementById('form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-submit');
+      const errEl = document.getElementById('error');
+      const successEl = document.getElementById('success');
+      errEl.style.display = 'none';
+      successEl.style.display = 'none';
+
+      const accountId = document.getElementById('account_id').value;
+      if (!accountId) {
+        errEl.textContent = 'No hay cuenta configurada para esta moneda. Configura una cuenta predeterminada.';
+        errEl.style.display = 'block';
+        return;
+      }
+      const categoryId = document.getElementById('category').value;
+      if (!categoryId) {
+        errEl.textContent = 'Selecciona una categoría.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      btn.disabled = true; btn.textContent = 'Registrando...';
+
+      const payload = {
+        account_id: accountId,
+        category_id: categoryId,
+        amount: parseFloat(document.getElementById('amount').value),
+        currency: document.getElementById('currency').value,
+        exchange_rate: parseFloat(document.getElementById('exchange_rate').value),
+        date: document.getElementById('date').value,
+        description: document.getElementById('description').value.trim() || null,
+      };
+
+      try {
+        const res = await fetch('/api/finance/expenses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          successEl.textContent = 'Egreso registrado correctamente.';
+          successEl.style.display = 'block';
+          document.getElementById('form').reset();
+          document.getElementById('date').value = new Date().toISOString().split('T')[0];
+          document.getElementById('account_id').value = '';
+          document.getElementById('account_display').value = '';
+          updateAccountByCurrency();
+          updateExchangeRate();
+        } else {
+          errEl.textContent = data.detail || 'Error al registrar egreso.';
+          errEl.style.display = 'block';
+        }
+      } catch {
+        errEl.textContent = 'Error de conexión.';
+        errEl.style.display = 'block';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Registrar egreso';
+      }
+    });
+
+    document.getElementById('btn-logout').addEventListener('click', async () => {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/';
+    });
+
+    function getCookie(name) {
+      return document.cookie.split('; ').find(r => r.startsWith(name + '='))?.split('=')[1] || '';
+    }
+
+    loadAccounts();
+    loadCategories();
+  </script>
+</body>
+</html>

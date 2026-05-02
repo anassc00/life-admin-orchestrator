@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Transacciones — Life Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { min-height: 100vh; font-family: 'Segoe UI', system-ui, sans-serif; background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); color: #e0e0f0; display: flex; }
+    .sidebar { width: 220px; min-height: 100vh; flex-shrink: 0; background: rgba(15,12,41,0.7); backdrop-filter: blur(12px); border-right: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: column; padding: 1.5rem 0; position: sticky; top: 0; height: 100vh; }
+    .sidebar-logo { font-weight: 700; font-size: 0.95rem; color: #7c6ff7; padding: 0 1.5rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .sidebar-nav { flex: 1; padding: 1rem 0; }
+    .nav-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.7rem 1.5rem; color: #9090b0; font-size: 0.9rem; font-weight: 500; text-decoration: none; transition: color 0.15s, background 0.15s; border-left: 2px solid transparent; }
+    .nav-item:hover { color: #e0e0f0; background: rgba(255,255,255,0.04); }
+    .nav-item.active { color: #c0b8ff; border-left-color: #7c6ff7; background: rgba(124,111,247,0.08); }
+    .nav-icon { font-size: 1rem; width: 1.25rem; text-align: center; }
+    .sidebar-footer { padding: 1rem 1.5rem; }
+    .btn-logout { width: 100%; background: transparent; border: 1px solid rgba(255,255,255,0.12); color: #9090b0; font-size: 0.82rem; font-weight: 600; padding: 0.5rem; border-radius: 0.5rem; cursor: pointer; transition: color 0.2s, border-color 0.2s; }
+    .btn-logout:hover { color: #f87171; border-color: #f8717155; }
+
+    .main { flex: 1; display: flex; flex-direction: column; padding: 2.5rem 2rem; gap: 1.5rem; min-width: 0; }
+    .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; }
+    .page-title-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #7c6ff7; margin-bottom: 0.3rem; }
+    h1 { font-size: 1.4rem; font-weight: 700; color: #fff; }
+    .badge-new { font-size: 0.7rem; font-weight: 700; background: rgba(124,111,247,0.2); color: #c0b8ff; border: 1px solid rgba(124,111,247,0.35); border-radius: 0.9rem; padding: 0.2rem 0.65rem; }
+
+    /* Filter bar */
+    .filter-bar { display: flex; gap: 0.65rem; flex-wrap: wrap; align-items: center; }
+    .filter-bar select { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #e0e0f0; border-radius: 0.55rem; padding: 0.45rem 0.8rem; font-size: 0.83rem; outline: none; cursor: pointer; }
+    .filter-bar select option { background: #1e1b4b; }
+    .filter-bar input[type="text"] { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #e0e0f0; border-radius: 0.55rem; padding: 0.45rem 0.8rem; font-size: 0.83rem; outline: none; min-width: 180px; }
+    .filter-bar input::placeholder { color: #6060a0; }
+    .tx-count { margin-left: auto; font-size: 0.78rem; color: #6060a0; white-space: nowrap; }
+
+    /* Table card */
+    .table-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); border-radius: 1rem; overflow: hidden; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    thead th { padding: 0.75rem 1rem; text-align: left; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #6060a0; border-bottom: 1px solid rgba(255,255,255,0.07); white-space: nowrap; }
+    tbody tr { border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.12s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.03); }
+    td { padding: 0.75rem 1rem; color: #c0c0d8; vertical-align: middle; white-space: nowrap; }
+    td.wrap { white-space: normal; word-break: break-word; max-width: 200px; }
+
+    /* Type badge */
+    .type-badge { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.73rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 0.9rem; }
+    .type-income { background: rgba(52,211,153,0.12); color: #34d399; border: 1px solid rgba(52,211,153,0.25); }
+    .type-expense { background: rgba(248,113,113,0.12); color: #f87171; border: 1px solid rgba(248,113,113,0.25); }
+    .type-exchange_out { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.25); }
+    .type-exchange_in { background: rgba(96,165,250,0.12); color: #60a5fa; border: 1px solid rgba(96,165,250,0.25); }
+
+    /* Amount */
+    .amount-positive { color: #34d399; font-weight: 600; }
+    .amount-negative { color: #f87171; font-weight: 600; }
+    .amount-neutral { color: #c0c0d8; font-weight: 600; }
+
+    /* Edit btn */
+    .btn-edit { background: transparent; border: 1px solid rgba(124,111,247,0.3); color: #9090b0; font-size: 0.75rem; padding: 0.3rem 0.65rem; border-radius: 0.45rem; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+    .btn-edit:hover { color: #c0b8ff; border-color: rgba(124,111,247,0.6); }
+
+    /* Empty / loading */
+    .empty-state { padding: 3rem 1rem; text-align: center; color: #6060a0; font-size: 0.88rem; }
+    .skeleton-row td { padding: 0.85rem 1rem; }
+    .skel { height: 0.8rem; border-radius: 0.3rem; background: rgba(255,255,255,0.06); animation: pulse 1.4s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* Toast */
+    #toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: rgba(52,211,153,0.15); border: 1px solid rgba(52,211,153,0.35); color: #34d399; padding: 0.7rem 1.1rem; border-radius: 0.6rem; font-size: 0.83rem; font-weight: 600; opacity: 0; transform: translateY(8px); transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 999; }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    /* Modal backdrop */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .modal-backdrop.open { opacity: 1; pointer-events: auto; }
+    .modal { background: #1a1730; border: 1px solid rgba(255,255,255,0.1); border-radius: 1rem; padding: 1.75rem; width: 100%; max-width: 420px; transform: translateY(12px); transition: transform 0.2s; }
+    .modal-backdrop.open .modal { transform: translateY(0); }
+    .modal-title { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 0.3rem; }
+    .modal-sub { font-size: 0.78rem; color: #6060a0; margin-bottom: 1.25rem; }
+    .modal label { display: block; font-size: 0.78rem; font-weight: 600; color: #9090b0; margin-bottom: 0.35rem; }
+    .modal input, .modal textarea { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #e0e0f0; border-radius: 0.55rem; padding: 0.6rem 0.85rem; font-size: 0.92rem; outline: none; transition: border-color 0.2s; font-family: inherit; margin-bottom: 1rem; }
+    .modal input:focus, .modal textarea:focus { border-color: #7c6ff7; }
+    .modal textarea { resize: vertical; min-height: 80px; }
+    .modal-actions { display: flex; gap: 0.65rem; justify-content: flex-end; margin-top: 0.25rem; }
+    .btn-cancel { background: transparent; border: 1px solid rgba(255,255,255,0.12); color: #9090b0; font-size: 0.85rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 0.55rem; cursor: pointer; }
+    .btn-cancel:hover { color: #e0e0f0; }
+    .btn-primary { background: #7c6ff7; border: none; color: #fff; font-size: 0.85rem; font-weight: 700; padding: 0.5rem 1.1rem; border-radius: 0.55rem; cursor: pointer; transition: background 0.2s; }
+    .btn-primary:hover { background: #6a5fe5; }
+    .btn-primary:disabled { background: rgba(124,111,247,0.4); cursor: not-allowed; }
+    .modal-error { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: #f87171; padding: 0.55rem 0.8rem; border-radius: 0.5rem; font-size: 0.8rem; margin-bottom: 1rem; display: none; }
+    .security-icon { font-size: 2rem; text-align: center; margin-bottom: 0.75rem; }
+    .security-note { font-size: 0.78rem; color: #9090b0; background: rgba(251,191,36,0.07); border: 1px solid rgba(251,191,36,0.2); border-radius: 0.5rem; padding: 0.6rem 0.8rem; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <nav class="sidebar">
+    <div class="sidebar-logo">Life Admin</div>
+    <div class="sidebar-nav">
+      <a href="/dashboard/" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+      <a href="/finance/accounts/" class="nav-item"><span class="nav-icon">💳</span> Mis cuentas</a>
+      <a href="/finance/expenses/" class="nav-item"><span class="nav-icon">💸</span> Egresos</a>
+      <a href="/finance/transactions/" class="nav-item active"><span class="nav-icon">📋</span> Transacciones</a>
+      <a href="/profile/" class="nav-item"><span class="nav-icon">👤</span> Mi perfil</a>
+    </div>
+    <div class="sidebar-footer">
+      <button class="btn-logout" id="btn-logout">Cerrar sesión</button>
+    </div>
+  </nav>
+
+  <main class="main">
+    <div class="page-header">
+      <div>
+        <div class="page-title-label">Finanzas</div>
+        <h1>Historial de transacciones</h1>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <select id="filter-type">
+        <option value="">Todos los tipos</option>
+        <option value="income">Ingresos</option>
+        <option value="expense">Egresos</option>
+        <option value="exchange_out">Cambio (salida)</option>
+        <option value="exchange_in">Cambio (entrada)</option>
+      </select>
+      <select id="filter-currency">
+        <option value="">Todas las monedas</option>
+        <option value="USD">USD</option>
+        <option value="USDT">USDT</option>
+        <option value="VES">VES</option>
+      </select>
+      <input type="text" id="filter-search" placeholder="Buscar descripción o notas..." />
+      <span class="tx-count" id="tx-count"></span>
+    </div>
+
+    <div class="table-card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Tipo</th>
+              <th>Monto</th>
+              <th>Moneda</th>
+              <th>Tasa</th>
+              <th>Categoría / Descripción</th>
+              <th>Notas</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tx-body">
+            <!-- skeleton -->
+            <tr class="skeleton-row"><td><div class="skel" style="width:80px"></div></td><td><div class="skel" style="width:90px"></div></td><td><div class="skel" style="width:70px"></div></td><td><div class="skel" style="width:40px"></div></td><td><div class="skel" style="width:50px"></div></td><td><div class="skel" style="width:120px"></div></td><td><div class="skel" style="width:100px"></div></td><td></td></tr>
+            <tr class="skeleton-row"><td><div class="skel" style="width:80px"></div></td><td><div class="skel" style="width:90px"></div></td><td><div class="skel" style="width:70px"></div></td><td><div class="skel" style="width:40px"></div></td><td><div class="skel" style="width:50px"></div></td><td><div class="skel" style="width:120px"></div></td><td><div class="skel" style="width:100px"></div></td><td></td></tr>
+            <tr class="skeleton-row"><td><div class="skel" style="width:80px"></div></td><td><div class="skel" style="width:90px"></div></td><td><div class="skel" style="width:70px"></div></td><td><div class="skel" style="width:40px"></div></td><td><div class="skel" style="width:50px"></div></td><td><div class="skel" style="width:120px"></div></td><td><div class="skel" style="width:100px"></div></td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Edit Notes Modal -->
+  <div class="modal-backdrop" id="edit-modal">
+    <div class="modal">
+      <div class="modal-title">Editar transacción</div>
+      <div class="modal-sub" id="edit-modal-sub">Puedes modificar las notas de esta transacción.</div>
+      <div class="modal-error" id="edit-error"></div>
+      <label for="edit-notes">Notas</label>
+      <textarea id="edit-notes" placeholder="Agregar o modificar notas..."></textarea>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="edit-cancel">Cancelar</button>
+        <button class="btn-primary" id="edit-next">Confirmar →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Password Security Modal -->
+  <div class="modal-backdrop" id="pwd-modal">
+    <div class="modal">
+      <div class="security-icon">🔐</div>
+      <div class="modal-title">Verificación de seguridad</div>
+      <div class="modal-sub">Para confirmar la edición, introduce tu contraseña.</div>
+      <div class="security-note">Por seguridad, cualquier modificación de transacción requiere autenticación.</div>
+      <div class="modal-error" id="pwd-error"></div>
+      <label for="edit-password">Contraseña</label>
+      <input id="edit-password" type="password" placeholder="Tu contraseña actual" autocomplete="current-password" />
+      <div class="modal-actions">
+        <button class="btn-cancel" id="pwd-cancel">Cancelar</button>
+        <button class="btn-primary" id="pwd-confirm">Guardar cambio</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast">Transacción actualizada correctamente</div>
+
+  <script>
+    const TYPE_LABELS = {
+      income: 'Ingreso',
+      expense: 'Egreso',
+      exchange_out: 'Cambio salida',
+      exchange_in: 'Cambio entrada',
+    };
+    const TYPE_ICONS = {
+      income: '↑',
+      expense: '↓',
+      exchange_out: '⇄',
+      exchange_in: '⇄',
+    };
+
+    let allTx = [];
+    let editingTx = null;
+    let pendingNotes = null;
+
+    // ── Load transactions ────────────────────────────────────────────────────
+    async function loadTransactions() {
+      const res = await fetch('/api/finance/transactions');
+      if (res.status === 401) { window.location.href = '/login/'; return; }
+      allTx = await res.json();
+      renderTable(allTx);
+    }
+
+    function renderTable(txList) {
+      const tbody = document.getElementById('tx-body');
+      document.getElementById('tx-count').textContent =
+        txList.length === 0 ? '' : `${txList.length} transacción${txList.length !== 1 ? 'es' : ''}`;
+
+      if (!txList.length) {
+        tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">Sin transacciones registradas.</div></td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = txList.map(tx => {
+        const amtClass =
+          tx.type === 'income' || tx.type === 'exchange_in' ? 'amount-positive' :
+          tx.type === 'expense' || tx.type === 'exchange_out' ? 'amount-negative' : 'amount-neutral';
+        const sign = (tx.type === 'income' || tx.type === 'exchange_in') ? '+' :
+                     (tx.type === 'expense' || tx.type === 'exchange_out') ? '-' : '';
+        const categoryLabel = tx.category
+          ? `<span style="color:#9090b0;font-size:0.78rem">${tx.category}</span>`
+          : tx.description
+          ? `<span class="wrap" style="color:#9090b0;font-size:0.78rem">${escHtml(tx.description)}</span>`
+          : '<span style="color:#3a3a5a">—</span>';
+        const notes = tx.notes
+          ? `<span class="wrap" style="font-size:0.8rem;color:#8080a0">${escHtml(tx.notes)}</span>`
+          : '<span style="color:#3a3a5a">—</span>';
+        const rate = (tx.exchange_rate && Number(tx.exchange_rate) !== 1)
+          ? Number(tx.exchange_rate).toLocaleString('es-VE', {maximumFractionDigits: 4})
+          : '—';
+
+        return `<tr>
+          <td style="color:#8080a0;font-size:0.82rem">${tx.date}</td>
+          <td><span class="type-badge type-${tx.type}">${TYPE_ICONS[tx.type]} ${TYPE_LABELS[tx.type] || tx.type}</span></td>
+          <td class="${amtClass}">${sign}${Number(tx.amount).toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 6})}</td>
+          <td style="font-size:0.8rem;color:#7c6ff7;font-weight:700">${tx.currency}</td>
+          <td style="font-size:0.8rem;color:#6060a0">${rate}</td>
+          <td>${categoryLabel}</td>
+          <td>${notes}</td>
+          <td><button class="btn-edit" data-id="${tx.transaction_id}" data-notes="${escAttr(tx.notes || '')}">Editar</button></td>
+        </tr>`;
+      }).join('');
+
+      // Attach edit handlers
+      tbody.querySelectorAll('.btn-edit').forEach(btn => {
+        btn.addEventListener('click', () => openEditModal(btn.dataset.id, btn.dataset.notes));
+      });
+    }
+
+    // ── Filters ──────────────────────────────────────────────────────────────
+    function applyFilters() {
+      const type     = document.getElementById('filter-type').value;
+      const currency = document.getElementById('filter-currency').value;
+      const search   = document.getElementById('filter-search').value.trim().toLowerCase();
+      const filtered = allTx.filter(tx => {
+        if (type && tx.type !== type) return false;
+        if (currency && tx.currency !== currency) return false;
+        if (search) {
+          const haystack = [tx.description, tx.notes, tx.category].filter(Boolean).join(' ').toLowerCase();
+          if (!haystack.includes(search)) return false;
+        }
+        return true;
+      });
+      renderTable(filtered);
+    }
+
+    ['filter-type', 'filter-currency'].forEach(id =>
+      document.getElementById(id).addEventListener('change', applyFilters));
+    document.getElementById('filter-search').addEventListener('input', applyFilters);
+
+    // ── Edit Modal ───────────────────────────────────────────────────────────
+    function openEditModal(txId, currentNotes) {
+      editingTx = txId;
+      pendingNotes = null;
+      const tx = allTx.find(t => t.transaction_id === txId);
+      document.getElementById('edit-modal-sub').textContent =
+        tx ? `Transacción del ${tx.date} · ${TYPE_LABELS[tx.type] || tx.type}` : 'Modifica las notas.';
+      document.getElementById('edit-notes').value = currentNotes || '';
+      document.getElementById('edit-error').style.display = 'none';
+      document.getElementById('edit-modal').classList.add('open');
+      document.getElementById('edit-notes').focus();
+    }
+
+    document.getElementById('edit-cancel').addEventListener('click', closeEditModal);
+    document.getElementById('edit-modal').addEventListener('click', e => {
+      if (e.target === document.getElementById('edit-modal')) closeEditModal();
+    });
+
+    function closeEditModal() {
+      document.getElementById('edit-modal').classList.remove('open');
+      editingTx = null;
+    }
+
+    document.getElementById('edit-next').addEventListener('click', () => {
+      pendingNotes = document.getElementById('edit-notes').value.trim() || null;
+      closeEditModal();
+      openPwdModal();
+    });
+
+    // ── Password Modal ───────────────────────────────────────────────────────
+    function openPwdModal() {
+      document.getElementById('edit-password').value = '';
+      document.getElementById('pwd-error').style.display = 'none';
+      document.getElementById('pwd-confirm').disabled = false;
+      document.getElementById('pwd-confirm').textContent = 'Guardar cambio';
+      document.getElementById('pwd-modal').classList.add('open');
+      document.getElementById('edit-password').focus();
+    }
+
+    document.getElementById('pwd-cancel').addEventListener('click', closePwdModal);
+    document.getElementById('pwd-modal').addEventListener('click', e => {
+      if (e.target === document.getElementById('pwd-modal')) closePwdModal();
+    });
+
+    function closePwdModal() {
+      document.getElementById('pwd-modal').classList.remove('open');
+    }
+
+    document.getElementById('edit-password').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('pwd-confirm').click();
+    });
+
+    document.getElementById('pwd-confirm').addEventListener('click', async () => {
+      const password = document.getElementById('edit-password').value;
+      if (!password) {
+        showModalError('pwd-error', 'Introduce tu contraseña.');
+        return;
+      }
+      const btn = document.getElementById('pwd-confirm');
+      btn.disabled = true;
+      btn.textContent = 'Guardando...';
+
+      try {
+        const res = await fetch(`/api/finance/transactions/${editingTx}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+          body: JSON.stringify({ notes: pendingNotes, password }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          // Update local cache
+          const idx = allTx.findIndex(t => t.transaction_id === editingTx);
+          if (idx !== -1) allTx[idx] = { ...allTx[idx], notes: pendingNotes };
+          closePwdModal();
+          applyFilters();
+          showToast();
+          editingTx = null;
+        } else {
+          btn.disabled = false;
+          btn.textContent = 'Guardar cambio';
+          showModalError('pwd-error', data.detail || 'Error al guardar.');
+        }
+      } catch {
+        btn.disabled = false;
+        btn.textContent = 'Guardar cambio';
+        showModalError('pwd-error', 'Error de conexión.');
+      }
+    });
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function showModalError(id, msg) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function showToast() {
+      const t = document.getElementById('toast');
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function getCookie(name) {
+      return document.cookie.split('; ').find(r => r.startsWith(name + '='))?.split('=')[1] || '';
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function escAttr(str) {
+      return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    document.getElementById('btn-logout').addEventListener('click', async () => {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/';
+    });
+
+    // Handle ?exchange=1 success toast from exchange form redirect
+    if (new URLSearchParams(location.search).get('exchange') === '1') {
+      history.replaceState(null, '', '/finance/transactions/');
+      document.getElementById('toast').textContent = 'Cambio de divisas registrado correctamente';
+      showToast();
+    }
+
+    loadTransactions();
+  </script>
+</body>
+</html>

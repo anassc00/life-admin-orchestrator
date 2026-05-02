@@ -33,6 +33,9 @@ class TransactionModel(models.Model):
     currency = models.CharField(max_length=10)
     exchange_rate = models.DecimalField(max_digits=18, decimal_places=6)
     category = models.CharField(max_length=50, null=True, blank=True)
+    is_base_salary = models.BooleanField(default=False)
+    category_id = models.UUIDField(null=True, blank=True)
+    description = models.CharField(max_length=500, null=True, blank=True)
     date = models.DateField()
     notes = models.TextField(null=True, blank=True)
     related_transaction = models.ForeignKey(
@@ -50,6 +53,97 @@ class TransactionModel(models.Model):
 
     def __str__(self) -> str:
         return f"Transaction({self.type}, {self.amount} {self.currency})"
+
+
+class ExpenseCategoryModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user_id = models.UUIDField(db_index=True)
+    name = models.CharField(max_length=255)
+    is_fixed_expense = models.BooleanField(default=False)
+    default_amount_usd = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "expense_categories"
+        unique_together = [("user_id", "name")]
+
+    def __str__(self) -> str:
+        return f"ExpenseCategory({self.name})"
+
+
+class SavingsGoalModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user_id = models.UUIDField(db_index=True)
+    motive = models.CharField(max_length=500)
+    target_amount_usd = models.DecimalField(max_digits=14, decimal_places=2)
+    is_completed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "savings_goals"
+
+    def __str__(self) -> str:
+        return f"SavingsGoal({self.motive}, ${self.target_amount_usd})"
+
+
+class SavingsDepositModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user_id = models.UUIDField(db_index=True)
+    goal = models.ForeignKey(
+        SavingsGoalModel,
+        on_delete=models.CASCADE,
+        related_name="deposits",
+    )
+    account = models.ForeignKey(
+        AccountModel,
+        on_delete=models.PROTECT,
+        related_name="savings_deposits",
+    )
+    amount = models.DecimalField(max_digits=14, decimal_places=6)
+    currency = models.CharField(max_length=10)
+    date = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "savings_deposits"
+
+    def __str__(self) -> str:
+        return f"SavingsDeposit({self.amount} {self.currency})"
+
+
+class BudgetPlanModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user_id = models.UUIDField(db_index=True)
+    year = models.IntegerField()
+    month = models.IntegerField()
+    budget_usd = models.DecimalField(max_digits=14, decimal_places=2, default=500)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "budget_plans"
+        unique_together = [("user_id", "year", "month")]
+
+    def __str__(self) -> str:
+        return f"BudgetPlan({self.year}-{self.month:02d}, ${self.budget_usd})"
+
+
+class PlannedItemModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    plan = models.ForeignKey(
+        BudgetPlanModel,
+        on_delete=models.CASCADE,
+        related_name="planned_items",
+    )
+    category_id = models.UUIDField(null=True, blank=True)
+    planned_amount_usd = models.DecimalField(max_digits=14, decimal_places=2)
+
+    class Meta:
+        db_table = "planned_items"
+
+    def __str__(self) -> str:
+        return f"PlannedItem(${self.planned_amount_usd})"
 
 
 class InvoiceModel(models.Model):

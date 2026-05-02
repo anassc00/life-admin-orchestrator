@@ -42,5 +42,21 @@ def finance_exchange_page(request: HttpRequest) -> HttpResponse:
     return _protected(request, "finance_exchange.html")
 
 
+def finance_transactions_page(request: HttpRequest) -> HttpResponse:
+    return _protected(request, "finance_transactions.html")
+
+
+def finance_expenses_page(request: HttpRequest) -> HttpResponse:
+    return _protected(request, "finance_expenses.html")
+
+
+def finance_savings_page(request: HttpRequest) -> HttpResponse:
+    return _protected(request, "finance_savings.html")
+
+
+def finance_planning_page(request: HttpRequest) -> HttpResponse:
+    return _protected(request, "finance_planning.html")
+
+
 def profile_page(request: HttpRequest) -> HttpResponse:
     return _protected(request, "profile.html")

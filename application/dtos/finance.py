@@ -62,6 +62,7 @@ class RegisterIncomeCommand(BaseModel):
     currency: Currency
     exchange_rate: Decimal
     category: IncomeCategory
+    is_base_salary: bool = False
     date: date
     notes: str | None = None
 
@@ -71,6 +72,7 @@ class IncomeRegisteredResponse(BaseModel):
     type: TransactionType
     amount: Decimal
     currency: Currency
+    is_base_salary: bool = False
     notes: str | None = None
 
 
@@ -112,6 +114,25 @@ class EditTransactionCommand(BaseModel):
 class TransactionEditedResponse(BaseModel):
     transaction_id: UUID
     notes: str | None = None
+
+
+class GetTransactionsByUserQuery(BaseModel):
+    user_id: UUID
+
+
+class TransactionListItemResponse(BaseModel):
+    transaction_id: UUID
+    type: TransactionType
+    amount: Decimal
+    currency: Currency
+    exchange_rate: Decimal
+    category: IncomeCategory | None = None
+    category_id: UUID | None = None
+    description: str | None = None
+    is_base_salary: bool = False
+    date: date
+    notes: str | None = None
+    related_transaction_id: UUID | None = None
 
 
 # --- Invoice ---
@@ -170,9 +191,145 @@ class GetMonthlyFinancialSummaryQuery(BaseModel):
 class MonthlyFinancialSummaryResponse(BaseModel):
     year: int
     month: int
-    total_income: Decimal
-    total_expenses: Decimal
-    savings: Decimal
+    total_income_usd: Decimal
+    total_expenses_usd: Decimal
+    total_savings_usd: Decimal
+    budget_usd: Decimal = Decimal("500")
+    balance_usd: Decimal
+
+
+# --- Savings Goals ---
+
+
+class CreateSavingsGoalCommand(BaseModel):
+    user_id: UUID
+    motive: str
+    target_amount_usd: Decimal
+
+
+class SavingsGoalCreatedResponse(BaseModel):
+    goal_id: UUID
+    user_id: UUID
+    motive: str
+    target_amount_usd: Decimal
+    is_completed: bool = False
+
+
+class SavingsGoalSummaryResponse(BaseModel):
+    goal_id: UUID
+    motive: str
+    target_amount_usd: Decimal
+    deposited_usd: Decimal
+    is_completed: bool
+
+
+class GetSavingsGoalsQuery(BaseModel):
+    user_id: UUID
+
+
+# --- Savings Deposits ---
+
+
+class DepositToSavingsCommand(BaseModel):
+    user_id: UUID
+    goal_id: UUID
+    account_id: UUID
+    amount: Decimal
+    currency: Currency
+    date: date
+
+
+class SavingsDepositCreatedResponse(BaseModel):
+    deposit_id: UUID
+    goal_id: UUID
+    amount: Decimal
+    currency: Currency
+
+
+# --- Budget Plan ---
+
+
+class SaveBudgetPlanCommand(BaseModel):
+    user_id: UUID
+    year: int
+    month: int
+    planned_items: list["PlannedItemCommand"]
+
+
+class PlannedItemCommand(BaseModel):
+    category_id: UUID | None = None  # None = savings bucket
+    planned_amount_usd: Decimal
+
+
+class GetBudgetPlanQuery(BaseModel):
+    user_id: UUID
+    year: int
+    month: int
+
+
+class BudgetPlanResponse(BaseModel):
+    plan_id: UUID
+    user_id: UUID
+    year: int
+    month: int
+    budget_usd: Decimal
+    planned_items: list["PlannedItemResponse"]
+
+
+class PlannedItemResponse(BaseModel):
+    item_id: UUID
+    category_id: UUID | None
+    planned_amount_usd: Decimal
+
+
+# --- Expense Categories ---
+
+
+class CreateExpenseCategoryCommand(BaseModel):
+    user_id: UUID
+    name: str
+    is_fixed_expense: bool = False
+    default_amount_usd: Decimal = Decimal("0")
+
+
+class ExpenseCategoryCreatedResponse(BaseModel):
+    category_id: UUID
+    name: str
+    is_fixed_expense: bool
+    default_amount_usd: Decimal
+
+
+class GetExpenseCategoriesQuery(BaseModel):
+    user_id: UUID
+
+
+class ExpenseCategoryResponse(BaseModel):
+    category_id: UUID
+    name: str
+    is_fixed_expense: bool
+    default_amount_usd: Decimal
+
+
+# --- Register Expense ---
+
+
+class RegisterExpenseCommand(BaseModel):
+    user_id: UUID
+    account_id: UUID
+    category_id: UUID
+    amount: Decimal
+    currency: Currency
+    exchange_rate: Decimal
+    date: date
+    description: str | None = None
+
+
+class ExpenseRegisteredResponse(BaseModel):
+    transaction_id: UUID
+    amount: Decimal
+    currency: Currency
+    category_id: UUID
+    description: str | None = None
 
 
 # --- Reports ---

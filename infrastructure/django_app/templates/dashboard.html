@@ -129,6 +129,12 @@
       <a href="/finance/accounts/" class="nav-item">
         <span class="nav-icon">💳</span> Mis cuentas
       </a>
+      <a href="/finance/savings/" class="nav-item">
+        <span class="nav-icon">🏦</span> Ahorros
+      </a>
+      <a href="/finance/planning/" class="nav-item">
+        <span class="nav-icon">📊</span> Planificación
+      </a>
       <a href="/profile/" class="nav-item">
         <span class="nav-icon">👤</span> Mi perfil
       </a>
@@ -151,20 +157,26 @@
     </div>
     <div class="metrics">
       <div class="metric-card income">
-        <div class="metric-label">Ingresos totales</div>
+        <div class="metric-label">Ingresos (salario base)</div>
         <div class="metric-value" id="val-income">
           <span class="skeleton skeleton-value"></span>
         </div>
       </div>
       <div class="metric-card expense">
-        <div class="metric-label">Egresos totales</div>
+        <div class="metric-label">Egresos (en USD)</div>
         <div class="metric-value" id="val-expenses">
           <span class="skeleton skeleton-value"></span>
         </div>
       </div>
       <div class="metric-card savings">
-        <div class="metric-label">Ahorros</div>
+        <div class="metric-label">Ahorrado</div>
         <div class="metric-value" id="val-savings">
+          <span class="skeleton skeleton-value"></span>
+        </div>
+      </div>
+      <div class="metric-card" style="border-color:rgba(96,165,250,0.25)">
+        <div class="metric-label" style="color:#9090b0">Balance real</div>
+        <div class="metric-value" id="val-balance" style="color:#60a5fa">
           <span class="skeleton skeleton-value"></span>
         </div>
       </div>
@@ -178,8 +190,8 @@
     ];
 
     function fmt(amount) {
-      return new Intl.NumberFormat('es-MX', {
-        style: 'currency', currency: 'MXN', maximumFractionDigits: 2
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency', currency: 'USD', maximumFractionDigits: 2
       }).format(amount);
     }
 
@@ -206,16 +218,17 @@
         const res  = await fetch('/api/finance/summary/current');
         const data = await res.json();
         if (res.ok) {
-          document.getElementById('val-income').textContent   = fmt(data.total_income);
-          document.getElementById('val-expenses').textContent = fmt(data.total_expenses);
-          document.getElementById('val-savings').textContent  = fmt(data.savings);
+          document.getElementById('val-income').textContent   = fmt(data.total_income_usd);
+          document.getElementById('val-expenses').textContent = fmt(data.total_expenses_usd);
+          document.getElementById('val-savings').textContent  = fmt(data.total_savings_usd);
+          document.getElementById('val-balance').textContent  = fmt(data.balance_usd);
         } else {
-          ['val-income','val-expenses','val-savings'].forEach(id => {
+          ['val-income','val-expenses','val-savings','val-balance'].forEach(id => {
             document.getElementById(id).textContent = '—';
           });
         }
       } catch {
-        ['val-income','val-expenses','val-savings'].forEach(id => {
+        ['val-income','val-expenses','val-savings','val-balance'].forEach(id => {
           document.getElementById(id).textContent = '—';
         });
       }
