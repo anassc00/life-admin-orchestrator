@@ -216,7 +216,7 @@ class ExpenseCategoryResponseSchema(Schema):
 
 class RegisterExpenseRequest(Schema):
     account_id: UUID
-    category_id: UUID
+    category_name: str
     amount: Decimal
     currency: Currency
     exchange_rate: Decimal

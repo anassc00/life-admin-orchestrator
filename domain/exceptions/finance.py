@@ -52,12 +52,13 @@ class ExpenseNotFoundError(Exception):
 
 
 class ExpenseCategoryNotFoundError(Exception):
-    def __init__(self, category_id: UUID | None = None) -> None:
-        msg = (
-            f"Expense category '{category_id}' not found."
-            if category_id
-            else "Expense category not found."
-        )
+    def __init__(self, category_id: UUID | None = None, category_name: str | None = None) -> None:
+        if category_name:
+            msg = f"Expense category '{category_name}' not found."
+        elif category_id:
+            msg = f"Expense category '{category_id}' not found."
+        else:
+            msg = "Expense category not found."
         super().__init__(msg)
 
 

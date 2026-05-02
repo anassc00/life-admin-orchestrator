@@ -194,9 +194,9 @@
       sel.innerHTML = '<option value="">Selecciona una categoría...</option>';
       categories.forEach(c => {
         const o = document.createElement('option');
-        o.value = c.category_id;
+        o.value = c.name;
         o.textContent = c.name + (c.is_fixed_expense ? ' (fijo)' : '');
-        if (c.category_id === prev) o.selected = true;
+        if (c.name === prev) o.selected = true;
         sel.appendChild(o);
       });
     }
@@ -284,8 +284,8 @@
         errEl.style.display = 'block';
         return;
       }
-      const categoryId = String(document.getElementById('category').value).trim();
-      if (!categoryId) {
+      const categoryName = String(document.getElementById('category').value).trim();
+      if (!categoryName) {
         errEl.textContent = 'Selecciona una categoría.';
         errEl.style.display = 'block';
         return;
@@ -310,7 +310,7 @@
 
       const payload = {
         account_id: accountId,
-        category_id: categoryId,
+        category_name: categoryName,
         amount: amount,
         currency: document.getElementById('currency').value,
         exchange_rate: exchangeRate,
@@ -321,7 +321,7 @@
       btn.disabled = true; btn.textContent = 'Registrando...';
 
       try {
-        const res = await fetch('/api/finance/expenses', {
+        const res = await fetch('/api/finance/expenses/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
           body: JSON.stringify(payload),

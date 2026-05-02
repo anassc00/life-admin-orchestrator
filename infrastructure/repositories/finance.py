@@ -293,6 +293,13 @@ class DjangoExpenseCategoryRepository(ExpenseCategoryRepository):
         except ExpenseCategoryModel.DoesNotExist:
             return None
 
+    def get_by_name(self, user_id: UUID, name: str) -> ExpenseCategory | None:
+        try:
+            record = ExpenseCategoryModel.objects.get(user_id=user_id, name=name)
+            return self._to_entity(record)
+        except ExpenseCategoryModel.DoesNotExist:
+            return None
+
     def exists_by_name_and_user(self, name: str, user_id: UUID) -> bool:
         return ExpenseCategoryModel.objects.filter(name=name, user_id=user_id).exists()
 

@@ -130,6 +130,9 @@ class ExpenseCategoryRepository(ABC):
     def get_by_id(self, category_id: UUID) -> ExpenseCategory | None: ...
 
     @abstractmethod
+    def get_by_name(self, user_id: UUID, name: str) -> ExpenseCategory | None: ...
+
+    @abstractmethod
     def exists_by_name_and_user(self, name: str, user_id: UUID) -> bool: ...
 
     @abstractmethod

@@ -2,7 +2,7 @@ from decimal import Decimal
 from http import HTTPStatus
 from uuid import UUID
 
-from ninja import Router
+from ninja import Body, Router
 
 from adapters.api.finance.schemas import (
     AccountRegisteredResponseSchema,
@@ -431,15 +431,16 @@ def list_expense_categories(request):
 
 
 @router.post(
-    "/expenses",
+    "/expenses/register",
     response={
         HTTPStatus.CREATED: ExpenseRegisteredResponseSchema,
         HTTPStatus.NOT_FOUND: ErrorResponse,
         HTTPStatus.FORBIDDEN: ErrorResponse,
+        HTTPStatus.UNAUTHORIZED: ErrorResponse,
     },
     summary="Register an expense transaction",
 )
-def register_expense(request, payload: RegisterExpenseRequest):
+def register_expense(request, expense_data: RegisterExpenseRequest = Body(...)):
     user_id_str = request.session.get("user_id")
     if not user_id_str:
         return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
@@ -451,13 +452,13 @@ def register_expense(request, payload: RegisterExpenseRequest):
         result = uc.execute(
             RegisterExpenseCommand(
                 user_id=user_id,
-                account_id=payload.account_id,
-                category_id=payload.category_id,
-                amount=payload.amount,
-                currency=payload.currency,
-                exchange_rate=payload.exchange_rate,
-                date=payload.date,
-                description=payload.description,
+                account_id=expense_data.account_id,
+                category_name=expense_data.category_name,
+                amount=expense_data.amount,
+                currency=expense_data.currency,
+                exchange_rate=expense_data.exchange_rate,
+                date=expense_data.date,
+                description=expense_data.description,
             )
         )
         return HTTPStatus.CREATED, result.model_dump()

@@ -31,9 +31,9 @@ class RegisterExpenseUseCase:
         if account.user_id != command.user_id:
             raise AccountAccessForbiddenError()
 
-        category = self._category_repo.get_by_id(command.category_id)
+        category = self._category_repo.get_by_name(command.user_id, command.category_name)
         if category is None:
-            raise ExpenseCategoryNotFoundError(command.category_id)
+            raise ExpenseCategoryNotFoundError(category_name=command.category_name)
 
         tx = Transaction(
             user_id=command.user_id,
@@ -42,7 +42,7 @@ class RegisterExpenseUseCase:
             amount=command.amount,
             currency=command.currency,
             exchange_rate=command.exchange_rate,
-            category_id=command.category_id,
+            category_id=category.id,
             description=command.description,
             date=command.date,
         )

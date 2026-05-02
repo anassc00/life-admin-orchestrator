@@ -324,7 +324,7 @@ class ExpenseCategoryResponse(BaseModel):
 class RegisterExpenseCommand(BaseModel):
     user_id: UUID
     account_id: UUID
-    category_id: UUID
+    category_name: str
     amount: Decimal
     currency: Currency
     exchange_rate: Decimal
