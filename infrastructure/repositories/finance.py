@@ -129,11 +129,17 @@ class DjangoTransactionRepository(TransactionRepository):
         self, user_id: UUID, year: int, month: int
     ) -> tuple[Decimal, Decimal]:
         """Return (base_income_usd, expenses_usd) using amount / exchange_rate."""
-        from django.db.models import DecimalField as DjDecimalField
+        from django.db.models import Case, DecimalField as DjDecimalField, Value
         from django.db.models import ExpressionWrapper, F, Q, Sum
 
+        # Handle exchange_rate: use 1.0 if 0 or null to avoid division by zero
+        safe_exchange_rate = Case(
+            default=F("exchange_rate"),
+            condition=Q(exchange_rate__isnull=True) | Q(exchange_rate=0),
+            then=Value(1.0),
+        )
         usd_expr = ExpressionWrapper(
-            F("amount") / F("exchange_rate"),
+            F("amount") / safe_exchange_rate,
             output_field=DjDecimalField(max_digits=18, decimal_places=6),
         )
         result = TransactionModel.objects.filter(

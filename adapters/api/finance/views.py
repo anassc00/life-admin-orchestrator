@@ -117,9 +117,9 @@ def monthly_report(request, year: int, month: int):
 @router.get(
     "/summary/current",
     response=MonthlyFinancialSummarySchema,
-    summary="Get the financial summary (income, expenses, savings) for the current month",
+    summary="Get the financial summary (income, expenses, savings) for a specific month (defaults to current month)",
 )
-def monthly_financial_summary(request):
+def monthly_financial_summary(request, year: int = None, month: int = None):
     from datetime import date
 
     user_id_str = request.session.get("user_id")
@@ -136,12 +136,15 @@ def monthly_financial_summary(request):
     from uuid import UUID
 
     today = date.today()
+    query_year = year if year is not None else today.year
+    query_month = month if month is not None else today.month
+    
     uc = get_monthly_financial_summary_use_case()
     result = uc.execute(
         GetMonthlyFinancialSummaryQuery(
             user_id=UUID(user_id_str),
-            year=today.year,
-            month=today.month,
+            year=query_year,
+            month=query_month,
         )
     )
     return result.model_dump()

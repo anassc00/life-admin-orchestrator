@@ -76,7 +76,11 @@
 
     <div class="section-header">
       <span class="section-label">Finanzas</span>
-      <span class="section-month" id="month-label"></span>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <button id="prev-month" style="background:none; border:1px solid rgba(255,255,255,0.2); color:#9090b0; padding:0.3rem 0.6rem; border-radius:0.4rem; cursor:pointer; font-size:0.9rem;">←</button>
+        <span class="section-month" id="month-label"></span>
+        <button id="next-month" style="background:none; border:1px solid rgba(255,255,255,0.2); color:#9090b0; padding:0.3rem 0.6rem; border-radius:0.4rem; cursor:pointer; font-size:0.9rem;">→</button>
+      </div>
     </div>
     <div class="metrics">
       <div class="metric-card income">
@@ -111,6 +115,8 @@
       'enero','febrero','marzo','abril','mayo','junio',
       'julio','agosto','septiembre','octubre','noviembre','diciembre'
     ];
+    let currentYear = new Date().getFullYear();
+    let currentMonth = new Date().getMonth() + 1; // 1-12
 
     function fmt(amount) {
       return new Intl.NumberFormat('en-US', {
@@ -118,28 +124,19 @@
       }).format(amount);
     }
 
-    async function loadProfile() {
-      try {
-        const res  = await fetch('/api/auth/me');
-        const data = await res.json();
-        if (res.ok) {
-          const first = data.full_name.split(' ')[0];
-          document.getElementById('greeting').textContent = `¡Hola, ${first}! Bienvenido a tu panel.`;
-          document.title = `${first} — Life Admin`;
-        } else {
-          window.location.href = '/login/';
-        }
-      } catch { window.location.href = '/login/'; }
+    function updateMonthLabel() {
+      document.getElementById('month-label').textContent =
+        MONTHS_ES[currentMonth - 1] + ' ' + currentYear;
     }
 
     async function loadSummary() {
-      const now = new Date();
-      document.getElementById('month-label').textContent =
-        MONTHS_ES[now.getMonth()] + ' ' + now.getFullYear();
-
+      updateMonthLabel();
+      console.log(`Loading summary for ${currentYear}-${currentMonth}`);
+      
       try {
-        const res  = await fetch('/api/finance/summary/current');
+        const res  = await fetch(`/api/finance/summary/current?year=${currentYear}&month=${currentMonth}`);
         const data = await res.json();
+        console.log("Dashboard summary response:", data);
         if (res.ok) {
           document.getElementById('val-income').textContent   = fmt(data.total_income_usd);
           document.getElementById('val-expenses').textContent = fmt(data.total_expenses_usd);
@@ -157,7 +154,16 @@
       }
     }
 
-    loadProfile();
-    loadSummary();
+    document.getElementById('prev-month').addEventListener('click', () => {
+      currentMonth--;
+      if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+      loadSummary();
+    });
+
+    document.getElementById('next-month').addEventListener('click', () => {
+      currentMonth++;
+      if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+      loadSummary();
+    });
   </script>
 {% endblock %}
