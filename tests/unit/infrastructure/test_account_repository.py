@@ -67,8 +67,8 @@ class TestAccountBalanceCalculation(TestCase):
         
         assert accounts[0].current_balance.get('USD') == '70.00'
 
-    def test_balance_with_savings_added(self):
-        """Savings should be added to balance (not subtracted)."""
+    def test_balance_with_savings_not_counted(self):
+        """Savings should NOT be included in account balance (user's clarification)."""
         self._create_transaction(TransactionType.INCOME, Decimal('100.00'), Currency.USD)
         self._create_transaction(TransactionType.SAVINGS, Decimal('20.00'), Currency.USD)
         
@@ -76,8 +76,8 @@ class TestAccountBalanceCalculation(TestCase):
         repo = DjangoAccountRepository()
         accounts = repo.list_by_user(self.user.id)
         
-        # 100 (income) + 20 (savings) = 120
-        assert accounts[0].current_balance.get('USD') == '120.00'
+        # 100 (income) - 0 (no expense) = 100 (savings NOT added)
+        assert accounts[0].current_balance.get('USD') == '100.00'
 
     def test_balance_with_exchange_in_and_out(self):
         """Exchange in adds, exchange out subtracts."""
