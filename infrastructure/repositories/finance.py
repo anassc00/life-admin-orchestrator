@@ -3,6 +3,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from django.db import transaction
+from django.db.models import Sum
 
 from domain.entities.finance import (
     Account,
@@ -70,26 +71,25 @@ class DjangoAccountRepository(AccountRepository):
         for record in AccountModel.objects.filter(user_id=user_id):
             # Calculate current balance for each supported currency
             balance = {}
-            for currency in Currency:
-                # Sum all transactions for this account in this currency
-                from django.db.models import Sum
-                
-                # Get all transactions for this account
+            supported_currencies = [Currency(c) for c in record.supported_currencies]
+            
+            for currency in supported_currencies:
+                # Get all transactions for this account in this currency
                 txs = TransactionModel.objects.filter(
                     account_id=record.id,
                     currency=currency.value,
                 )
                 
-                # Calculate balance: sum of incomes - sum of expenses
+                # Calculate balance: incomes + exchange_in - expenses - exchange_out - savings
                 income = txs.filter(
-                    type__in=[TransactionType.INCOME.value, TransactionType.EXCHANGE_IN.value, TransactionType.SAVINGS.value]
+                    type__in=[TransactionType.INCOME.value, TransactionType.EXCHANGE_IN.value]
                 ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
                 
                 expense = txs.filter(
-                    type__in=[TransactionType.EXPENSE.value, TransactionType.EXCHANGE_OUT.value]
+                    type__in=[TransactionType.EXPENSE.value, TransactionType.EXCHANGE_OUT.value, TransactionType.SAVINGS.value]
                 ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
                 
-                balance[currency.value] = str(income - expense)
+                balance[currency.value] = str((income - expense).quantize(Decimal('0.01')))
             
             account = self._to_entity(record, balance)
             accounts.append(account)

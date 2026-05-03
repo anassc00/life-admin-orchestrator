@@ -200,27 +200,6 @@
     let pendingDescription = null;
     let pendingExchangeRate = null;
 
-
-
-
-
-    
-    function escHtml(str) {
-      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-    function escAttr(str) {
-      return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    }
-    function escAttr(str) {
-      return String(str).replace(/"//g, '&quot;').replace(/'/g, '&#39;');
-    }
-
-
-
-
-
-
-
     function escHtml(str) {
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
@@ -228,7 +207,7 @@
       return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
-async function loadTransactions() {
+    async function loadTransactions() {
       const res = await fetch('/api/finance/transactions');
       if (res.status === 401) { window.location.href = '/login/'; return; }
       allTx = await res.json();
@@ -241,7 +220,7 @@ async function loadTransactions() {
         txList.length === 0 ? '' : `${txList.length} transacción${txList.length !== 1 ? 'es' : ''}`;
 
       if (!txList.length) {
-        tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">Sin transacciones registradas.</div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">Sin transacciones registradas.</div></td></tr>`;
         return;
       }
 
@@ -250,33 +229,56 @@ async function loadTransactions() {
           tx.type === 'income' || tx.type === 'exchange_in' ? 'amount-positive' :
           tx.type === 'expense' || tx.type === 'exchange_out' ? 'amount-negative' : 'amount-neutral';
         const sign = (tx.type === 'income' || tx.type === 'exchange_in') ? '+' :
-                     (tx.type === 'expense' || tx.type === 'exchange_out') ? '-' : '';
-        const categoryLabel = tx.related_transaction_id && tx.type === 'exchange_in'
-          ? '<span class="type-badge savings">Aporte a Ahorro</span>'
-          : tx.category
+                      (tx.type === 'expense' || tx.type === 'exchange_out') ? '-' : '';
+        
+        // BADGES - Only show savings badge for actual savings type
+        const isSavings = tx.type === 'savings';
+        const typeBadge = isSavings 
+          ? `<span class="type-badge type-savings">💰 Ahorro</span>`
+          : `<span class="type-badge type-${tx.type}">${TYPE_ICONS[tx.type]} ${TYPE_LABELS[tx.type] || tx.type}</span>`;
+        
+        // Category/Description
+        const categoryLabel = tx.category
           ? `<span style="color:#9090b0;font-size:0.78rem">${tx.category}</span>`
           : tx.description
           ? `<span class="wrap" style="color:#9090b0;font-size:0.78rem">${escHtml(tx.description)}</span>`
           : '<span style="color:#3a3a5a">—</span>';
-        const notes = tx.notes
-          ? `<span class="wrap" style="font-size:0.8rem;color:#8080a0">${escHtml(tx.notes)}</span>`
-          : '<span style="color:#3a3a5a">—</span>';
+        
+        // Exchange rate display
         const rate = (tx.exchange_rate && Number(tx.exchange_rate) !== 1)
           ? Number(tx.exchange_rate).toLocaleString('es-VE',{maximumFractionDigits:4})
           : '—';
-
+        
+        // USD EQUIVALENT - Inline with original amount
+        let usdEquiv = '';
+        const amount = Number(tx.amount);
+        if (tx.currency === 'USD' || tx.currency === 'USDT') {
+          // Already USD - show as is, inherit color from amount class
+          usdEquiv = `<br><span class="${amtClass}" style="font-size:0.75rem;font-weight:600;">$${amount.toFixed(2)}</span>`;
+        } else if (tx.currency === 'VES' && tx.exchange_rate > 0) {
+          // VES to USD: divide by rate
+          let equivalent = amount / tx.exchange_rate;
+          // Safety check: if rate seems inverted (result is huge), multiply instead
+          if (equivalent > amount * 100) {
+            equivalent = amount * tx.exchange_rate;
+          }
+          usdEquiv = `<br><span class="${amtClass}" style="font-size:0.75rem;font-weight:600;">$${equivalent.toFixed(2)}</span>`;
+        }
+        
         return `<tr>
           <td style="color:#8080a0;font-size:0.82rem">${tx.date}</td>
-          <td><span class="type-badge type-${tx.type}">${TYPE_ICONS[tx.type]} ${TYPE_LABELS[tx.type] || tx.type}</span></td>
-          <td class="${amtClass}">${sign}${Number(tx.amount).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:6})}</td>
+          <td>${typeBadge}</td>
+          <td class="${amtClass}">
+            ${sign}${Number(tx.amount).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:6})}
+            ${usdEquiv}
+          </td>
           <td style="font-size:0.8rem;color:#7c6ff7;font-weight:700">${tx.currency}</td>
           <td style="font-size:0.8rem;color:#6060a0">${rate}</td>
           <td>${categoryLabel}</td>
-          <td>${notes}</td>
           <td><button class="btn-edit" data-id="${tx.transaction_id}" data-notes="${escAttr(tx.notes || '')}">Editar</button></td>
         </tr>`;
       }).join('');
-
+      
       tbody.querySelectorAll('.btn-edit').forEach(btn => {
         btn.addEventListener('click', () => openEditModal(btn.dataset.id));
       });
@@ -304,9 +306,6 @@ async function loadTransactions() {
 
     function openEditModal(txId) {
       editingTx = txId;
-      console.log('openEditModal called with txId:', txId);
-      console.log('editingTx set to:', editingTx);
-      pendingNotes = null;
       const tx = allTx.find(t => t.transaction_id === txId);
       if (!tx) return;
       
@@ -324,25 +323,14 @@ async function loadTransactions() {
       document.getElementById('edit-amount').focus();
     }
 
-    document.getElementById('edit-cancel').addEventListener('click', closeEditModal);
-    document.getElementById('edit-modal').addEventListener('click', e => {
-      if (e.target === document.getElementById('edit-modal')) closeEditModal();
+    document.getElementById('edit-cancel').addEventListener('click', () => {
+      document.getElementById('edit-modal').classList.remove('open');
     });
 
-    function closeEditModal() {
-      document.getElementById('edit-modal').classList.remove('open');
-      // Don't reset editingTx here - it's needed for the password modal
-    }
-
-    document.getElementById('edit-next').addEventListener('click', () => {
-      pendingNotes = document.getElementById('edit-notes').value.trim() || null;
-      if (!pendingNotes) { alert('Añade una nota.'); return; }
-      pendingAmount = document.getElementById('edit-amount').value;
-      pendingDate = document.getElementById('edit-date').value;
-      pendingDescription = document.getElementById('edit-description').value.trim();
-      pendingExchangeRate = document.getElementById('edit-exchange-rate').value;
-      closeEditModal();
-      openPwdModal();
+    document.getElementById('edit-modal').addEventListener('click', e => {
+      if (e.target === document.getElementById('edit-modal')) {
+        document.getElementById('edit-modal').classList.remove('open');
+      }
     });
 
     function openPwdModal() {
@@ -351,14 +339,26 @@ async function loadTransactions() {
       document.getElementById('pwd-modal').classList.add('open');
     }
 
-    document.getElementById('pwd-cancel').addEventListener('click', closePwdModal);
-    document.getElementById('pwd-modal').addEventListener('click', e => {
-      if (e.target === document.getElementById('pwd-modal')) closePwdModal();
+    document.getElementById('pwd-cancel').addEventListener('click', () => {
+      document.getElementById('pwd-modal').classList.remove('open');
     });
 
-    function closePwdModal() {
-      document.getElementById('pwd-modal').classList.remove('open');
-    }
+    document.getElementById('pwd-modal').addEventListener('click', e => {
+      if (e.target === document.getElementById('pwd-modal')) {
+        document.getElementById('pwd-modal').classList.remove('open');
+      }
+    });
+
+    document.getElementById('edit-next').addEventListener('click', () => {
+      pendingNotes = document.getElementById('edit-notes').value.trim() || null;
+      if (!pendingNotes) { alert('Añade una nota.'); return; }
+      pendingAmount = document.getElementById('edit-amount').value;
+      pendingDate = document.getElementById('edit-date').value;
+      pendingDescription = document.getElementById('edit-description').value.trim();
+      pendingExchangeRate = document.getElementById('edit-exchange-rate').value;
+      document.getElementById('edit-modal').classList.remove('open');
+      openPwdModal();
+    });
 
     document.getElementById('edit-password').addEventListener('keydown', e => {
       if (e.key === 'Enter') document.getElementById('pwd-confirm').click();
@@ -374,7 +374,6 @@ async function loadTransactions() {
     }
 
     document.getElementById('pwd-confirm').addEventListener('click', async () => {
-      console.log('pwd-confirm clicked, editingTx:', editingTx);
       if (!editingTx) {
         showModalError('pwd-error', 'Error: No se ha seleccionado ninguna transacción.');
         return;
@@ -391,9 +390,6 @@ async function loadTransactions() {
       if (pendingDescription) payload.description = pendingDescription;
       if (pendingExchangeRate) payload.exchange_rate = parseFloat(pendingExchangeRate);
 
-      console.log("Datos enviados al editar:", payload);
-      console.log("URL:", `/api/finance/transactions/${editingTx}`);
-
       try {
         const res = await fetch(`/api/finance/transactions/${editingTx}`, {
           method: 'PATCH',
@@ -402,7 +398,6 @@ async function loadTransactions() {
         });
         if (!res.ok) {
           const text = await res.text();
-          console.error("Error del servidor:", text);
           btn.disabled = false; btn.textContent = 'Guardar cambio';
           showModalError('pwd-error', 'Error del servidor: ' + res.status);
           return;
@@ -416,14 +411,13 @@ async function loadTransactions() {
           if (payload.exchange_rate) allTx[idx].exchange_rate = payload.exchange_rate;
           allTx[idx].notes = pendingNotes;
         }
-        closePwdModal();
+        document.getElementById('pwd-modal').classList.remove('open');
         applyFilters();
         showToast();
         editingTx = null;
        } catch (error) {
          btn.disabled = false; btn.textContent = 'Guardar cambio';
          showModalError('pwd-error', 'Error de conexión.');
-         return;
        }
     });
 
@@ -442,16 +436,12 @@ async function loadTransactions() {
       return document.cookie.split('; ').find(r => r.startsWith(name + '='))?.split('=')[1] || '';
     }
 
-
     if (new URLSearchParams(location.search).get('exchange') === '1') {
       history.replaceState(null, '', '/finance/transactions/');
       document.getElementById('toast').textContent = 'Cambio de divisas registrado correctamente';
       showToast();
     }
 
-
-
-
     loadTransactions();
-  </script>
+</script>
 {% endblock %}
