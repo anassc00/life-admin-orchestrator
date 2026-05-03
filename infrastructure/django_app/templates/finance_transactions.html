@@ -228,8 +228,21 @@
       return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
-async function loadTransactions() {
-      const res = await fetch('/api/finance/transactions');
+    function getSelectedMonthYear() {
+      const month = document.getElementById('filter-month').value;
+      const year = document.getElementById('filter-year').value;
+      return { month: month ? parseInt(month) : null, year: year ? parseInt(year) : null };
+    }
+
+    async function loadTransactions() {
+      const { month, year } = getSelectedMonthYear();
+      let url = '/api/finance/transactions';
+      const params = [];
+      if (month) params.push(`month=${month}`);
+      if (year) params.push(`year=${year}`);
+      if (params.length) url += '?' + params.join('&');
+      
+      const res = await fetch(url);
       if (res.status === 401) { window.location.href = '/login/'; return; }
       allTx = await res.json();
       renderTable(allTx);
@@ -241,7 +254,7 @@ async function loadTransactions() {
         txList.length === 0 ? '' : `${txList.length} transacción${txList.length !== 1 ? 'es' : ''}`;
 
       if (!txList.length) {
-        tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">Sin transacciones registradas.</div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">Sin transacciones registradas.</div></td></tr>`;
         return;
       }
 
@@ -250,7 +263,15 @@ async function loadTransactions() {
           tx.type === 'income' || tx.type === 'exchange_in' ? 'amount-positive' :
           tx.type === 'expense' || tx.type === 'exchange_out' ? 'amount-negative' : 'amount-neutral';
         const sign = (tx.type === 'income' || tx.type === 'exchange_in') ? '+' :
-                     (tx.type === 'expense' || tx.type === 'exchange_out') ? '-' : '';
+                       (tx.type === 'expense' || tx.type === 'exchange_out') ? '-' : '';
+        
+        // Savings badge
+        const isSavings = tx.related_transaction_id && tx.type === 'exchange_in';
+        const typeBadge = isSavings 
+          ? `<span class="type-badge type-savings">💰 Ahorro</span>`
+          : `<span class="type-badge type-${tx.type}">${TYPE_ICONS[tx.type]} ${TYPE_LABELS[tx.type] || tx.type}</span>`;
+        
+        // Category/Description
         const categoryLabel = tx.related_transaction_id && tx.type === 'exchange_in'
           ? '<span class="type-badge savings">Aporte a Ahorro</span>'
           : tx.category
@@ -258,28 +279,54 @@ async function loadTransactions() {
           : tx.description
           ? `<span class="wrap" style="color:#9090b0;font-size:0.78rem">${escHtml(tx.description)}</span>`
           : '<span style="color:#3a3a5a">—</span>';
-        const notes = tx.notes
-          ? `<span class="wrap" style="font-size:0.8rem;color:#8080a0">${escHtml(tx.notes)}</span>`
-          : '<span style="color:#3a3a5a">—</span>';
-        const rate = (tx.exchange_rate && Number(tx.exchange_rate) !== 1)
-          ? Number(tx.exchange_rate).toLocaleString('es-VE',{maximumFractionDigits:4})
-          : '—';
-
-        return `<tr>
+        
+        // USD equivalent
+        let usdEquiv = '';
+        if (tx.currency === 'USD' || tx.currency === 'USDT') {
+          usdEquiv = Number(tx.amount).toFixed(2);
+        } else if (tx.exchange_rate && tx.exchange_rate != 0) {
+          usdEquiv = (tx.amount / tx.exchange_rate).toFixed(2);
+        }
+        const usdDisplay = usdEquiv ? `$${usdEquiv}` : '—';
+        
+        // Expandable details (hidden by default)
+        const detailsId = `details-${tx.transaction_id}`;
+        
+        return `<tr style="cursor:pointer" onclick="toggleDetails('${tx.transaction_id}')">
           <td style="color:#8080a0;font-size:0.82rem">${tx.date}</td>
-          <td><span class="type-badge type-${tx.type}">${TYPE_ICONS[tx.type]} ${TYPE_LABELS[tx.type] || tx.type}</span></td>
+          <td>${typeBadge}</td>
           <td class="${amtClass}">${sign}${Number(tx.amount).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:6})}</td>
           <td style="font-size:0.8rem;color:#7c6ff7;font-weight:700">${tx.currency}</td>
-          <td style="font-size:0.8rem;color:#6060a0">${rate}</td>
+          <td style="font-size:0.8rem;color:#6060a0">${(tx.exchange_rate && Number(tx.exchange_rate) !== 1) ? Number(tx.exchange_rate).toLocaleString('es-VE',{maximumFractionDigits:4}) : '—'}</td>
           <td>${categoryLabel}</td>
-          <td>${notes}</td>
-          <td><button class="btn-edit" data-id="${tx.transaction_id}" data-notes="${escAttr(tx.notes || '')}">Editar</button></td>
+          <td style="font-size:0.8rem;color:#34d399;font-weight:600">${usdDisplay}</td>
+          <td><button class="btn-edit" data-id="${tx.transaction_id}" data-notes="${escAttr(tx.notes || '')}" onclick="event.stopPropagation()">Editar</button></td>
+        </tr>
+        <tr id="${detailsId}" style="display:none;background:rgba(255,255,255,0.02);">
+          <td colspan="7" style="padding:1rem 1rem 1rem 2rem;font-size:0.82rem;color:#9090b0;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+              <div><strong>Notas completas:</strong> ${tx.notes ? escHtml(tx.notes) : '<span style="color:#3a3a5a">Sin notas</span>'}</div>
+              <div><strong>Categoría:</strong> ${tx.category || '<span style="color:#3a3a5a">—</span>'}</div>
+              <div><strong>ID:</strong> <span style="font-family:monospace;font-size:0.75rem;">${tx.transaction_id}</span></div>
+              <div><strong>Tipo:</strong> ${TYPE_LABELS[tx.type] || tx.type}</div>
+            </div>
+          </td>
         </tr>`;
       }).join('');
 
       tbody.querySelectorAll('.btn-edit').forEach(btn => {
-        btn.addEventListener('click', () => openEditModal(btn.dataset.id));
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openEditModal(btn.dataset.id);
+        });
       });
+    }
+
+    function toggleDetails(txId) {
+      const detailsRow = document.getElementById(`details-${txId}`);
+      if (detailsRow) {
+        detailsRow.style.display = detailsRow.style.display === 'none' ? 'table-row' : 'none';
+      }
     }
 
     function applyFilters() {
@@ -298,9 +345,13 @@ async function loadTransactions() {
       renderTable(filtered);
     }
 
-    ['filter-type', 'filter-currency'].forEach(id =>
-      document.getElementById(id).addEventListener('change', applyFilters));
+    ['filter-type', 'filter-currency', 'filter-month', 'filter-year'].forEach(id =>
+      document.getElementById(id).addEventListener('change', () => {
+        loadTransactions();
+      }));
     document.getElementById('filter-search').addEventListener('input', applyFilters);
+
+    loadTransactions();
 
     function openEditModal(txId) {
       editingTx = txId;
