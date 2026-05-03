@@ -80,13 +80,13 @@ class DjangoAccountRepository(AccountRepository):
                     currency=currency.value,
                 )
                 
-                # Calculate balance: incomes + exchange_in - expenses - exchange_out - savings
+                # Calculate balance: incomes + savings + exchange_in - expenses - exchange_out
                 income = txs.filter(
-                    type__in=[TransactionType.INCOME.value, TransactionType.EXCHANGE_IN.value]
+                    type__in=[TransactionType.INCOME.value, TransactionType.SAVINGS.value, TransactionType.EXCHANGE_IN.value]
                 ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
                 
                 expense = txs.filter(
-                    type__in=[TransactionType.EXPENSE.value, TransactionType.EXCHANGE_OUT.value, TransactionType.SAVINGS.value]
+                    type__in=[TransactionType.EXPENSE.value, TransactionType.EXCHANGE_OUT.value]
                 ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
                 
                 balance[currency.value] = str((income - expense).quantize(Decimal('0.01')))
