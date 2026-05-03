@@ -10,12 +10,38 @@
       border: 1px solid rgba(255,255,255,0.1);
       border-radius: 1.25rem; padding: 2rem;
       backdrop-filter: blur(12px); margin-bottom: 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 1rem;
     }
     .greeting-card h1 {
       font-size: 1.75rem; font-weight: 700; color: #fff;
       margin-bottom: 0.4rem; min-height: 2.2rem;
     }
-    .greeting-card p { color: #8080a0; font-size: 0.9rem; }
+    .greeting-card p { color: #8080a0; font-size: 0.9rem; margin: 0; }
+
+    .accounts-widget {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 1rem; padding: 1.25rem 1.5rem;
+      min-width: 280px; max-width: 380px;
+      flex-shrink: 0;
+    }
+    .accounts-title {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: #7c6ff7; margin-bottom: 0.75rem;
+    }
+    .account-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.45rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.85rem;
+    }
+    .account-item:last-child { border-bottom: none; }
+    .account-name { color: #c0c0d8; font-weight: 500; }
+    .account-currency { color: #6060a0; font-size: 0.75rem; margin-left: 0.4rem; }
+    .account-balance { color: #e0e0f0; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .account-balance.negative { color: #f87171; }
+    .no-accounts { color: #6060a0; font-size: 0.82rem; font-style: italic; }
 
     /* ── Section header ── */
     .section-header {
@@ -70,8 +96,16 @@
 {% block content %}
     <div class="page-title">Panel de control</div>
     <div class="greeting-card">
-      <h1 id="greeting"><span class="skeleton skeleton-text"></span></h1>
-      <p>Los agentes IA están listos para ayudarte a gestionar tu vida personal.</p>
+      <div>
+        <h1 id="greeting"><span class="skeleton skeleton-text"></span></h1>
+        <p>Los agentes IA están listos para ayudarte a gestionar tu vida personal.</p>
+      </div>
+      <div class="accounts-widget">
+        <div class="accounts-title">Saldos actuales</div>
+        <div id="accounts-list">
+          <div class="no-accounts">Cargando cuentas...</div>
+        </div>
+      </div>
     </div>
 
     <div class="section-header">
@@ -129,6 +163,56 @@
         MONTHS_ES[currentMonth - 1] + ' ' + currentYear;
     }
 
+    function fmtAmount(amount, currency) {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency', currency: currency, maximumFractionDigits: 2
+      }).format(amount);
+    }
+
+    async function fetchGlobalAccounts() {
+      try {
+        const res = await fetch('/api/finance/accounts');
+        if (!res.ok) return;
+        const accounts = await res.json();
+        const container = document.getElementById('accounts-list');
+        if (!accounts.length) {
+          container.innerHTML = '<div class="no-accounts">No hay cuentas configuradas.</div>';
+          return;
+        }
+        container.innerHTML = accounts.map(acc => {
+          const balances = acc.current_balance || {};
+          const balanceItems = Object.entries(balances).map(([curr, bal]) => {
+            const value = parseFloat(bal);
+            const cssClass = value < 0 ? 'account-balance negative' : 'account-balance';
+            return '<div style="display:flex; justify-content:space-between; padding:0.2rem 0;">' +
+              '<span class="account-currency">' + curr + '</span>' +
+              '<span class="' + cssClass + '">' + fmtAmount(value, curr) + '</span>' +
+            '</div>';
+          }).join('');
+          return '<div class="account-item">' +
+            '<div>' +
+              '<div class="account-name">' + acc.name + ' <span class="account-currency">(' + acc.type + ')</span></div>' +
+              (balanceItems || '<span style="color:#6060a0;font-size:0.78rem;">Sin movimientos</span>') +
+            '</div>' +
+          '</div>';
+        }).join('');
+      } catch { }
+    }
+
+    async function loadProfile() {
+      try {
+        const res  = await fetch('/api/auth/me');
+        const data = await res.json();
+        if (res.ok) {
+          const first = data.full_name.split(' ')[0];
+          document.getElementById('greeting').textContent = `¡Hola, ${first}! Bienvenido a tu panel.`;
+          document.title = `${first} — Life Admin`;
+        } else {
+          window.location.href = '/login/';
+        }
+      } catch { window.location.href = '/login/'; }
+    }
+
     async function loadSummary() {
       updateMonthLabel();
       console.log(`Loading summary for ${currentYear}-${currentMonth}`);
@@ -153,6 +237,11 @@
         });
       }
     }
+
+    // Initialize on page load
+    loadProfile();
+    loadSummary();
+    fetchGlobalAccounts();
 
     document.getElementById('prev-month').addEventListener('click', () => {
       currentMonth--;

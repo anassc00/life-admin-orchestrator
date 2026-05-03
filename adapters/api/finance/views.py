@@ -155,14 +155,14 @@ def monthly_financial_summary(request, year: int = None, month: int = None):
     response=list[TransactionListItemSchema],
     summary="List all transactions for the current user, ordered by date descending",
 )
-def list_transactions(request):
+def list_transactions(request, year: int = None, month: int = None):
     user_id_str = request.session.get("user_id")
     if not user_id_str:
         return []
     from uuid import UUID
 
     uc = get_transactions_by_user_use_case()
-    results = uc.execute(GetTransactionsByUserQuery(user_id=UUID(user_id_str)))
+    results = uc.execute(GetTransactionsByUserQuery(user_id=UUID(user_id_str), year=year, month=month))
     return [r.model_dump() for r in results]
 
 

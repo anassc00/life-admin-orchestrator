@@ -6,11 +6,13 @@
     .page-title-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #7c6ff7; margin-bottom: 0.3rem; }
     h1 { font-size: 1.4rem; font-weight: 700; color: #fff; }
     .filter-bar { display: flex; gap: 0.65rem; flex-wrap: wrap; align-items: center; }
-    .filter-bar select { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); color: #e0e0f0; border-radius: 0.55rem; padding: 0.45rem 0.8rem; font-size: 0.83rem; outline: none; cursor: pointer; }
+    .filter-bar select { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #e0e0f0; border-radius: 0.55rem; padding: 0.45rem 0.8rem; font-size: 0.83rem; outline: none; cursor: pointer; }
     .filter-bar select option { background: #1e1b4b; }
-    .filter-bar input[type="text"] { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); color: #e0e0f0; border-radius: 0.55rem; padding: 0.45rem 0.8rem; font-size: 0.83rem; outline: none; min-width: 180px; }
+    .filter-bar input[type="text"] { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #e0e0f0; border-radius: 0.55rem; padding: 0.45rem 0.8rem; font-size: 0.83rem; outline: none; min-width: 180px; }
     .filter-bar input::placeholder { color: #6060a0; }
     .tx-count { margin-left: auto; font-size: 0.78rem; color: #6060a0; white-space: nowrap; }
+    .month-filter { display: flex; gap: 0.5rem; align-items: center; }
+    .month-filter select { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #e0e0f0; border-radius: 0.55rem; padding: 0.45rem 0.8rem; font-size: 0.83rem; outline: none; cursor: pointer; }
     .table-card { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 1rem; overflow: hidden; }
     .table-wrap { overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
@@ -25,6 +27,7 @@
     .type-expense { background: rgba(248, 113, 113, 0.12); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.25); }
     .type-exchange_out { background: rgba(251, 191, 36, 0.12); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.25); }
     .type-exchange_in { background: rgba(96, 165, 250, 0.12); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.25); }
+    .type-savings { background: rgba(124, 111, 247, 0.15); color: #a78bfa; border: 1px solid rgba(124, 111, 247, 0.3); font-size: 0.68rem; }
     .amount-positive { color: #34d399; font-weight: 600; }
     .amount-negative { color: #f87171; font-weight: 600; }
     .amount-neutral { color: #c0c0d8; font-weight: 600; }
@@ -81,6 +84,29 @@
         <option value="USDT">USDT</option>
         <option value="VES">VES</option>
       </select>
+      <div class="month-filter">
+        <select id="filter-month">
+          <option value="">Todos los meses</option>
+          <option value="1">Enero</option>
+          <option value="2">Febrero</option>
+          <option value="3">Marzo</option>
+          <option value="4">Abril</option>
+          <option value="5">Mayo</option>
+          <option value="6">Junio</option>
+          <option value="7">Julio</option>
+          <option value="8">Agosto</option>
+          <option value="9">Septiembre</option>
+          <option value="10">Octubre</option>
+          <option value="11">Noviembre</option>
+          <option value="12">Diciembre</option>
+        </select>
+        <select id="filter-year">
+          <option value="">Todos los años</option>
+          <option value="2024">2024</option>
+          <option value="2025">2025</option>
+          <option value="2026">2026</option>
+        </select>
+      </div>
       <input type="text" id="filter-search" placeholder="Buscar descripción o notas..." />
       <span class="tx-count" id="tx-count"></span>
     </div>
@@ -88,18 +114,18 @@
     <div class="table-card">
       <div class="table-wrap">
         <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Tipo</th>
-              <th>Monto</th>
-              <th>Moneda</th>
-              <th>Tasa</th>
-              <th>Categoría / Descripción</th>
-              <th>Notas</th>
-              <th></th>
-            </tr>
-          </thead>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Monto</th>
+                <th>Moneda</th>
+                <th>Tasa</th>
+                <th>Categoría / Descripción</th>
+                <th>Monto (USD)</th>
+                <th></th>
+              </tr>
+            </thead>
           <tbody id="tx-body">
             <tr class="skeleton-row"><td><div class="skel" style="width:80px"></div></td><td><div class="skel" style="width:90px"></div></td><td><div class="skel" style="width:70px"></div></td><td><div class="skel" style="width:40px"></div></td><td><div class="skel" style="width:50px"></div></td><td><div class="skel" style="width:120px"></div></td><td><div class="skel" style="width:100px"></div></td><td></td></tr>
             <tr class="skeleton-row"><td><div class="skel" style="width:80px"></div></td><td><div class="skel" style="width:90px"></div></td><td><div class="skel" style="width:70px"></div></td><td><div class="skel" style="width:40px"></div></td><td><div class="skel" style="width:50px"></div></td><td><div class="skel" style="width:120px"></div></td><td><div class="skel" style="width:100px"></div></td><td></td></tr>

@@ -66,10 +66,37 @@ class DjangoAccountRepository(AccountRepository):
         )
 
     def list_by_user(self, user_id: UUID) -> list[Account]:
-        return [self._to_entity(r) for r in AccountModel.objects.filter(user_id=user_id)]
+        accounts = []
+        for record in AccountModel.objects.filter(user_id=user_id):
+            # Calculate current balance for each supported currency
+            balance = {}
+            for currency in Currency:
+                # Sum all transactions for this account in this currency
+                from django.db.models import Sum
+                
+                # Get all transactions for this account
+                txs = TransactionModel.objects.filter(
+                    account_id=record.id,
+                    currency=currency.value,
+                )
+                
+                # Calculate balance: sum of incomes - sum of expenses
+                income = txs.filter(
+                    type__in=[TransactionType.INCOME.value, TransactionType.EXCHANGE_IN.value, TransactionType.SAVINGS.value]
+                ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+                
+                expense = txs.filter(
+                    type__in=[TransactionType.EXPENSE.value, TransactionType.EXCHANGE_OUT.value]
+                ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+                
+                balance[currency.value] = str(income - expense)
+            
+            account = self._to_entity(record, balance)
+            accounts.append(account)
+        return accounts
 
     @staticmethod
-    def _to_entity(record: AccountModel) -> Account:
+    def _to_entity(record: AccountModel, balance: dict[str, str] = None) -> Account:
         return Account(
             id=record.id,
             user_id=record.user_id,
@@ -77,6 +104,7 @@ class DjangoAccountRepository(AccountRepository):
             type=AccountType(record.type),
             supported_currencies=[Currency(c) for c in record.supported_currencies],
             default_currencies=[Currency(c) for c in record.default_currencies],
+            current_balance=balance or {},
         )
 
 
@@ -101,13 +129,13 @@ class DjangoTransactionRepository(TransactionRepository):
             )
             TransactionModel.objects.update_or_create(pk=tx_in.id, defaults=self._to_record(tx_in))
 
-    def list_by_user(self, user_id: UUID) -> list[Transaction]:
-        return [
-            self._to_entity(r)
-            for r in TransactionModel.objects.filter(user_id=user_id).order_by(
-                "-date", "-created_at"
-            )
-        ]
+    def list_by_user(self, user_id: UUID, year: int = None, month: int = None) -> list[Transaction]:
+        qs = TransactionModel.objects.filter(user_id=user_id).order_by("-date", "-created_at")
+        if year is not None:
+            qs = qs.filter(date__year=year)
+        if month is not None:
+            qs = qs.filter(date__month=month)
+        return [self._to_entity(r) for r in qs]
 
     def get_monthly_totals(self, user_id: UUID, year: int, month: int) -> tuple[Decimal, Decimal]:
         from django.db.models import Q, Sum
@@ -129,8 +157,8 @@ class DjangoTransactionRepository(TransactionRepository):
         self, user_id: UUID, year: int, month: int
     ) -> tuple[Decimal, Decimal]:
         """Return (base_income_usd, expenses_usd) using amount / exchange_rate."""
-        from django.db.models import Case, DecimalField as DjDecimalField, Value
-        from django.db.models import ExpressionWrapper, F, Q, Sum
+        from django.db.models import Case, ExpressionWrapper, F, Q, Sum, Value
+        from django.db.models import DecimalField as DjDecimalField
 
         # Handle exchange_rate: use 1.0 if 0 or null to avoid division by zero
         safe_exchange_rate = Case(

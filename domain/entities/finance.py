@@ -46,6 +46,7 @@ class Account(BaseModel):
     type: AccountType
     supported_currencies: list[Currency]
     default_currencies: list[Currency]
+    current_balance: dict[str, str] = {}  # currency -> balance
 
 
 class Transaction(BaseModel):

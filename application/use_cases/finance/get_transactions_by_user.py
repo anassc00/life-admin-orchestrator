@@ -7,7 +7,9 @@ class GetTransactionsByUserUseCase:
         self._transaction_repo = transaction_repo
 
     def execute(self, query: GetTransactionsByUserQuery) -> list[TransactionListItemResponse]:
-        transactions = self._transaction_repo.list_by_user(query.user_id)
+        transactions = self._transaction_repo.list_by_user(
+            query.user_id, year=query.year, month=query.month
+        )
         return [
             TransactionListItemResponse(
                 transaction_id=tx.id,

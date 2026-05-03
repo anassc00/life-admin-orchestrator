@@ -48,7 +48,7 @@
           </div>
           <div>
             <label for="amount_out">Monto pagado</label>
-            <input id="amount_out" type="number" step="0.000001" min="0.000001" placeholder="0.00" required />
+            <input id="amount_out" type="number" step="any" min="0.000001" placeholder="0.00" required />
           </div>
         </div>
         <label>Cuenta origen (auto)</label>
@@ -70,7 +70,7 @@
           </div>
           <div>
             <label for="amount_in">Monto obtenido</label>
-            <input id="amount_in" type="number" step="0.000001" min="0.000001" placeholder="0.00" required />
+            <input id="amount_in" type="number" step="any" min="0.000001" placeholder="0.00" readonly required />
           </div>
         </div>
         <label>Cuenta destino (auto)</label>
@@ -78,8 +78,8 @@
         <input id="dest_account_id" type="hidden" />
         <div class="account-hint" id="in-hint"></div>
 
-        <label for="exchange_rate">Tasa de cambio <span style="color:#6060a0;font-weight:400">(1 moneda pagada = X moneda obtenida)</span></label>
-        <input id="exchange_rate" type="number" step="0.000001" min="0.000001" placeholder="Ej: 36" required />
+        <label for="exchange_rate">Tasa de mercado <span style="color:#6060a0;font-weight:400">(Ej: 1 USD = X VES)</span></label>
+        <input id="exchange_rate" type="number" step="any" min="0.000001" placeholder="Ej: 36" required />
 
         <label for="date">Fecha</label>
         <input id="date" type="date" required />
@@ -120,14 +120,40 @@
     function updateAll() {
       updateAccountDisplay('currency_out', 'out_display', 'source_account_id', 'out-hint');
       updateAccountDisplay('currency_in',  'in_display',  'dest_account_id',   'in-hint');
+      updateRateLabel();
       recalculate();
     }
 
+    function updateRateLabel() {
+      const currOut = document.getElementById('currency_out').value;
+      const currIn  = document.getElementById('currency_in').value;
+      const label = document.querySelector('label[for="exchange_rate"] span');
+      if (label) {
+        label.textContent = `(1 ${currOut} = X ${currIn})`;
+      }
+    }
+
     function recalculate() {
-      const out  = parseFloat(document.getElementById('amount_out').value);
-      const rate = parseFloat(document.getElementById('exchange_rate').value);
+      const out      = parseFloat(document.getElementById('amount_out').value);
+      const rate     = parseFloat(document.getElementById('exchange_rate').value);
+      const currOut  = document.getElementById('currency_out').value;
+      const currIn   = document.getElementById('currency_in').value;
+      
       if (out > 0 && rate > 0) {
-        document.getElementById('amount_in').value = (out * rate).toFixed(6).replace(/\.?0+$/, '');
+        let result;
+        // Local (VES) to Strong (USD/USDT): divide
+        // Strong (USD/USDT) to Local (VES): multiply
+        if ((currOut === 'VES') && (currIn === 'USD' || currIn === 'USDT')) {
+          result = out / rate;
+        } else if ((currOut === 'USD' || currOut === 'USDT') && currIn === 'VES') {
+          result = out * rate;
+        } else {
+          // Same currency or other combinations: use rate as multiplier by default
+          result = out * rate;
+        }
+        // Round to 4 decimal places before displaying
+        result = Number(result.toFixed(4));
+        document.getElementById('amount_in').value = result;
       }
     }
 
@@ -165,16 +191,20 @@
         errEl.style.display = 'block'; return;
       }
 
+      const amountOut = Number(parseFloat(document.getElementById('amount_out').value).toFixed(4));
+      const amountIn  = Number(parseFloat(document.getElementById('amount_in').value).toFixed(4));
+      const rate      = Number(parseFloat(document.getElementById('exchange_rate').value).toFixed(4));
+      
       btn.disabled = true; btn.textContent = 'Registrando...';
 
       const payload = {
         source_account_id: srcId,
         dest_account_id:   dstId,
-        amount_out:    parseFloat(document.getElementById('amount_out').value),
+        amount_out:    amountOut,
         currency_out:  document.getElementById('currency_out').value,
-        amount_in:     parseFloat(document.getElementById('amount_in').value),
+        amount_in:     amountIn,
         currency_in:   document.getElementById('currency_in').value,
-        exchange_rate: parseFloat(document.getElementById('exchange_rate').value),
+        exchange_rate: rate,
         date:  document.getElementById('date').value,
         notes: document.getElementById('notes').value.trim() || null,
       };
@@ -205,5 +235,6 @@
     }
 
     loadAccounts();
+    updateRateLabel();
   </script>
 {% endblock %}

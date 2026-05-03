@@ -126,6 +126,8 @@ class TransactionEditedResponse(BaseModel):
 
 class GetTransactionsByUserQuery(BaseModel):
     user_id: UUID
+    year: int | None = None
+    month: int | None = None
 
 
 class TransactionListItemResponse(BaseModel):
