@@ -101,7 +101,12 @@
         <p>Los agentes IA están listos para ayudarte a gestionar tu vida personal.</p>
       </div>
       <div class="accounts-widget">
-        <div class="accounts-title">Saldos actuales</div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div class="accounts-title">Saldos actuales</div>
+          <button id="refresh-balances" title="Actualizar saldos" style="background:none; border:1px solid rgba(255,255,255,0.2); color:#9090b0; padding:0.3rem 0.5rem; border-radius:0.4rem; cursor:pointer; font-size:0.9rem;">
+            🔄 <span id="refresh-text">Actualizar saldos</span>
+          </button>
+        </div>
         <div id="accounts-list">
           <div class="no-accounts">Cargando cuentas...</div>
         </div>
@@ -171,12 +176,12 @@
     }
 
     async function fetchGlobalAccounts() {
+      const container = document.getElementById('accounts-list');
       try {
         const res = await fetch('/api/finance/accounts');
         if (!res.ok) return;
         const accounts = await res.json();
         console.log('Accounts API response:', accounts);
-        const container = document.getElementById('accounts-list');
         if (!accounts.length) {
           container.innerHTML = '<div class="no-accounts">No hay cuentas configuradas.</div>';
           return;
@@ -199,6 +204,33 @@
         }).join('');
       } catch (e) { console.error('Error fetching accounts:', e); }
     }
+
+    async function refreshBalances() {
+      const btn = document.getElementById('refresh-balances');
+      const text = document.getElementById('refresh-text');
+      const container = document.getElementById('accounts-list');
+      
+      // Show loading state
+      btn.disabled = true;
+      text.textContent = 'Actualizando...';
+      container.innerHTML = '<div class="no-accounts">Recalculando saldos...</div>';
+      
+      try {
+        const res = await fetch('/api/finance/accounts/refresh-balances', {
+          method: 'POST',
+        });
+        if (res.ok) {
+          await fetchGlobalAccounts();
+        }
+      } catch (e) {
+        console.error('Error refreshing balances:', e);
+      } finally {
+        btn.disabled = false;
+        text.textContent = 'Actualizar saldos';
+      }
+    }
+
+    document.getElementById('refresh-balances').addEventListener('click', refreshBalances);
 
     async function loadProfile() {
       try {

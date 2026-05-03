@@ -186,6 +186,25 @@ def list_accounts(request):
     return [r.model_dump() for r in results]
 
 
+@router.post(
+    "/accounts/refresh-balances",
+    response={
+        HTTPStatus.OK: list[AccountSummarySchema],
+    },
+    summary="Recalculate and return all account balances",
+)
+def refresh_account_balances(request):
+    """Force recalculation of all account balances for the current user."""
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
+    from uuid import UUID
+
+    uc = get_accounts_by_user_use_case()
+    results = uc.execute(GetAccountsByUserQuery(user_id=UUID(user_id_str)))
+    return [r.model_dump() for r in results]
+
+
 @router.patch(
     "/accounts/{account_id}",
     response={

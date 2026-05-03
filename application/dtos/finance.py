@@ -29,6 +29,7 @@ class AccountSummaryResponse(BaseModel):
     type: AccountType
     supported_currencies: list[Currency]
     default_currencies: list[Currency]
+    current_balance: dict[str, str] = {}
 
 
 class GetAccountsByUserQuery(BaseModel):

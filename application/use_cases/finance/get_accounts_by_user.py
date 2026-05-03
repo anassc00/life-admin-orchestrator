@@ -15,6 +15,7 @@ class GetAccountsByUserUseCase:
                 type=a.type,
                 supported_currencies=a.supported_currencies,
                 default_currencies=a.default_currencies,
+                current_balance=a.current_balance,
             )
             for a in accounts
         ]

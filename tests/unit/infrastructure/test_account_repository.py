@@ -2,13 +2,10 @@
 
 from datetime import date
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
-from uuid import uuid4
 
-import pytest
 from django.test import TestCase
 
-from domain.entities.finance import Account, AccountType, Currency, TransactionType
+from domain.entities.finance import AccountType, Currency, TransactionType
 
 
 class TestAccountBalanceCalculation(TestCase):

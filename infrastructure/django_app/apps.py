@@ -9,3 +9,6 @@ class LifeAdminConfig(AppConfig):
     def ready(self) -> None:
         # Import models to ensure they're registered with Django ORM.
         import infrastructure.django_app.models  # noqa: F401
+
+        # Import signals for auto-balance updates
+        import infrastructure.django_app.signals  # noqa: F401
