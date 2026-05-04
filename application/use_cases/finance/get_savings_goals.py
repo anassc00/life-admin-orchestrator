@@ -25,6 +25,7 @@ class GetSavingsGoalsUseCase:
                     motive=goal.motive,
                     target_amount_usd=goal.target_amount_usd,
                     deposited_usd=deposited_usd,
+                    expected_monthly_contribution=goal.expected_monthly_contribution,
                     is_completed=goal.is_completed,
                 )
             )

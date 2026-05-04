@@ -169,6 +169,7 @@ class MonthlyFinancialSummarySchema(Schema):
 class CreateSavingsGoalRequest(Schema):
     motive: str
     target_amount_usd: Decimal
+    expected_monthly_contribution: Decimal = Decimal("0")
 
 
 class SavingsGoalResponseSchema(Schema):
@@ -176,6 +177,7 @@ class SavingsGoalResponseSchema(Schema):
     user_id: UUID
     motive: str
     target_amount_usd: Decimal
+    expected_monthly_contribution: Decimal = Decimal("0")
     is_completed: bool
 
 
@@ -184,7 +186,14 @@ class SavingsGoalSummaryResponseSchema(Schema):
     motive: str
     target_amount_usd: Decimal
     deposited_usd: Decimal
+    expected_monthly_contribution: Decimal = Decimal("0")
     is_completed: bool
+
+
+class EditSavingsGoalRequest(Schema):
+    motive: str | None = None
+    target_amount_usd: Decimal | None = None
+    expected_monthly_contribution: Decimal | None = None
 
 
 class DepositToSavingsRequest(Schema):
@@ -193,6 +202,7 @@ class DepositToSavingsRequest(Schema):
     amount: Decimal
     currency: Currency
     date: datetime.date
+    notes: str | None = None
 
 
 class SavingsDepositResponseSchema(Schema):
@@ -200,6 +210,14 @@ class SavingsDepositResponseSchema(Schema):
     goal_id: UUID
     amount: Decimal
     currency: Currency
+
+
+class SavingsDepositContributionSchema(Schema):
+    deposit_id: UUID
+    amount: Decimal
+    currency: Currency
+    date: datetime.date
+    notes: str | None = None
 
 
 class CreateExpenseCategoryRequest(Schema):

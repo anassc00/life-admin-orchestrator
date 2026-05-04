@@ -72,25 +72,25 @@ class DjangoAccountRepository(AccountRepository):
             # Calculate current balance for each supported currency
             balance = {}
             supported_currencies = [Currency(c) for c in record.supported_currencies]
-            
+
             for currency in supported_currencies:
                 # Get all transactions for this account in this currency
                 txs = TransactionModel.objects.filter(
                     account_id=record.id,
                     currency=currency.value,
                 )
-                
+
                 # Calculate balance: incomes + exchange_in - expenses - exchange_out (excluding savings)
                 income = txs.filter(
                     type__in=[TransactionType.INCOME.value, TransactionType.EXCHANGE_IN.value]
-                ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-                
+                ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
                 expense = txs.filter(
                     type__in=[TransactionType.EXPENSE.value, TransactionType.EXCHANGE_OUT.value]
-                ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-                
-                balance[currency.value] = str((income - expense).quantize(Decimal('0.01')))
-            
+                ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+                balance[currency.value] = str((income - expense).quantize(Decimal("0.01")))
+
             account = self._to_entity(record, balance)
             accounts.append(account)
         return accounts
@@ -380,6 +380,7 @@ class DjangoSavingsGoalRepository(SavingsGoalRepository):
                 "user_id": goal.user_id,
                 "motive": goal.motive,
                 "target_amount_usd": goal.target_amount_usd,
+                "expected_monthly_contribution": goal.expected_monthly_contribution,
                 "is_completed": goal.is_completed,
             },
         )
@@ -397,6 +398,7 @@ class DjangoSavingsGoalRepository(SavingsGoalRepository):
             user_id=record.user_id,
             motive=record.motive,
             target_amount_usd=record.target_amount_usd,
+            expected_monthly_contribution=record.expected_monthly_contribution,
             is_completed=record.is_completed,
         )
 
@@ -412,6 +414,7 @@ class DjangoSavingsDepositRepository(SavingsDepositRepository):
                 "amount": deposit.amount,
                 "currency": deposit.currency.value,
                 "date": deposit.date,
+                "notes": deposit.notes,
             },
         )
 
@@ -441,6 +444,7 @@ class DjangoSavingsDepositRepository(SavingsDepositRepository):
             amount=record.amount,
             currency=Currency(record.currency),
             date=record.date,
+            notes=record.notes,
         )
 
 

@@ -54,7 +54,7 @@ class RegisterCurrencyExchangeUseCase:
         # Condition B: amount_out ≈ amount_in * exchange_rate
         expected_a = amount_out * exchange_rate
         expected_b = amount_in * exchange_rate
-        
+
         # Use relative tolerance of 1% (0.01)
         def is_close(a: Decimal, b: Decimal) -> bool:
             if a == 0 and b == 0:

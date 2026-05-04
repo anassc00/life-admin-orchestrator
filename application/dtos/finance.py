@@ -216,6 +216,7 @@ class CreateSavingsGoalCommand(BaseModel):
     user_id: UUID
     motive: str
     target_amount_usd: Decimal
+    expected_monthly_contribution: Decimal = Decimal("0")
 
 
 class SavingsGoalCreatedResponse(BaseModel):
@@ -223,6 +224,7 @@ class SavingsGoalCreatedResponse(BaseModel):
     user_id: UUID
     motive: str
     target_amount_usd: Decimal
+    expected_monthly_contribution: Decimal = Decimal("0")
     is_completed: bool = False
 
 
@@ -231,7 +233,24 @@ class SavingsGoalSummaryResponse(BaseModel):
     motive: str
     target_amount_usd: Decimal
     deposited_usd: Decimal
+    expected_monthly_contribution: Decimal = Decimal("0")
     is_completed: bool
+
+
+class EditSavingsGoalCommand(BaseModel):
+    user_id: UUID
+    goal_id: UUID
+    motive: str | None = None
+    target_amount_usd: Decimal | None = None
+    expected_monthly_contribution: Decimal | None = None
+
+
+class SavingsDepositContributionResponse(BaseModel):
+    deposit_id: UUID
+    amount: Decimal
+    currency: Currency
+    date: date
+    notes: str | None = None
 
 
 class GetSavingsGoalsQuery(BaseModel):
@@ -248,6 +267,7 @@ class DepositToSavingsCommand(BaseModel):
     amount: Decimal
     currency: Currency
     date: date
+    notes: str | None = None
 
 
 class SavingsDepositCreatedResponse(BaseModel):

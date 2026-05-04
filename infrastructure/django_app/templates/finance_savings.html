@@ -19,9 +19,26 @@
     .goal-progress-fill { height: 100%; background: linear-gradient(90deg, #7c6ff7, #34d399); border-radius: 3px; transition: width 0.5s ease; }
     .goal-meta { display: flex; justify-content: space-between; font-size: 0.75rem; color: #6060a0; }
     .goal-deposited { color: #34d399; font-weight: 600; }
+    .goal-actions { display: flex; gap: 0.4rem; align-items: center; }
+    .btn-icon { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #9090b0; width: 28px; height: 28px; border-radius: 0.4rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; font-size: 0.85rem; }
+    .btn-icon:hover { background: rgba(255,255,255,0.12); color: #c0b8ff; }
+    .btn-icon.btn-edit:hover { border-color: rgba(251,191,36,0.4); color: #fbbf24; }
+    .btn-icon.btn-view:hover { border-color: rgba(52,211,153,0.4); color: #34d399; }
     .btn-deposit { font-size: 0.78rem; font-weight: 700; background: rgba(124,111,247,0.15); border: 1px solid rgba(124,111,247,0.35); color: #c0b8ff; padding: 0.35rem 0.8rem; border-radius: 0.45rem; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
     .btn-deposit:hover { background: rgba(124,111,247,0.3); }
     .completed-badge { font-size: 0.7rem; font-weight: 700; background: rgba(52,211,153,0.12); color: #34d399; border: 1px solid rgba(52,211,153,0.25); padding: 0.2rem 0.55rem; border-radius: 0.9rem; }
+
+    /* Accordion */
+    .goal-accordion { max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s ease; padding: 0 0; }
+    .goal-accordion.open { max-height: 500px; padding: 0.75rem 0 0.25rem; }
+    .accordion-header { font-size: 0.75rem; font-weight: 600; color: #7c6ff7; margin-bottom: 0.5rem; }
+    .deposits-list { display: flex; flex-direction: column; gap: 0.4rem; }
+    .deposit-item { display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: #9090b0; padding: 0.35rem 0.5rem; background: rgba(255,255,255,0.03); border-radius: 0.4rem; }
+    .deposit-amount { color: #34d399; font-weight: 600; }
+    .deposit-date { color: #6060a0; }
+    .deposit-note { color: #7c6ff7; font-style: italic; font-size: 0.72rem; margin-left: 0.5rem; }
+    .empty-deposits { font-size: 0.78rem; color: #6060a0; padding: 0.5rem 0; text-align: center; }
+
     .empty-goals { color: #6060a0; font-size: 0.88rem; padding: 2rem 0; text-align: center; }
 
     /* Form card */
@@ -43,6 +60,16 @@
     .tab-pane.active { display: block; }
     .account-hint { font-size: 0.74rem; color: #6060a0; margin-top: -0.75rem; margin-bottom: 0.85rem; min-height: 1em; }
     .currency-note { font-size: 0.74rem; color: #fbbf24; background: rgba(251,191,36,0.07); border: 1px solid rgba(251,191,36,0.2); border-radius: 0.45rem; padding: 0.5rem 0.7rem; margin-bottom: 1rem; }
+
+    /* Edit Modal */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: #1e1b4b; border: 1px solid rgba(124,111,247,0.3); border-radius: 1.25rem; padding: 1.75rem; width: 90%; max-width: 420px; }
+    .modal-title { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 1rem; }
+    .modal-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+    .btn-cancel { flex: 1; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #9090b0; font-size: 0.88rem; font-weight: 600; padding: 0.6rem; border-radius: 0.55rem; cursor: pointer; }
+    .btn-save { flex: 1; background: #7c6ff7; border: none; color: #fff; font-size: 0.88rem; font-weight: 700; padding: 0.6rem; border-radius: 0.55rem; cursor: pointer; }
+    .btn-save:hover { background: #6a5fe5; }
 
     /* Toast */
     #toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: rgba(52,211,153,0.15); border: 1px solid rgba(52,211,153,0.35); color: #34d399; padding: 0.7rem 1.1rem; border-radius: 0.6rem; font-size: 0.83rem; font-weight: 600; opacity: 0; transform: translateY(8px); transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 999; }
@@ -77,6 +104,8 @@
           <input id="motive" type="text" placeholder="Ej: Fondo de emergencia" required />
           <label for="target">Monto objetivo (USD)</label>
           <input id="target" type="number" step="0.01" min="1" placeholder="0.00" required />
+          <label for="expected-monthly">Cuota mensual esperada (USD) <span style="color:#6060a0; font-weight:400">(opcional)</span></label>
+          <input id="expected-monthly" type="number" step="0.01" min="0" placeholder="0.00" value="0" />
           <button class="btn-submit" id="btn-new">Crear meta</button>
         </div>
 
@@ -101,7 +130,28 @@
           <input id="dep-currency-hidden" type="hidden" />
           <label for="dep-date">Fecha</label>
           <input id="dep-date" type="date" required />
+          <label for="dep-notes">Nota <span style="color:#6060a0; font-weight:400">(opcional)</span></label>
+          <input id="dep-notes" type="text" placeholder="Ej: Bono de fin de año" />
           <button class="btn-submit" id="btn-deposit">Registrar aporte</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal-overlay" id="edit-modal">
+      <div class="modal">
+        <div class="modal-title">Editar meta</div>
+        <div class="error-msg" id="edit-error"></div>
+        <input type="hidden" id="edit-goal-id" />
+        <label for="edit-motive">Motivo</label>
+        <input id="edit-motive" type="text" placeholder="Motivo" required />
+        <label for="edit-target">Monto objetivo (USD)</label>
+        <input id="edit-target" type="number" step="0.01" min="1" placeholder="0.00" required />
+        <label for="edit-monthly">Cuota mensual esperada (USD) <span style="color:#6060a0; font-weight:400">(opcional)</span></label>
+        <input id="edit-monthly" type="number" step="0.01" min="0" placeholder="0.00" value="0" />
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="closeEditModal()">Cancelar</button>
+          <button class="btn-save" id="btn-save-edit">Guardar cambios</button>
         </div>
       </div>
     </div>
@@ -114,11 +164,11 @@
     const USD_CURRENCIES = ['USD', 'USDT'];
     let allGoals = [];
     let allAccounts = [];
-    let goalDeposits = {};  // goal_id → deposited amount (placeholder)
+    let goalDeposits = {}; // goal_id → deposits array
 
     document.getElementById('dep-date').value = new Date().toISOString().split('T')[0];
 
-    // ── Tabs ─────────────────────────────────────────────────────────────────
+    // ── Tabs ────────────────────────────────────────────────────────
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -128,7 +178,7 @@
       });
     });
 
-    // ── Load data ─────────────────────────────────────────────────────────────
+    // ── Load data ────────────────────────────────────────────────────
     async function loadAll() {
       const [goalsRes, accountsRes] = await Promise.all([
         fetch('/api/finance/savings/goals'),
@@ -151,24 +201,82 @@
         return;
       }
       container.innerHTML = allGoals.map(g => {
-        const pct = Math.min(100, ((g.deposited_usd || 0) / g.target_amount_usd) * 100).toFixed(1);
+        const deposited = Number(g.deposited_usd) || 0;
+        const pct = Math.min(100, (deposited / g.target_amount_usd) * 100).toFixed(1);
+
+        // Calculate projected date if applicable
+        let targetDisplay = `$${Number(g.target_amount_usd).toFixed(2)}`;
+        const monthlyContrib = Number(g.expected_monthly_contribution) || 0;
+        if (monthlyContrib > 0 && deposited < g.target_amount_usd) {
+          const remaining = g.target_amount_usd - deposited;
+          const months = Math.ceil(remaining / monthlyContrib);
+          const targetDate = new Date();
+          targetDate.setMonth(targetDate.getMonth() + months);
+          const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+          targetDisplay += ` (${monthNames[targetDate.getMonth()]} ${targetDate.getFullYear()})`;
+        }
+
         return `
-        <div class="goal-card">
+        <div class="goal-card" id="goal-${g.goal_id}">
           <div class="goal-header">
-            <div class="goal-motive">${escHtml(g.motive)}</div>
-            ${g.is_completed
-              ? '<span class="completed-badge">✓ Completada</span>'
-              : `<button class="btn-deposit" onclick="switchToDeposit('${g.goal_id}')">Aportar →</button>`}
+            <div>
+              <div class="goal-motive">${escHtml(g.motive)}</div>
+              <div class="goal-target">Meta: ${targetDisplay}</div>
+            </div>
+            <div class="goal-actions">
+              <button class="btn-icon btn-edit" title="Editar" onclick="openEditModal('${g.goal_id}')">✏️</button>
+              <button class="btn-icon btn-view" title="Ver detalles" onclick="toggleAccordion('${g.goal_id}')">👁</button>
+              ${g.is_completed
+                ? '<span class="completed-badge">✓ Completada</span>'
+                : `<button class="btn-deposit" onclick="switchToDeposit('${g.goal_id}')">Aportar →</button>`}
+            </div>
           </div>
           <div class="goal-progress-bar">
             <div class="goal-progress-fill" style="width:${pct}%"></div>
           </div>
           <div class="goal-meta">
-            <span class="goal-deposited">$${Number(g.deposited_usd || 0).toFixed(2)} ahorrados</span>
-            <span>Meta: <strong style="color:#c0b8ff">$${Number(g.target_amount_usd).toFixed(2)}</strong></span>
+            <span class="goal-deposited">$${Number(deposited).toFixed(2)} ahorrados</span>
+            <span>${pct}%</span>
+          </div>
+          <div class="goal-accordion" id="accordion-${g.goal_id}">
+            <div class="accordion-header">Historial de aportes</div>
+            <div class="deposits-list" id="deposits-${g.goal_id}">
+              <div class="empty-deposits">Cargando...</div>
+            </div>
           </div>
         </div>`;
       }).join('');
+    }
+
+    function toggleAccordion(goalId) {
+      const accordion = document.getElementById(`accordion-${goalId}`);
+      accordion.classList.toggle('open');
+      if (accordion.classList.contains('open') && !goalDeposits[goalId]) {
+        loadDeposits(goalId);
+      }
+    }
+
+    async function loadDeposits(goalId) {
+      const container = document.getElementById(`deposits-${goalId}`);
+      try {
+        const res = await fetch(`/api/finance/savings/goals/${goalId}/contributions`);
+        if (!res.ok) { container.innerHTML = '<div class="empty-deposits">Error al cargar</div>'; return; }
+        const deposits = await res.json();
+        goalDeposits[goalId] = deposits;
+        if (!deposits.length) {
+          container.innerHTML = '<div class="empty-deposits">Sin aportes registrados aún</div>';
+          return;
+        }
+        container.innerHTML = deposits.map(d => `
+          <div class="deposit-item">
+            <span class="deposit-date">${d.date}</span>
+            <span class="deposit-amount">$${Number(d.amount).toFixed(2)} ${d.currency}</span>
+            ${d.notes ? `<span class="deposit-note">${escHtml(d.notes)}</span>` : ''}
+          </div>
+        `).join('');
+      } catch {
+        container.innerHTML = '<div class="empty-deposits">Error de conexión</div>';
+      }
     }
 
     function switchToDeposit(goalId) {
@@ -218,10 +326,11 @@
       document.getElementById('dep-account-hint').textContent = currency ? `Cuenta en ${currency}` : '';
     });
 
-    // ── Create goal ───────────────────────────────────────────────────────────
+    // ── Create goal ─────────────────────────────────────────────────
     document.getElementById('btn-new').addEventListener('click', async () => {
       const motive = document.getElementById('motive').value.trim();
       const target = parseFloat(document.getElementById('target').value);
+      const expectedMonthly = parseFloat(document.getElementById('expected-monthly').value) || 0;
       const errEl = document.getElementById('new-error');
       errEl.style.display = 'none';
       if (!motive || !(target > 0)) { errEl.textContent = 'Completa todos los campos.'; errEl.style.display = 'block'; return; }
@@ -232,12 +341,13 @@
         const res = await fetch('/api/finance/savings/goals', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-          body: JSON.stringify({ motive, target_amount_usd: target }),
+          body: JSON.stringify({ motive, target_amount_usd: target, expected_monthly_contribution: expectedMonthly }),
         });
         const data = await res.json();
         if (res.ok) {
           document.getElementById('motive').value = '';
           document.getElementById('target').value = '';
+          document.getElementById('expected-monthly').value = '0';
           await loadAll();
           showToast('Meta creada correctamente');
         } else {
@@ -248,13 +358,14 @@
       btn.disabled = false; btn.textContent = 'Crear meta';
     });
 
-    // ── Deposit ───────────────────────────────────────────────────────────────
+    // ── Deposit ─────────────────────────────────────────────────────
     document.getElementById('btn-deposit').addEventListener('click', async () => {
       const goalId   = document.getElementById('dep-goal').value;
       const accountId = document.getElementById('dep-account').value;
       const amount   = parseFloat(document.getElementById('dep-amount').value);
       const currency = document.getElementById('dep-currency-hidden').value;
       const depDate  = document.getElementById('dep-date').value;
+      const notes    = document.getElementById('dep-notes').value.trim();
       const errEl    = document.getElementById('dep-error');
       errEl.style.display = 'none';
 
@@ -265,14 +376,19 @@
       const btn = document.getElementById('btn-deposit');
       btn.disabled = true; btn.textContent = 'Registrando...';
       try {
+        const body = { goal_id: goalId, account_id: accountId, amount, currency, date: depDate };
+        if (notes) body.notes = notes;
         const res = await fetch('/api/finance/savings/deposits', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-          body: JSON.stringify({ goal_id: goalId, account_id: accountId, amount, currency, date: depDate }),
+          body: JSON.stringify(body),
         });
         const data = await res.json();
         if (res.ok) {
           document.getElementById('dep-amount').value = '';
+          document.getElementById('dep-notes').value = '';
+          // Clear cached deposits for this goal
+          delete goalDeposits[goalId];
           await loadAll();
           showToast('Aporte registrado');
         } else {
@@ -283,7 +399,59 @@
       btn.disabled = false; btn.textContent = 'Registrar aporte';
     });
 
-    // ── Helpers ─────────────────────────────────────────────────────────────
+    // ── Edit Modal ──────────────────────────────────────────────────
+    function openEditModal(goalId) {
+      const goal = allGoals.find(g => g.goal_id === goalId);
+      if (!goal) return;
+      document.getElementById('edit-goal-id').value = goalId;
+      document.getElementById('edit-motive').value = goal.motive;
+      document.getElementById('edit-target').value = goal.target_amount_usd;
+      document.getElementById('edit-monthly').value = goal.expected_monthly_contribution || 0;
+      document.getElementById('edit-error').style.display = 'none';
+      document.getElementById('edit-modal').classList.add('show');
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-modal').classList.remove('show');
+    }
+
+    document.getElementById('btn-save-edit').addEventListener('click', async () => {
+      const goalId = document.getElementById('edit-goal-id').value;
+      const motive = document.getElementById('edit-motive').value.trim();
+      const target = parseFloat(document.getElementById('edit-target').value);
+      const monthly = parseFloat(document.getElementById('edit-monthly').value) || 0;
+      const errEl = document.getElementById('edit-error');
+      errEl.style.display = 'none';
+
+      if (!motive || !(target > 0)) { errEl.textContent = 'Completa los campos requeridos.'; errEl.style.display = 'block'; return; }
+
+      const btn = document.getElementById('btn-save-edit');
+      btn.disabled = true; btn.textContent = 'Guardando...';
+      try {
+        const res = await fetch(`/api/finance/savings/goals/${goalId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+          body: JSON.stringify({ motive, target_amount_usd: target, expected_monthly_contribution: monthly }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          closeEditModal();
+          await loadAll();
+          showToast('Meta actualizada correctamente');
+        } else {
+          errEl.textContent = data.detail || 'Error al actualizar la meta.';
+          errEl.style.display = 'block';
+        }
+      } catch { errEl.textContent = 'Error de conexión.'; errEl.style.display = 'block'; }
+      btn.disabled = false; btn.textContent = 'Guardar cambios';
+    });
+
+    // Close modal on overlay click
+    document.getElementById('edit-modal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('edit-modal')) closeEditModal();
+    });
+
+    // ── Helpers ─────────────────────────────────────────────────────
     function showToast(msg) {
       const t = document.getElementById('toast');
       t.textContent = msg;

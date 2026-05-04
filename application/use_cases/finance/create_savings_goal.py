@@ -12,6 +12,7 @@ class CreateSavingsGoalUseCase:
             user_id=command.user_id,
             motive=command.motive,
             target_amount_usd=command.target_amount_usd,
+            expected_monthly_contribution=command.expected_monthly_contribution,
         )
         self._repo.save(goal)
         return SavingsGoalCreatedResponse(
@@ -19,5 +20,6 @@ class CreateSavingsGoalUseCase:
             user_id=goal.user_id,
             motive=goal.motive,
             target_amount_usd=goal.target_amount_usd,
+            expected_monthly_contribution=goal.expected_monthly_contribution,
             is_completed=goal.is_completed,
         )

@@ -44,6 +44,7 @@ class DepositToSavingsUseCase:
             amount=command.amount,
             currency=command.currency,
             date=command.date,
+            notes=command.notes,
         )
         self._deposit_repo.save(deposit)
 

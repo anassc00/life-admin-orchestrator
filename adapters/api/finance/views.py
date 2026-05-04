@@ -14,6 +14,7 @@ from adapters.api.finance.schemas import (
     CreateSavingsGoalRequest,
     CurrencyExchangeRegisteredResponseSchema,
     DepositToSavingsRequest,
+    EditSavingsGoalRequest,
     EditTransactionRequest,
     ExpenseCategorizedResponseSchema,
     ExpenseCategoryResponseSchema,
@@ -27,6 +28,7 @@ from adapters.api.finance.schemas import (
     RegisterCurrencyExchangeRequest,
     RegisterExpenseRequest,
     RegisterIncomeRequest,
+    SavingsDepositContributionSchema,
     SavingsDepositResponseSchema,
     SavingsGoalResponseSchema,
     SavingsGoalSummaryResponseSchema,
@@ -39,6 +41,7 @@ from application.dtos.finance import (
     CreateExpenseCategoryCommand,
     CreateSavingsGoalCommand,
     DepositToSavingsCommand,
+    EditSavingsGoalCommand,
     EditTransactionCommand,
     GenerateMonthlyReportQuery,
     GetAccountsByUserQuery,
@@ -73,6 +76,7 @@ from infrastructure.di import (
     get_create_invoice_use_case,
     get_create_savings_goal_use_case,
     get_deposit_to_savings_use_case,
+    get_edit_savings_goal_use_case,
     get_edit_transaction_use_case,
     get_expense_categories_use_case,
     get_generate_monthly_report_use_case,
@@ -82,6 +86,7 @@ from infrastructure.di import (
     get_register_currency_exchange_use_case,
     get_register_expense_use_case,
     get_register_income_use_case,
+    get_savings_goal_contributions_use_case,
     get_savings_goals_use_case,
     get_transactions_by_user_use_case,
     get_update_account_use_case,
@@ -138,7 +143,7 @@ def monthly_financial_summary(request, year: int = None, month: int = None):
     today = date.today()
     query_year = year if year is not None else today.year
     query_month = month if month is not None else today.month
-    
+
     uc = get_monthly_financial_summary_use_case()
     result = uc.execute(
         GetMonthlyFinancialSummaryQuery(
@@ -162,7 +167,9 @@ def list_transactions(request, year: int = None, month: int = None):
     from uuid import UUID
 
     uc = get_transactions_by_user_use_case()
-    results = uc.execute(GetTransactionsByUserQuery(user_id=UUID(user_id_str), year=year, month=month))
+    results = uc.execute(
+        GetTransactionsByUserQuery(user_id=UUID(user_id_str), year=year, month=month)
+    )
     return [r.model_dump() for r in results]
 
 
@@ -381,15 +388,13 @@ def edit_transaction(request, transaction_id: UUID, payload: EditTransactionRequ
     try:
         payload_dict = payload.model_dump(exclude_none=True)
         # Convert date to ISO string if present
-        if 'date' in payload_dict and payload_dict['date'] is not None:
-            if hasattr(payload_dict['date'], 'isoformat'):
-                payload_dict['date'] = payload_dict['date'].isoformat()
-        
-        result = uc.execute(EditTransactionCommand(
-            user_id=user_id,
-            transaction_id=transaction_id,
-            **payload_dict
-        ))
+        if "date" in payload_dict and payload_dict["date"] is not None:
+            if hasattr(payload_dict["date"], "isoformat"):
+                payload_dict["date"] = payload_dict["date"].isoformat()
+
+        result = uc.execute(
+            EditTransactionCommand(user_id=user_id, transaction_id=transaction_id, **payload_dict)
+        )
         return HTTPStatus.OK, result.model_dump()
     except TransactionNotFoundError as exc:
         return HTTPStatus.NOT_FOUND, ErrorResponse(detail=str(exc))
@@ -570,3 +575,54 @@ def deposit_to_savings(request, payload: DepositToSavingsRequest):
         return HTTPStatus.NOT_FOUND, ErrorResponse(detail=str(exc))
     except SavingsDepositCurrencyError as exc:
         return HTTPStatus.UNPROCESSABLE_ENTITY, ErrorResponse(detail=str(exc))
+
+
+@router.put(
+    "/savings/goals/{goal_id}",
+    response={
+        HTTPStatus.OK: SavingsGoalSummaryResponseSchema,
+        HTTPStatus.NOT_FOUND: ErrorResponse,
+    },
+    summary="Edit a savings goal (motive, target amount, expected monthly contribution)",
+)
+def edit_savings_goal(request, goal_id: UUID, payload: EditSavingsGoalRequest):
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
+    from uuid import UUID as _UUID
+
+    user_id = _UUID(user_id_str)
+    uc = get_edit_savings_goal_use_case()
+    try:
+        result = uc.execute(
+            EditSavingsGoalCommand(
+                user_id=user_id,
+                goal_id=goal_id,
+                motive=payload.motive,
+                target_amount_usd=payload.target_amount_usd,
+                expected_monthly_contribution=payload.expected_monthly_contribution,
+            )
+        )
+        return HTTPStatus.OK, result.model_dump()
+    except SavingsGoalNotFoundError as exc:
+        return HTTPStatus.NOT_FOUND, ErrorResponse(detail=str(exc))
+
+
+@router.get(
+    "/savings/goals/{goal_id}/contributions",
+    response=list[SavingsDepositContributionSchema],
+    summary="Get all contributions/deposits for a specific savings goal",
+)
+def get_savings_goal_contributions(request, goal_id: UUID):
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return []
+    from uuid import UUID as _UUID
+
+    user_id = _UUID(user_id_str)
+    uc = get_savings_goal_contributions_use_case()
+    try:
+        results = uc.execute(goal_id, user_id)
+        return [r.model_dump() for r in results]
+    except SavingsGoalNotFoundError:
+        return []

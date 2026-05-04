@@ -99,6 +99,7 @@ class SavingsGoal(BaseModel):
     user_id: UUID
     motive: str
     target_amount_usd: Decimal
+    expected_monthly_contribution: Decimal = Decimal("0")
     is_completed: bool = False
 
 
@@ -112,6 +113,7 @@ class SavingsDeposit(BaseModel):
     amount: Decimal
     currency: Currency
     date: date
+    notes: str | None = None
 
 
 class BudgetPlan(BaseModel):

@@ -20,12 +20,16 @@ from application.use_cases.finance.create_expense_category import CreateExpenseC
 from application.use_cases.finance.create_invoice import CreateInvoiceUseCase
 from application.use_cases.finance.create_savings_goal import CreateSavingsGoalUseCase
 from application.use_cases.finance.deposit_to_savings import DepositToSavingsUseCase
+from application.use_cases.finance.edit_savings_goal import EditSavingsGoalUseCase
 from application.use_cases.finance.edit_transaction import EditTransactionUseCase
 from application.use_cases.finance.generate_monthly_report import GenerateMonthlyReportUseCase
 from application.use_cases.finance.get_accounts_by_user import GetAccountsByUserUseCase
 from application.use_cases.finance.get_expense_categories import GetExpenseCategoriesUseCase
 from application.use_cases.finance.get_monthly_financial_summary import (
     GetMonthlyFinancialSummaryUseCase,
+)
+from application.use_cases.finance.get_savings_goal_contributions import (
+    GetSavingsGoalContributionsUseCase,
 )
 from application.use_cases.finance.get_savings_goals import GetSavingsGoalsUseCase
 from application.use_cases.finance.get_transactions_by_user import GetTransactionsByUserUseCase
@@ -167,6 +171,20 @@ def get_deposit_to_savings_use_case() -> DepositToSavingsUseCase:
 
 def get_savings_goals_use_case() -> GetSavingsGoalsUseCase:
     return GetSavingsGoalsUseCase(
+        savings_goal_repo=DjangoSavingsGoalRepository(),
+        savings_deposit_repo=DjangoSavingsDepositRepository(),
+    )
+
+
+def get_edit_savings_goal_use_case() -> EditSavingsGoalUseCase:
+    return EditSavingsGoalUseCase(
+        savings_goal_repo=DjangoSavingsGoalRepository(),
+        savings_deposit_repo=DjangoSavingsDepositRepository(),
+    )
+
+
+def get_savings_goal_contributions_use_case() -> GetSavingsGoalContributionsUseCase:
+    return GetSavingsGoalContributionsUseCase(
         savings_goal_repo=DjangoSavingsGoalRepository(),
         savings_deposit_repo=DjangoSavingsDepositRepository(),
     )

@@ -17,10 +17,10 @@ def repo():
 def setup_transactions(db):
     """Create sample transactions for testing."""
     from infrastructure.django_app.models.finance import TransactionModel
-    
+
     user_id = uuid4()
     account_id = uuid4()
-    
+
     # Create transactions for different months
     txs = [
         TransactionModel(
@@ -57,12 +57,12 @@ def setup_transactions(db):
             notes="May VES transaction",
         ),
     ]
-    
+
     for tx in txs:
         tx.save()
-    
+
     yield user_id
-    
+
     # Cleanup
     for tx in txs:
         tx.delete()
@@ -70,13 +70,13 @@ def setup_transactions(db):
 
 class TestListByUserWithMonthYear:
     """Test the list_by_user method with month/year filtering."""
-    
+
     def test_list_without_filters_returns_all(self, repo, setup_transactions):
         """Should return all transactions when no month/year specified."""
         user_id = setup_transactions
         results = repo.list_by_user(user_id)
         assert len(results) == 3
-    
+
     def test_list_with_month_year_filter(self, repo, setup_transactions):
         """Should return only transactions for specified month/year."""
         user_id = setup_transactions
@@ -86,14 +86,14 @@ class TestListByUserWithMonthYear:
         for tx in results:
             assert tx.date.year == 2026
             assert tx.date.month == 5
-    
+
     def test_list_with_april_filter(self, repo, setup_transactions):
         """Should return only April transactions."""
         user_id = setup_transactions
         results = repo.list_by_user(user_id, year=2026, month=4)
         assert len(results) == 1
         assert results[0].date.month == 4
-    
+
     def test_list_with_wrong_month_returns_empty(self, repo, setup_transactions):
         """Should return empty list for month with no transactions."""
         user_id = setup_transactions

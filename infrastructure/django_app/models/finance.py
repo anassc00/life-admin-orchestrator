@@ -76,6 +76,7 @@ class SavingsGoalModel(models.Model):
     user_id = models.UUIDField(db_index=True)
     motive = models.CharField(max_length=500)
     target_amount_usd = models.DecimalField(max_digits=14, decimal_places=2)
+    expected_monthly_contribution = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     is_completed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -103,6 +104,7 @@ class SavingsDepositModel(models.Model):
     amount = models.DecimalField(max_digits=14, decimal_places=6)
     currency = models.CharField(max_length=10)
     date = models.DateField()
+    notes = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
