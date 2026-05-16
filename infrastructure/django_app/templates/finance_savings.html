@@ -38,6 +38,11 @@
     .deposit-date { color: #6060a0; }
     .deposit-note { color: #7c6ff7; font-style: italic; font-size: 0.72rem; margin-left: 0.5rem; }
     .empty-deposits { font-size: 0.78rem; color: #6060a0; padding: 0.5rem 0; text-align: center; }
+    .btn-del-deposit { background: transparent; border: none; color: #f87171; font-size: 1rem; line-height: 1; cursor: pointer; padding: 0 0.25rem; margin-left: auto; opacity: 0.7; transition: opacity 0.15s; }
+    .btn-del-deposit:hover { opacity: 1; }
+    .goal-projection { font-size: 0.73rem; color: #6060a0; margin-top: 0.15rem; }
+    .badge-on-track { display: inline-block; margin-left: 0.4rem; font-size: 0.68rem; font-weight: 700; color: #34d399; background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.3); padding: 0.1rem 0.4rem; border-radius: 0.6rem; }
+    .badge-late { display: inline-block; margin-left: 0.4rem; font-size: 0.68rem; font-weight: 700; color: #f87171; background: rgba(248,113,113,0.12); border: 1px solid rgba(248,113,113,0.3); padding: 0.1rem 0.4rem; border-radius: 0.6rem; }
 
     .empty-goals { color: #6060a0; font-size: 0.88rem; padding: 2rem 0; text-align: center; }
 
@@ -106,6 +111,19 @@
           <input id="target" type="number" step="0.01" min="1" placeholder="0.00" required />
           <label for="expected-monthly">Cuota mensual esperada (USD) <span style="color:#6060a0; font-weight:400">(opcional)</span></label>
           <input id="expected-monthly" type="number" step="0.01" min="0" placeholder="0.00" value="0" />
+          <label for="new-deadline">Fecha objetivo (opcional)</label>
+          <input id="new-deadline" type="date" />
+          <label for="new-priority">Prioridad (0=baja, 10=alta)</label>
+          <input id="new-priority" type="number" min="0" max="10" step="1" placeholder="0" />
+          <label for="new-category">Categoría</label>
+          <select id="new-category">
+            <option value="">Sin categoría</option>
+            <option value="emergency_fund">Fondo de emergencia</option>
+            <option value="travel">Viajes</option>
+            <option value="education">Educación</option>
+            <option value="investment">Inversión</option>
+            <option value="other">Otro</option>
+          </select>
           <button class="btn-submit" id="btn-new">Crear meta</button>
         </div>
 
@@ -149,6 +167,19 @@
         <input id="edit-target" type="number" step="0.01" min="1" placeholder="0.00" required />
         <label for="edit-monthly">Cuota mensual esperada (USD) <span style="color:#6060a0; font-weight:400">(opcional)</span></label>
         <input id="edit-monthly" type="number" step="0.01" min="0" placeholder="0.00" value="0" />
+        <label for="edit-deadline">Fecha objetivo (opcional)</label>
+        <input id="edit-deadline" type="date" />
+        <label for="edit-priority">Prioridad (0=baja, 10=alta)</label>
+        <input id="edit-priority" type="number" min="0" max="10" step="1" placeholder="0" />
+        <label for="edit-category">Categoría</label>
+        <select id="edit-category">
+          <option value="">Sin categoría</option>
+          <option value="emergency_fund">Fondo de emergencia</option>
+          <option value="travel">Viajes</option>
+          <option value="education">Educación</option>
+          <option value="investment">Inversión</option>
+          <option value="other">Otro</option>
+        </select>
         <div class="modal-actions">
           <button class="btn-cancel" onclick="closeEditModal()">Cancelar</button>
           <button class="btn-save" id="btn-save-edit">Guardar cambios</button>
@@ -165,6 +196,7 @@
     let allGoals = [];
     let allAccounts = [];
     let goalDeposits = {}; // goal_id → deposits array
+    let projections = {}; // goal_id → projection object
 
     document.getElementById('dep-date').value = new Date().toISOString().split('T')[0];
 
@@ -180,15 +212,21 @@
 
     // ── Load data ────────────────────────────────────────────────────
     async function loadAll() {
-      const [goalsRes, accountsRes] = await Promise.all([
+      const [goalsRes, accountsRes, projRes] = await Promise.all([
         fetch('/api/finance/savings/goals'),
         fetch('/api/finance/accounts'),
+        fetch('/api/finance/savings/projection'),
       ]);
       if (goalsRes.status === 401 || accountsRes.status === 401) {
         window.location.href = '/login/'; return;
       }
       allGoals = await goalsRes.json();
       allAccounts = await accountsRes.json();
+      if (projRes.ok) {
+        const projList = await projRes.json();
+        projections = {};
+        projList.forEach(p => { projections[p.goal_id] = p; });
+      }
       renderGoals();
       populateGoalSelect();
       populateAccountSelect();
@@ -238,6 +276,21 @@
             <span class="goal-deposited">$${Number(deposited).toFixed(2)} ahorrados</span>
             <span>${pct}%</span>
           </div>
+          ${(() => {
+            const proj = projections[g.goal_id];
+            if (!proj || typeof proj.months_to_completion !== 'number') return '';
+            const monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+            const projDate = proj.projected_completion_date ? new Date(proj.projected_completion_date) : null;
+            const monthLabel = projDate ? `${monthNames[projDate.getUTCMonth()]} ${projDate.getUTCFullYear()}` : '';
+            let badge = '';
+            if (g.deadline && projDate) {
+              const deadlineDate = new Date(g.deadline);
+              badge = projDate > deadlineDate
+                ? '<span class="badge-late">⚠️ Atrasada</span>'
+                : '<span class="badge-on-track">✓ En camino</span>';
+            }
+            return `<div class="goal-projection">Proyección: en ${proj.months_to_completion} meses${monthLabel ? ` (${monthLabel})` : ''}${badge}</div>`;
+          })()}
           <div class="goal-accordion" id="accordion-${g.goal_id}">
             <div class="accordion-header">Historial de aportes</div>
             <div class="deposits-list" id="deposits-${g.goal_id}">
@@ -268,16 +321,46 @@
           return;
         }
         container.innerHTML = deposits.map(d => `
-          <div class="deposit-item">
+          <div class="deposit-item" data-deposit-id="${d.deposit_id}" data-goal-id="${goalId}">
             <span class="deposit-date">${d.date}</span>
             <span class="deposit-amount">$${Number(d.amount).toFixed(2)} ${d.currency}</span>
             ${d.notes ? `<span class="deposit-note">${escHtml(d.notes)}</span>` : ''}
+            <button class="btn-del-deposit" data-deposit-id="${d.deposit_id}" title="Eliminar aporte">×</button>
           </div>
         `).join('');
       } catch {
         container.innerHTML = '<div class="empty-deposits">Error de conexión</div>';
       }
     }
+
+    // ── Delete deposit (event delegation on goals-list) ─────────────
+    document.getElementById('goals-list').addEventListener('click', async (e) => {
+      const btn = e.target.closest('.btn-del-deposit');
+      if (!btn) return;
+      const depositId = btn.dataset.depositId;
+      const item = btn.closest('.deposit-item');
+      const goalId = item ? item.dataset.goalId : null;
+      if (!depositId) return;
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/finance/savings/deposits/${depositId}`, {
+          method: 'DELETE',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        });
+        if (res.ok || res.status === 204) {
+          if (item) item.remove();
+          if (goalId) delete goalDeposits[goalId];
+          await loadAll();
+          showToast('Aporte eliminado');
+        } else {
+          let msg = 'Error al eliminar el aporte.';
+          try { const d = await res.json(); msg = d.detail || msg; } catch {}
+          showToast(msg);
+        }
+      } catch {
+        showToast('Error de conexión.');
+      }
+    });
 
     function switchToDeposit(goalId) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -331,6 +414,9 @@
       const motive = document.getElementById('motive').value.trim();
       const target = parseFloat(document.getElementById('target').value);
       const expectedMonthly = parseFloat(document.getElementById('expected-monthly').value) || 0;
+      const deadline = document.getElementById('new-deadline').value || null;
+      const priority = document.getElementById('new-priority').value !== '' ? parseInt(document.getElementById('new-priority').value, 10) : null;
+      const category = document.getElementById('new-category').value || null;
       const errEl = document.getElementById('new-error');
       errEl.style.display = 'none';
       if (!motive || !(target > 0)) { errEl.textContent = 'Completa todos los campos.'; errEl.style.display = 'block'; return; }
@@ -338,16 +424,23 @@
       const btn = document.getElementById('btn-new');
       btn.disabled = true; btn.textContent = 'Creando...';
       try {
+        const payload = { motive, target_amount_usd: target, expected_monthly_contribution: expectedMonthly };
+        if (deadline) payload.deadline = deadline;
+        if (priority !== null) payload.priority = priority;
+        if (category) payload.category = category;
         const res = await fetch('/api/finance/savings/goals', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-          body: JSON.stringify({ motive, target_amount_usd: target, expected_monthly_contribution: expectedMonthly }),
+          body: JSON.stringify(payload),
         });
         const data = await res.json();
         if (res.ok) {
           document.getElementById('motive').value = '';
           document.getElementById('target').value = '';
           document.getElementById('expected-monthly').value = '0';
+          document.getElementById('new-deadline').value = '';
+          document.getElementById('new-priority').value = '';
+          document.getElementById('new-category').value = '';
           await loadAll();
           showToast('Meta creada correctamente');
         } else {
@@ -407,6 +500,9 @@
       document.getElementById('edit-motive').value = goal.motive;
       document.getElementById('edit-target').value = goal.target_amount_usd;
       document.getElementById('edit-monthly').value = goal.expected_monthly_contribution || 0;
+      document.getElementById('edit-deadline').value = goal.deadline || '';
+      document.getElementById('edit-priority').value = goal.priority != null ? goal.priority : '';
+      document.getElementById('edit-category').value = goal.category || '';
       document.getElementById('edit-error').style.display = 'none';
       document.getElementById('edit-modal').classList.add('show');
     }
@@ -420,6 +516,10 @@
       const motive = document.getElementById('edit-motive').value.trim();
       const target = parseFloat(document.getElementById('edit-target').value);
       const monthly = parseFloat(document.getElementById('edit-monthly').value) || 0;
+      const deadline = document.getElementById('edit-deadline').value || null;
+      const priorityRaw = document.getElementById('edit-priority').value;
+      const priority = priorityRaw !== '' ? parseInt(priorityRaw, 10) : null;
+      const category = document.getElementById('edit-category').value || null;
       const errEl = document.getElementById('edit-error');
       errEl.style.display = 'none';
 
@@ -428,10 +528,14 @@
       const btn = document.getElementById('btn-save-edit');
       btn.disabled = true; btn.textContent = 'Guardando...';
       try {
+        const payload = { motive, target_amount_usd: target, expected_monthly_contribution: monthly };
+        if (deadline) payload.deadline = deadline;
+        if (priority !== null) payload.priority = priority;
+        if (category) payload.category = category;
         const res = await fetch(`/api/finance/savings/goals/${goalId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-          body: JSON.stringify({ motive, target_amount_usd: target, expected_monthly_contribution: monthly }),
+          body: JSON.stringify(payload),
         });
         const data = await res.json();
         if (res.ok) {
