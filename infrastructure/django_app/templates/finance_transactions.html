@@ -35,6 +35,8 @@
     .btn-edit:hover { color: #c0b8ff; border-color: rgba(124, 111, 247, 0.6); }
     .btn-delete { background: transparent; border: 1px solid rgba(248, 113, 113, 0.25); color: #9090b0; font-size: 0.75rem; padding: 0.3rem 0.65rem; border-radius: 0.45rem; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
     .btn-delete:hover { color: #f87171; border-color: rgba(248, 113, 113, 0.55); }
+    .btn-reverse { background: transparent; border: 1px solid rgba(251, 191, 36, 0.3); color: #9090b0; font-size: 0.75rem; padding: 0.3rem 0.65rem; border-radius: 0.45rem; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+    .btn-reverse:hover { color: #fbbf24; border-color: rgba(251, 191, 36, 0.65); }
     .btn-danger { background: #ef4444; border: none; color: #fff; font-size: 0.85rem; font-weight: 700; padding: 0.5rem 1.1rem; border-radius: 0.55rem; cursor: pointer; transition: background 0.2s; }
     .btn-danger:hover { background: #dc2626; }
     .btn-danger:disabled { background: rgba(239, 68, 68, 0.4); cursor: not-allowed; }
@@ -92,6 +94,12 @@
         <option value="USDT">USDT</option>
         <option value="VES">VES</option>
         <option value="MXN">MXN</option>
+      </select>
+      <select id="filter-account">
+        <option value="">Todas las cuentas</option>
+      </select>
+      <select id="filter-category">
+        <option value="">Todas las categorías</option>
       </select>
       <div class="month-filter">
         <select id="filter-month">
@@ -223,6 +231,19 @@
       </div>
     </div>
 
+    <!-- Reverse Transaction Modal -->
+    <div class="modal-backdrop" id="reverse-modal">
+      <div class="modal">
+        <div class="modal-title">Revertir transacción</div>
+        <div class="modal-sub">¿Revertir esta transacción? Se creará una transacción compensatoria por el mismo monto.</div>
+        <div class="modal-error" id="reverse-error"></div>
+        <div class="modal-actions">
+          <button class="btn-cancel" id="reverse-cancel">Cancelar</button>
+          <button class="btn-primary" id="reverse-confirm">Revertir</button>
+        </div>
+      </div>
+    </div>
+
     <div id="toast">Transacción actualizada correctamente</div>
 {% endblock %}
 {% block extra_script %}
@@ -258,13 +279,32 @@
         const res = await fetch('/api/finance/accounts');
         if (!res.ok) return;
         allAccounts = await res.json();
+        // Populate edit modal account select
         const sel = document.getElementById('edit-account');
-        // Keep the "Sin cambio" option, then append accounts
         sel.innerHTML = '<option value="">Sin cambio</option>' +
           allAccounts.map(a =>
             `<option value="${a.account_id}">${escHtml(a.name)} (${a.type})</option>`
           ).join('');
+        // Populate filter-account select
+        const filterSel = document.getElementById('filter-account');
+        filterSel.innerHTML = '<option value="">Todas las cuentas</option>' +
+          allAccounts.map(a =>
+            `<option value="${a.account_id}">${escHtml(a.name)}</option>`
+          ).join('');
       } catch (e) { console.error('Error loading accounts:', e); }
+    }
+
+    async function loadCategories() {
+      try {
+        const res = await fetch('/api/finance/categories');
+        if (!res.ok) return;
+        const cats = await res.json();
+        const filterSel = document.getElementById('filter-category');
+        filterSel.innerHTML = '<option value="">Todas las categorías</option>' +
+          cats.map(c =>
+            `<option value="${escHtml(c.category_id || c.name)}">${escHtml(c.name)}</option>`
+          ).join('');
+      } catch (e) { console.error('Error loading categories:', e); }
     }
 
     function escHtml(str) {
@@ -275,7 +315,17 @@
     }
 
     async function loadTransactions() {
-      const res = await fetch('/api/finance/transactions');
+      const params = new URLSearchParams();
+      const year = document.getElementById('filter-year').value;
+      const month = document.getElementById('filter-month').value;
+      const accountId = document.getElementById('filter-account').value;
+      const categoryId = document.getElementById('filter-category').value;
+      if (year)       params.set('year', year);
+      if (month)      params.set('month', month);
+      if (accountId)  params.set('account_id', accountId);
+      if (categoryId) params.set('category_id', categoryId);
+      const qs = params.toString() ? '?' + params.toString() : '';
+      const res = await fetch('/api/finance/transactions' + qs);
       if (res.status === 401) { window.location.href = '/login/'; return; }
       allTx = await res.json();
       renderTable(allTx);
@@ -346,6 +396,7 @@
             <div style="display:flex;gap:0.4rem">
               <button class="btn-edit" data-id="${tx.transaction_id}">Editar</button>
               <button class="btn-delete" data-id="${tx.transaction_id}" data-related="${escAttr(tx.related_transaction_id || '')}">Eliminar</button>
+              ${(tx.type === 'income' || tx.type === 'expense') ? `<button class="btn-reverse" data-id="${tx.transaction_id}">Revertir</button>` : ''}
             </div>
           </td>
         </tr>`;
@@ -357,15 +408,22 @@
       tbody.querySelectorAll('.btn-delete').forEach(btn => {
         btn.addEventListener('click', () => openDeleteModal(btn.dataset.id, btn.dataset.related));
       });
+      tbody.querySelectorAll('.btn-reverse').forEach(btn => {
+        btn.addEventListener('click', () => openReverseModal(btn.dataset.id));
+      });
     }
 
     function applyFilters() {
-      const type     = document.getElementById('filter-type').value;
-      const currency = document.getElementById('filter-currency').value;
-      const search   = document.getElementById('filter-search').value.trim().toLowerCase();
+      const type       = document.getElementById('filter-type').value;
+      const currency   = document.getElementById('filter-currency').value;
+      const accountId  = document.getElementById('filter-account').value;
+      const categoryId = document.getElementById('filter-category').value;
+      const search     = document.getElementById('filter-search').value.trim().toLowerCase();
       const filtered = allTx.filter(tx => {
         if (type && tx.type !== type) return false;
         if (currency && tx.currency !== currency) return false;
+        if (accountId && tx.account_id !== accountId) return false;
+        if (categoryId && tx.category_id !== categoryId && tx.category !== categoryId) return false;
         if (search) {
           const haystack = [tx.description, tx.notes, tx.category].filter(Boolean).join(' ').toLowerCase();
           if (!haystack.includes(search)) return false;
@@ -375,9 +433,13 @@
       renderTable(filtered);
     }
 
-    ['filter-type', 'filter-currency'].forEach(id =>
+    ['filter-type', 'filter-currency', 'filter-account', 'filter-category'].forEach(id =>
       document.getElementById(id).addEventListener('change', applyFilters));
     document.getElementById('filter-search').addEventListener('input', applyFilters);
+
+    // Month/year filters trigger a fresh server fetch (server-side filtering)
+    ['filter-month', 'filter-year'].forEach(id =>
+      document.getElementById(id).addEventListener('change', loadTransactions));
 
     function openEditModal(txId) {
       editingTx = txId;
@@ -592,6 +654,57 @@
       return document.cookie.split('; ').find(r => r.startsWith(name + '='))?.split('=')[1] || '';
     }
 
+    let reversingTxId = null;
+
+    function openReverseModal(txId) {
+      reversingTxId = txId;
+      document.getElementById('reverse-error').style.display = 'none';
+      document.getElementById('reverse-modal').classList.add('open');
+    }
+
+    document.getElementById('reverse-cancel').addEventListener('click', () => {
+      reversingTxId = null;
+      document.getElementById('reverse-modal').classList.remove('open');
+    });
+
+    document.getElementById('reverse-modal').addEventListener('click', e => {
+      if (e.target === document.getElementById('reverse-modal')) {
+        reversingTxId = null;
+        document.getElementById('reverse-modal').classList.remove('open');
+      }
+    });
+
+    document.getElementById('reverse-confirm').addEventListener('click', async () => {
+      if (!reversingTxId) return;
+      const btn = document.getElementById('reverse-confirm');
+      btn.disabled = true; btn.textContent = 'Revirtiendo...';
+      document.getElementById('reverse-error').style.display = 'none';
+
+      try {
+        const res = await fetch(`/api/finance/transactions/${reversingTxId}/reverse`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        });
+        if (res.ok) {
+          document.getElementById('reverse-modal').classList.remove('open');
+          reversingTxId = null;
+          showToast('Transacción revertida');
+          loadTransactions();
+        } else {
+          const data = await res.json().catch(() => ({}));
+          const errEl = document.getElementById('reverse-error');
+          errEl.textContent = data.detail || `Error al revertir (${res.status}).`;
+          errEl.style.display = 'block';
+        }
+      } catch {
+        const errEl = document.getElementById('reverse-error');
+        errEl.textContent = 'Error de conexión.';
+        errEl.style.display = 'block';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Revertir';
+      }
+    });
+
     if (new URLSearchParams(location.search).get('exchange') === '1') {
       history.replaceState(null, '', '/finance/transactions/');
       showToast('Cambio de divisas registrado correctamente');
@@ -599,5 +712,6 @@
 
     loadTransactions();
     loadAccounts();
+    loadCategories();
 </script>
 {% endblock %}

@@ -23,6 +23,11 @@
     .currencies-pill { font-size: 0.78rem; color: #7070a0; }
     .btn-edit { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); color: #9090b0; font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.7rem; border-radius: 0.4rem; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
     .btn-edit:hover { color: #c0b8ff; border-color: rgba(124, 111, 247, 0.5); }
+    .btn-delete { background: transparent; border: 1px solid rgba(248,113,113,0.25); color: #9090b0; font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.7rem; border-radius: 0.4rem; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+    .btn-delete:hover { color: #f87171; border-color: rgba(248,113,113,0.55); }
+    .btn-danger { background: #ef4444; border: none; color: #fff; font-size: 0.88rem; font-weight: 700; padding: 0.5rem 1.1rem; border-radius: 0.5rem; cursor: pointer; transition: background 0.2s; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-danger:disabled { background: rgba(239,68,68,0.4); cursor: not-allowed; }
     .empty { color: #6060a0; font-size: 0.9rem; padding: 2rem 0; text-align: center; }
     .modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 100; }
     .modal-backdrop.open { display: flex; }
@@ -71,6 +76,22 @@
         <tr><td colspan="5" class="empty">Cargando cuentas...</td></tr>
       </tbody>
     </table>
+
+    <!-- Delete Account Confirm Modal -->
+    <div class="modal-backdrop" id="delete-account-backdrop">
+      <div class="modal">
+        <h3>Eliminar cuenta</h3>
+        <div id="delete-account-msg" style="color:#9090b0;font-size:0.88rem;margin-bottom:1rem;">
+          ¿Eliminar cuenta <strong id="delete-account-name"></strong>? Esta acción no se puede deshacer.
+          Si tiene transacciones asociadas, no podrá eliminarse.
+        </div>
+        <div id="delete-account-error" style="color:#f87171;font-size:0.82rem;margin-bottom:0.75rem;display:none;"></div>
+        <div class="modal-actions">
+          <button class="btn-cancel" id="delete-account-cancel">Cancelar</button>
+          <button class="btn-danger" id="delete-account-confirm">Eliminar</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Account Modal (create / edit) -->
     <div class="modal-backdrop" id="modal-backdrop">
@@ -148,7 +169,12 @@
           <td>${typeBadge(a.type)}</td>
           <td class="currencies-pill">${a.supported_currencies.join(' · ')}</td>
           <td class="currencies-pill">${a.default_currencies.join(' · ')}</td>
-          <td><button class="btn-edit" onclick="openEdit(this)">Editar</button></td>
+          <td>
+            <div style="display:flex;gap:0.4rem">
+              <button class="btn-edit" onclick="openEdit(this)">Editar</button>
+              <button class="btn-delete" onclick="deleteAccount('${a.account_id}', '${a.name.replace(/'/g, &quot;&#39;&quot;)}')">Eliminar</button>
+            </div>
+          </td>
         </tr>
       `).join('');
     }
@@ -238,6 +264,60 @@
     function getCookie(name) {
       return document.cookie.split('; ').find(r => r.startsWith(name + '='))?.split('=')[1] || '';
     }
+
+    let _deleteAccountId = null;
+
+    function deleteAccount(accountId, accountName) {
+      _deleteAccountId = accountId;
+      document.getElementById('delete-account-name').textContent = accountName;
+      document.getElementById('delete-account-error').style.display = 'none';
+      document.getElementById('delete-account-backdrop').classList.add('open');
+    }
+
+    document.getElementById('delete-account-cancel').addEventListener('click', () => {
+      _deleteAccountId = null;
+      document.getElementById('delete-account-backdrop').classList.remove('open');
+    });
+
+    document.getElementById('delete-account-backdrop').addEventListener('click', e => {
+      if (e.target === e.currentTarget) {
+        _deleteAccountId = null;
+        document.getElementById('delete-account-backdrop').classList.remove('open');
+      }
+    });
+
+    document.getElementById('delete-account-confirm').addEventListener('click', async () => {
+      if (!_deleteAccountId) return;
+      const btn = document.getElementById('delete-account-confirm');
+      const errEl = document.getElementById('delete-account-error');
+      btn.disabled = true; btn.textContent = 'Eliminando...';
+      errEl.style.display = 'none';
+
+      try {
+        const res = await fetch(`/api/finance/accounts/${_deleteAccountId}`, {
+          method: 'DELETE',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        });
+        if (res.ok) {
+          document.getElementById('delete-account-backdrop').classList.remove('open');
+          _deleteAccountId = null;
+          showMsg('Cuenta eliminada exitosamente.', 'success');
+          loadAccounts();
+        } else if (res.status === 409 || res.status === 422) {
+          errEl.textContent = 'No se puede eliminar: la cuenta tiene transacciones asociadas.';
+          errEl.style.display = 'block';
+        } else {
+          const data = await res.json().catch(() => ({}));
+          errEl.textContent = data.detail || `Error al eliminar (${res.status}).`;
+          errEl.style.display = 'block';
+        }
+      } catch {
+        errEl.textContent = 'Error de conexión.';
+        errEl.style.display = 'block';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Eliminar';
+      }
+    });
 
     loadAccounts();
   </script>
