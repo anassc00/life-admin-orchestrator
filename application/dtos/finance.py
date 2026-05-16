@@ -165,6 +165,7 @@ class TransactionListItemResponse(BaseModel):
 
 
 class CreateInvoiceCommand(BaseModel):
+    user_id: UUID
     vendor: str
     amount: Decimal
     currency: str = "MXN"
@@ -180,9 +181,9 @@ class InvoiceCreatedResponse(BaseModel):
 
 
 class ProcessInvoiceCommand(BaseModel):
+    user_id: UUID
     invoice_id: UUID
-    # Provide these to create the corresponding expense transaction on payment
-    user_id: UUID | None = None
+    # Provide account_id to create the corresponding expense transaction on payment
     account_id: UUID | None = None
     exchange_rate: Decimal = Decimal("1")
 
@@ -197,6 +198,7 @@ class InvoiceProcessedResponse(BaseModel):
 
 
 class CategorizeExpenseCommand(BaseModel):
+    user_id: UUID
     description: str
     amount: Decimal
     currency: str = "MXN"

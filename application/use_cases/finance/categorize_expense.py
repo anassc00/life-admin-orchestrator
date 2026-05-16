@@ -9,6 +9,7 @@ class CategorizeExpenseUseCase:
 
     def execute(self, command: CategorizeExpenseCommand) -> ExpenseCategorizedResponse:
         expense = Expense(
+            user_id=command.user_id,
             description=command.description,
             amount=command.amount,
             currency=command.currency,

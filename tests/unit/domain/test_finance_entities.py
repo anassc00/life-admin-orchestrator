@@ -1,5 +1,6 @@
 from datetime import date
 from decimal import Decimal
+from uuid import uuid4
 
 import pytest
 
@@ -9,6 +10,7 @@ from domain.entities.finance import Expense, Invoice
 class TestInvoice:
     def test_invoice_creation_defaults(self):
         invoice = Invoice(
+            user_id=uuid4(),
             vendor="Acme",
             amount=Decimal("1500.00"),
             due_date=date(2026, 5, 1),
@@ -19,6 +21,7 @@ class TestInvoice:
 
     def test_mark_as_paid_returns_new_instance(self):
         invoice = Invoice(
+            user_id=uuid4(),
             vendor="Acme",
             amount=Decimal("1500.00"),
             due_date=date(2026, 5, 1),
@@ -31,6 +34,7 @@ class TestInvoice:
 
     def test_invoice_is_frozen(self):
         invoice = Invoice(
+            user_id=uuid4(),
             vendor="Acme",
             amount=Decimal("500.00"),
             due_date=date(2026, 5, 1),
@@ -42,6 +46,7 @@ class TestInvoice:
 class TestExpense:
     def test_expense_creation(self):
         expense = Expense(
+            user_id=uuid4(),
             description="Electricity bill",
             amount=Decimal("800.00"),
             category="utilities",

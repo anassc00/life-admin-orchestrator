@@ -40,7 +40,9 @@ from adapters.api.finance.schemas import (
 )
 from adapters.api.users.schemas import ErrorResponse
 from application.dtos.finance import (
+    CategorizeExpenseCommand,
     CreateExpenseCategoryCommand,
+    CreateInvoiceCommand,
     CreateSavingsGoalCommand,
     DeleteTransactionCommand,
     DepositToSavingsCommand,
@@ -67,6 +69,9 @@ from domain.exceptions.finance import (
     ExpenseCategoryNotFoundError,
     InvalidEditionCredentialsError,
     InvalidExchangeMathError,
+    InvoiceAccessForbiddenError,
+    InvoiceAlreadyPaidError,
+    InvoiceNotFoundError,
     SavingsDepositCurrencyError,
     SavingsGoalNotFoundError,
     TransactionNotFoundError,
@@ -99,22 +104,102 @@ from infrastructure.di import (
 router = Router(tags=["Finance"])
 
 
-@router.post("/invoices", response=InvoiceCreatedResponseSchema)
+@router.post(
+    "/invoices",
+    response={
+        HTTPStatus.CREATED: InvoiceCreatedResponseSchema,
+        HTTPStatus.UNAUTHORIZED: ErrorResponse,
+    },
+    summary="Create a new invoice",
+)
 def create_invoice(request, payload: CreateInvoiceRequest):
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
+    from uuid import UUID
+
+    user_id = UUID(user_id_str)
     uc = get_create_invoice_use_case()
-    return uc.execute(payload.to_command()).model_dump()
+    result = uc.execute(
+        CreateInvoiceCommand(
+            user_id=user_id,
+            vendor=payload.vendor,
+            amount=payload.amount,
+            currency=payload.currency,
+            due_date=payload.due_date,
+        )
+    )
+    return HTTPStatus.CREATED, result.model_dump()
 
 
-@router.post("/invoices/{invoice_id}/process", response=InvoiceProcessedResponseSchema)
-def process_invoice(request, invoice_id: UUID):
+@router.post(
+    "/invoices/{invoice_id}/process",
+    response={
+        HTTPStatus.OK: InvoiceProcessedResponseSchema,
+        HTTPStatus.UNAUTHORIZED: ErrorResponse,
+        HTTPStatus.FORBIDDEN: ErrorResponse,
+        HTTPStatus.NOT_FOUND: ErrorResponse,
+        HTTPStatus.CONFLICT: ErrorResponse,
+    },
+    summary="Mark an invoice as paid (creates an expense transaction if account_id is provided)",
+)
+def process_invoice(request, invoice_id: UUID, account_id: UUID = None):
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
+    from uuid import UUID as _UUID
+
+    user_id = _UUID(user_id_str)
     uc = get_process_invoice_use_case()
-    return uc.execute(ProcessInvoiceCommand(invoice_id=invoice_id)).model_dump()
+    try:
+        result = uc.execute(
+            ProcessInvoiceCommand(
+                user_id=user_id,
+                invoice_id=invoice_id,
+                account_id=account_id,
+            )
+        )
+        return HTTPStatus.OK, result.model_dump()
+    except InvoiceNotFoundError as exc:
+        return HTTPStatus.NOT_FOUND, ErrorResponse(detail=str(exc))
+    except InvoiceAccessForbiddenError as exc:
+        return HTTPStatus.FORBIDDEN, ErrorResponse(detail=str(exc))
+    except InvoiceAlreadyPaidError as exc:
+        return HTTPStatus.CONFLICT, ErrorResponse(detail=str(exc))
+    except AccountNotFoundError as exc:
+        return HTTPStatus.NOT_FOUND, ErrorResponse(detail=str(exc))
+    except AccountAccessForbiddenError as exc:
+        return HTTPStatus.FORBIDDEN, ErrorResponse(detail=str(exc))
 
 
-@router.post("/expenses", response=ExpenseCategorizedResponseSchema)
+@router.post(
+    "/expenses",
+    response={
+        HTTPStatus.CREATED: ExpenseCategorizedResponseSchema,
+        HTTPStatus.UNAUTHORIZED: ErrorResponse,
+    },
+    summary="Categorize and record an expense entry",
+)
 def categorize_expense(request, payload: CategorizeExpenseRequest):
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
+    from uuid import UUID
+
+    user_id = UUID(user_id_str)
     uc = get_categorize_expense_use_case()
-    return uc.execute(payload.to_command()).model_dump()
+    result = uc.execute(
+        CategorizeExpenseCommand(
+            user_id=user_id,
+            description=payload.description,
+            amount=payload.amount,
+            currency=payload.currency,
+            date=payload.date,
+            category=payload.category,
+            invoice_id=payload.invoice_id,
+        )
+    )
+    return HTTPStatus.CREATED, result.model_dump()
 
 
 @router.get("/reports/monthly", response=MonthlyReportResponseSchema)

@@ -72,6 +72,9 @@ class InvoiceRepository(ABC):
     def save(self, invoice: Invoice) -> None: ...
 
     @abstractmethod
+    def list_by_user(self, user_id: UUID) -> list[Invoice]: ...
+
+    @abstractmethod
     def list_unpaid(self) -> list[Invoice]: ...
 
     @abstractmethod

@@ -9,6 +9,7 @@ class CreateInvoiceUseCase:
 
     def execute(self, command: CreateInvoiceCommand) -> InvoiceCreatedResponse:
         invoice = Invoice(
+            user_id=command.user_id,
             vendor=command.vendor,
             amount=command.amount,
             currency=command.currency,

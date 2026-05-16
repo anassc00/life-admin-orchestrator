@@ -4,10 +4,6 @@ from uuid import UUID
 
 from ninja import Schema
 
-from application.dtos.finance import (
-    CategorizeExpenseCommand,
-    CreateInvoiceCommand,
-)
 from domain.entities.finance import AccountType, Currency, IncomeCategory, TransactionType
 
 
@@ -117,9 +113,6 @@ class CreateInvoiceRequest(Schema):
     currency: str = "MXN"
     due_date: datetime.date
 
-    def to_command(self) -> CreateInvoiceCommand:
-        return CreateInvoiceCommand(**self.model_dump())
-
 
 class InvoiceCreatedResponseSchema(Schema):
     invoice_id: UUID
@@ -132,6 +125,7 @@ class InvoiceCreatedResponseSchema(Schema):
 class InvoiceProcessedResponseSchema(Schema):
     invoice_id: UUID
     status: str
+    transaction_id: UUID | None = None
 
 
 class CategorizeExpenseRequest(Schema):
@@ -141,9 +135,6 @@ class CategorizeExpenseRequest(Schema):
     date: datetime.date
     category: str
     invoice_id: UUID | None = None
-
-    def to_command(self) -> CategorizeExpenseCommand:
-        return CategorizeExpenseCommand(**self.model_dump())
 
 
 class ExpenseCategorizedResponseSchema(Schema):

@@ -248,6 +248,9 @@ class DjangoInvoiceRepository(InvoiceRepository):
             defaults=self._to_record(invoice),
         )
 
+    def list_by_user(self, user_id: UUID) -> list[Invoice]:
+        return [self._to_entity(r) for r in InvoiceModel.objects.filter(user_id=user_id)]
+
     def list_unpaid(self) -> list[Invoice]:
         return [self._to_entity(r) for r in InvoiceModel.objects.filter(is_paid=False)]
 
@@ -256,8 +259,10 @@ class DjangoInvoiceRepository(InvoiceRepository):
 
     @staticmethod
     def _to_entity(record: InvoiceModel) -> Invoice:
+        import uuid as _uuid
         return Invoice(
             id=record.id,
+            user_id=record.user_id if record.user_id else _uuid.UUID(int=0),
             vendor=record.vendor,
             amount=record.amount,
             currency=record.currency,
@@ -268,6 +273,7 @@ class DjangoInvoiceRepository(InvoiceRepository):
     @staticmethod
     def _to_record(invoice: Invoice) -> dict:
         return {
+            "user_id": invoice.user_id,
             "vendor": invoice.vendor,
             "amount": invoice.amount,
             "currency": invoice.currency,
@@ -304,8 +310,10 @@ class DjangoExpenseRepository(ExpenseRepository):
 
     @staticmethod
     def _to_entity(record: ExpenseModel) -> Expense:
+        import uuid as _uuid
         return Expense(
             id=record.id,
+            user_id=record.user_id if record.user_id else _uuid.UUID(int=0),
             description=record.description,
             amount=record.amount,
             currency=record.currency,
@@ -317,6 +325,7 @@ class DjangoExpenseRepository(ExpenseRepository):
     @staticmethod
     def _to_record(expense: Expense) -> dict:
         return {
+            "user_id": expense.user_id,
             "description": expense.description,
             "amount": expense.amount,
             "currency": expense.currency,

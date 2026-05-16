@@ -83,6 +83,7 @@ class Invoice(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     id: UUID = Field(default_factory=uuid4)
+    user_id: UUID
     vendor: str
     amount: Decimal
     currency: str = "MXN"
@@ -140,6 +141,7 @@ class Expense(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     id: UUID = Field(default_factory=uuid4)
+    user_id: UUID
     description: str
     amount: Decimal
     currency: str = "MXN"

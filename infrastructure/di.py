@@ -146,6 +146,7 @@ def get_process_invoice_use_case() -> ProcessInvoiceUseCase:
     return ProcessInvoiceUseCase(
         invoice_repo=DjangoInvoiceRepository(),
         transaction_repo=DjangoTransactionRepository(),
+        account_repo=DjangoAccountRepository(),
     )
 
 

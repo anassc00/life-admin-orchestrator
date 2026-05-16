@@ -45,6 +45,11 @@ class InvoiceAlreadyPaidError(Exception):
         self.invoice_id = invoice_id
 
 
+class InvoiceAccessForbiddenError(Exception):
+    def __init__(self) -> None:
+        super().__init__("This invoice does not belong to you.")
+
+
 class ExpenseNotFoundError(Exception):
     def __init__(self, expense_id: UUID) -> None:
         super().__init__(f"Expense {expense_id} not found")

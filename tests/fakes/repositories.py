@@ -21,6 +21,9 @@ class InMemoryInvoiceRepository(InvoiceRepository):
     def save(self, invoice: Invoice) -> None:
         self._store[invoice.id] = invoice
 
+    def list_by_user(self, user_id: UUID) -> list[Invoice]:
+        return [i for i in self._store.values() if i.user_id == user_id]
+
     def list_unpaid(self) -> list[Invoice]:
         return [i for i in self._store.values() if not i.is_paid]
 

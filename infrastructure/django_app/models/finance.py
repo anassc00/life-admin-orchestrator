@@ -150,6 +150,7 @@ class PlannedItemModel(models.Model):
 
 class InvoiceModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user_id = models.UUIDField(db_index=True, null=True, blank=True)
     vendor = models.CharField(max_length=255)
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     currency = models.CharField(max_length=3, default="MXN")
@@ -167,6 +168,7 @@ class InvoiceModel(models.Model):
 
 class ExpenseModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user_id = models.UUIDField(db_index=True, null=True, blank=True)
     description = models.TextField()
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     currency = models.CharField(max_length=3, default="MXN")
