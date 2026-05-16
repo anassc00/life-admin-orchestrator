@@ -1,290 +1,810 @@
 {% extends 'base.html' %}
 {% block title %}Dashboard — Life Admin{% endblock %}
+
 {% block extra_style %}
-    .page-title {
-      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.1em; color: #7c6ff7; margin-bottom: 0.5rem;
-    }
-    .greeting-card {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 1.25rem; padding: 2rem;
-      backdrop-filter: blur(12px); margin-bottom: 2rem;
-      display: flex; justify-content: space-between; align-items: center;
-      gap: 1rem;
-    }
-    .greeting-card h1 {
-      font-size: 1.75rem; font-weight: 700; color: #fff;
-      margin-bottom: 0.4rem; min-height: 2.2rem;
-    }
-    .greeting-card p { color: #8080a0; font-size: 0.9rem; margin: 0; }
+  /* ── Shared ── */
+  .page-title {
+    font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.1em; color: #7c6ff7; margin-bottom: 0.5rem;
+  }
+  .section-label {
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.1em; color: #7c6ff7; margin-bottom: 1rem; display: block;
+  }
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 1rem; padding: 1.5rem;
+  }
 
-    .accounts-widget {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 1rem; padding: 1.25rem 1.5rem;
-      min-width: 280px; max-width: 380px;
-      flex-shrink: 0;
-    }
-    .accounts-title {
-      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.1em; color: #7c6ff7; margin-bottom: 0.75rem;
-    }
-    .account-item {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 0.45rem 0;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-      font-size: 0.85rem;
-    }
-    .account-item:last-child { border-bottom: none; }
-    .account-name { color: #c0c0d8; font-weight: 500; }
-    .account-currency { color: #6060a0; font-size: 0.75rem; margin-left: 0.4rem; }
-    .account-balance { color: #e0e0f0; font-weight: 600; font-variant-numeric: tabular-nums; }
-    .account-balance.negative { color: #f87171; }
-    .no-accounts { color: #6060a0; font-size: 0.82rem; font-style: italic; }
+  /* ── Greeting ── */
+  .greeting-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 1.25rem; padding: 2rem;
+    backdrop-filter: blur(12px); margin-bottom: 2rem;
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 1rem; flex-wrap: wrap;
+  }
+  .greeting-card h1 {
+    font-size: 1.75rem; font-weight: 700; color: #fff;
+    margin-bottom: 0.4rem; min-height: 2.2rem;
+  }
+  .greeting-card p { color: #8080a0; font-size: 0.9rem; margin: 0; }
 
-    /* ── Section header ── */
-    .section-header {
-      display: flex; align-items: baseline; gap: 0.75rem;
-      margin-bottom: 1rem;
-    }
-    .section-label {
-      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.1em; color: #7c6ff7;
-    }
-    .section-month {
-      font-size: 0.82rem; font-weight: 500; color: #6060a0;
-    }
+  /* ── Net Worth ── */
+  .networth-number {
+    font-size: 2.4rem; font-weight: 800; color: #fff; line-height: 1;
+    margin: 0.5rem 0 0.3rem;
+  }
+  .networth-sub { font-size: 0.82rem; color: #6060a0; }
+  .networth-breakdown {
+    display: flex; gap: 1.25rem; margin-top: 1rem; flex-wrap: wrap;
+  }
+  .nw-type {
+    display: flex; flex-direction: column; gap: 0.2rem;
+  }
+  .nw-type-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: #6060a0; }
+  .nw-type-value { font-size: 0.95rem; font-weight: 600; color: #c0c0e0; }
 
-    /* ── Metric cards ── */
-    .metrics {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-    .metric-card {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 1rem; padding: 1.5rem;
-    }
-    .metric-card .metric-label {
-      font-size: 0.78rem; font-weight: 600; text-transform: uppercase;
-      letter-spacing: 0.08em; color: #7070a0; margin-bottom: 0.6rem;
-    }
-    .metric-card .metric-value {
-      font-size: 1.65rem; font-weight: 700; color: #fff; min-height: 2rem;
-    }
-    .metric-card.income  { border-color: rgba(52, 211, 153, 0.2); }
-    .metric-card.expense { border-color: rgba(248, 113, 113, 0.2); }
-    .metric-card.savings { border-color: rgba(124, 111, 247, 0.25); }
-    .metric-card.income  .metric-value { color: #34d399; }
-    .metric-card.expense .metric-value { color: #f87171; }
-    .metric-card.savings .metric-value { color: #a78bfa; }
+  /* ── Accounts widget ── */
+  .accounts-widget {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 1rem; padding: 1.25rem 1.5rem;
+    min-width: 260px; max-width: 360px; flex-shrink: 0;
+  }
+  .accounts-title {
+    font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.1em; color: #7c6ff7; margin-bottom: 0.75rem;
+  }
+  .account-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 0.85rem;
+  }
+  .account-item:last-child { border-bottom: none; }
+  .account-name { color: #c0c0d8; font-weight: 500; }
+  .account-currency { color: #6060a0; font-size: 0.72rem; margin-left: 0.3rem; }
+  .account-balance { color: #e0e0f0; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .account-balance.negative { color: #f87171; }
+  .no-accounts { color: #6060a0; font-size: 0.82rem; font-style: italic; }
 
-    /* ── Skeleton ── */
-    .skeleton {
-      display: inline-block;
-      background: linear-gradient(90deg,rgba(255,255,255,0.06) 25%,rgba(255,255,255,0.12) 50%,rgba(255,255,255,0.06) 75%);
-      background-size: 200% 100%; animation: shimmer 1.4s infinite;
-      border-radius: 0.4rem;
-    }
-    .skeleton-text { height: 1em; width: 240px; }
-    .skeleton-value { height: 1.65rem; width: 120px; }
-    @keyframes shimmer { to { background-position: -200% 0; } }
+  /* ── Top grid ── */
+  .top-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  @media (max-width: 860px) { .top-grid { grid-template-columns: 1fr; } }
+
+  /* ── Metric cards ── */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem; margin-bottom: 1.25rem;
+  }
+  .metric-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 1rem; padding: 1.25rem 1.5rem;
+  }
+  .metric-card .metric-label {
+    font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: #7070a0; margin-bottom: 0.5rem;
+  }
+  .metric-card .metric-value {
+    font-size: 1.55rem; font-weight: 700; color: #fff; min-height: 2rem;
+  }
+  .metric-card.income  { border-color: rgba(52,211,153,0.2); }
+  .metric-card.expense { border-color: rgba(248,113,113,0.2); }
+  .metric-card.savings { border-color: rgba(124,111,247,0.25); }
+  .metric-card.balance { border-color: rgba(96,165,250,0.25); }
+  .metric-card.income  .metric-value { color: #34d399; }
+  .metric-card.expense .metric-value { color: #f87171; }
+  .metric-card.savings .metric-value { color: #a78bfa; }
+  .metric-card.balance .metric-value { color: #60a5fa; }
+  .metric-card .metric-sub {
+    font-size: 0.72rem; color: #6060a0; margin-top: 0.3rem;
+  }
+
+  /* ── Month nav ── */
+  .month-nav {
+    display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;
+  }
+  .month-nav button {
+    background: none; border: 1px solid rgba(255,255,255,0.2);
+    color: #9090b0; padding: 0.3rem 0.6rem; border-radius: 0.4rem;
+    cursor: pointer; font-size: 0.9rem;
+  }
+  .month-nav button:hover { border-color: rgba(124,111,247,0.5); color: #a78bfa; }
+  .month-nav span { font-size: 0.85rem; font-weight: 500; color: #7070a0; }
+
+  /* ── Trend chart ── */
+  #trend-canvas { width: 100%; height: 140px; display: block; }
+  .trend-legend {
+    display: flex; gap: 1rem; margin-top: 0.75rem; flex-wrap: wrap;
+  }
+  .trend-legend span {
+    font-size: 0.72rem; color: #8080a0;
+    display: flex; align-items: center; gap: 0.35rem;
+  }
+  .legend-dot {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+  }
+
+  /* ── Category breakdown ── */
+  .cat-list { display: flex; flex-direction: column; gap: 0.65rem; }
+  .cat-row { display: flex; flex-direction: column; gap: 0.25rem; }
+  .cat-info {
+    display: flex; justify-content: space-between;
+    font-size: 0.82rem;
+  }
+  .cat-name { color: #c0c0d8; }
+  .cat-amount { color: #e0e0f0; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .cat-bar-bg {
+    height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;
+  }
+  .cat-bar-fill {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, #7c6ff7, #a78bfa);
+    transition: width 0.6s ease;
+  }
+
+  /* ── Recent transactions ── */
+  .tx-list { display: flex; flex-direction: column; gap: 0; }
+  .tx-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.6rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+    gap: 1rem;
+  }
+  .tx-row:last-child { border-bottom: none; }
+  .tx-left { display: flex; flex-direction: column; gap: 0.15rem; }
+  .tx-type-badge {
+    font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; padding: 0.15rem 0.45rem; border-radius: 0.25rem;
+    display: inline-block; margin-bottom: 0.1rem;
+  }
+  .badge-income  { background: rgba(52,211,153,0.15); color: #34d399; }
+  .badge-expense { background: rgba(248,113,113,0.15); color: #f87171; }
+  .badge-savings { background: rgba(124,111,247,0.15); color: #a78bfa; }
+  .badge-exchange { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  .tx-desc { font-size: 0.8rem; color: #8080a0; }
+  .tx-date { font-size: 0.72rem; color: #6060a0; }
+  .tx-amount {
+    font-size: 0.95rem; font-weight: 700;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .tx-amount.income  { color: #34d399; }
+  .tx-amount.expense { color: #f87171; }
+  .tx-amount.savings { color: #a78bfa; }
+  .tx-amount.exchange { color: #fbbf24; }
+
+  /* ── Upcoming invoices ── */
+  .inv-list { display: flex; flex-direction: column; gap: 0.5rem; }
+  .inv-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.65rem 0.75rem; border-radius: 0.6rem;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    gap: 1rem;
+  }
+  .inv-vendor { font-size: 0.88rem; font-weight: 600; color: #d0d0e8; }
+  .inv-due { font-size: 0.72rem; color: #8080a0; margin-top: 0.15rem; }
+  .inv-amount {
+    font-size: 0.92rem; font-weight: 700;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .inv-overdue { color: #f87171; }
+  .inv-soon { color: #fbbf24; }
+  .inv-ok { color: #c0c0d8; }
+  .inv-badge {
+    font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+    padding: 0.15rem 0.4rem; border-radius: 0.25rem; white-space: nowrap;
+  }
+  .inv-badge.overdue { background: rgba(248,113,113,0.15); color: #f87171; }
+  .inv-badge.soon { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  .inv-badge.ok { background: rgba(96,165,250,0.1); color: #60a5fa; }
+
+  /* ── Savings goals ── */
+  .goal-list { display: flex; flex-direction: column; gap: 0.9rem; }
+  .goal-row { display: flex; flex-direction: column; gap: 0.35rem; }
+  .goal-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .goal-name { font-size: 0.88rem; font-weight: 600; color: #d0d0e8; }
+  .goal-amounts { font-size: 0.78rem; color: #8080a0; }
+  .goal-progress-bg {
+    height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;
+  }
+  .goal-progress-fill {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, #7c6ff7, #34d399);
+    transition: width 0.7s ease;
+  }
+  .goal-progress-fill.complete { background: #34d399; }
+  .goal-meta { font-size: 0.72rem; color: #6060a0; display: flex; gap: 0.75rem; }
+
+  /* ── Budget status ── */
+  .budget-bar-bg {
+    height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px;
+    overflow: hidden; margin: 0.75rem 0 0.5rem;
+  }
+  .budget-bar-fill {
+    height: 100%; border-radius: 4px;
+    background: linear-gradient(90deg, #34d399, #7c6ff7);
+    transition: width 0.6s ease;
+  }
+  .budget-bar-fill.over { background: linear-gradient(90deg, #f87171, #ef4444); }
+  .budget-nums {
+    display: flex; justify-content: space-between;
+    font-size: 0.78rem; color: #8080a0;
+  }
+
+  /* ── Skeleton ── */
+  .skeleton {
+    display: inline-block;
+    background: linear-gradient(90deg,rgba(255,255,255,0.06) 25%,rgba(255,255,255,0.12) 50%,rgba(255,255,255,0.06) 75%);
+    background-size: 200% 100%; animation: shimmer 1.4s infinite;
+    border-radius: 0.4rem;
+  }
+  .skeleton-text  { height: 1em; width: 200px; }
+  .skeleton-value { height: 1.55rem; width: 100px; }
+  .skeleton-wide  { height: 1em; width: 100%; margin: 0.4rem 0; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+
+  /* ── Bottom 3-col grid ── */
+  .bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.25rem; margin-bottom: 1.25rem;
+  }
+  @media (max-width: 1100px) { .bottom-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 700px)  { .bottom-grid { grid-template-columns: 1fr; } }
+
+  .empty-state { font-size: 0.82rem; color: #6060a0; font-style: italic; }
+  .view-all-link {
+    display: block; text-align: center; margin-top: 1rem;
+    font-size: 0.78rem; color: #7c6ff7; text-decoration: none;
+  }
+  .view-all-link:hover { color: #a78bfa; }
 {% endblock %}
+
 {% block content %}
-    <div class="page-title">Panel de control</div>
-    <div class="greeting-card">
-      <div>
-        <h1 id="greeting"><span class="skeleton skeleton-text"></span></h1>
-        <p>Los agentes IA están listos para ayudarte a gestionar tu vida personal.</p>
+  <div class="page-title">Panel de control</div>
+
+  <!-- ── Greeting + Accounts ── -->
+  <div class="greeting-card">
+    <div style="flex:1; min-width:0;">
+      <h1 id="greeting"><span class="skeleton skeleton-text"></span></h1>
+      <p id="networth-line">Cargando patrimonio neto…</p>
+    </div>
+    <div class="accounts-widget">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="accounts-title">Saldos actuales</div>
+        <button id="refresh-balances" title="Actualizar saldos"
+          style="background:none;border:1px solid rgba(255,255,255,0.15);color:#9090b0;padding:0.35rem;border-radius:0.5rem;cursor:pointer;font-size:1rem;line-height:1;display:flex;align-items:center;justify-content:center;width:2rem;height:2rem;">
+          🔄
+        </button>
       </div>
-      <div class="accounts-widget">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div class="accounts-title">Saldos actuales</div>
-          <button id="refresh-balances" title="Actualizar saldos" style="background:none; border:1px solid rgba(255,255,255,0.15); color:#9090b0; padding:0.35rem; border-radius:0.5rem; cursor:pointer; font-size:1rem; line-height:1; display:flex; align-items:center; justify-content:center; width:2rem; height:2rem;">
-            🔄
-          </button>
-        </div>
-        <div id="accounts-list">
-          <div class="no-accounts">Cargando cuentas...</div>
-        </div>
+      <div id="accounts-list"><div class="no-accounts">Cargando cuentas…</div></div>
+    </div>
+  </div>
+
+  <!-- ── Net Worth + Trend ── -->
+  <div class="top-grid">
+    <div class="card">
+      <span class="section-label">Patrimonio neto</span>
+      <div class="networth-number" id="nw-total"><span class="skeleton skeleton-value"></span></div>
+      <div class="networth-sub" id="nw-sub"></div>
+      <div class="networth-breakdown" id="nw-breakdown">
+        <div class="nw-type"><div class="nw-type-label">Efectivo</div><div class="nw-type-value" id="nw-cash">—</div></div>
+        <div class="nw-type"><div class="nw-type-label">Banco</div><div class="nw-type-value" id="nw-bank">—</div></div>
+        <div class="nw-type"><div class="nw-type-label">Billetera digital</div><div class="nw-type-value" id="nw-wallet">—</div></div>
       </div>
     </div>
 
-    <div class="section-header">
-      <span class="section-label">Finanzas</span>
-      <div style="display:flex; align-items:center; gap:0.5rem;">
-        <button id="prev-month" style="background:none; border:1px solid rgba(255,255,255,0.2); color:#9090b0; padding:0.3rem 0.6rem; border-radius:0.4rem; cursor:pointer; font-size:0.9rem;">←</button>
-        <span class="section-month" id="month-label"></span>
-        <button id="next-month" style="background:none; border:1px solid rgba(255,255,255,0.2); color:#9090b0; padding:0.3rem 0.6rem; border-radius:0.4rem; cursor:pointer; font-size:0.9rem;">→</button>
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+        <span class="section-label" style="margin-bottom:0;">Tendencia (6 meses)</span>
+        <div class="trend-legend">
+          <span><i class="legend-dot" style="background:#34d399;"></i> Ingresos</span>
+          <span><i class="legend-dot" style="background:#f87171;"></i> Egresos</span>
+          <span><i class="legend-dot" style="background:#a78bfa;"></i> Ahorro</span>
+        </div>
+      </div>
+      <canvas id="trend-canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- ── Monthly Summary ── -->
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
+    <span class="section-label" style="margin-bottom:0;">Resumen mensual</span>
+    <div class="month-nav">
+      <button id="prev-month">←</button>
+      <span id="month-label"></span>
+      <button id="next-month">→</button>
+    </div>
+  </div>
+  <div class="metrics">
+    <div class="metric-card income">
+      <div class="metric-label">Ingresos</div>
+      <div class="metric-value" id="val-income"><span class="skeleton skeleton-value"></span></div>
+    </div>
+    <div class="metric-card expense">
+      <div class="metric-label">Egresos</div>
+      <div class="metric-value" id="val-expenses"><span class="skeleton skeleton-value"></span></div>
+    </div>
+    <div class="metric-card savings">
+      <div class="metric-label">Ahorrado</div>
+      <div class="metric-value" id="val-savings"><span class="skeleton skeleton-value"></span></div>
+      <div class="metric-sub" id="val-savings-rate"></div>
+    </div>
+    <div class="metric-card balance">
+      <div class="metric-label">Balance real</div>
+      <div class="metric-value" id="val-balance"><span class="skeleton skeleton-value"></span></div>
+    </div>
+    <div class="metric-card" style="border-color:rgba(251,191,36,0.2);">
+      <div class="metric-label" style="color:#9090b0;">Presupuesto</div>
+      <div class="metric-value" id="val-budget-pct" style="color:#fbbf24;"><span class="skeleton skeleton-value"></span></div>
+      <div class="metric-sub" id="val-budget-sub"></div>
+    </div>
+  </div>
+
+  <!-- ── Budget progress bar ── -->
+  <div class="card" id="budget-card" style="margin-bottom:1.25rem; display:none;">
+    <span class="section-label">Ejecución del presupuesto</span>
+    <div class="budget-bar-bg">
+      <div class="budget-bar-fill" id="budget-bar" style="width:0%"></div>
+    </div>
+    <div class="budget-nums">
+      <span id="budget-actual"></span>
+      <span id="budget-planned"></span>
+    </div>
+    <div style="margin-top:0.5rem; font-size:0.78rem; color:#8080a0;" id="budget-overrun"></div>
+  </div>
+
+  <!-- ── Bottom 3-col ── -->
+  <div class="bottom-grid">
+    <!-- Categorías de gasto -->
+    <div class="card">
+      <span class="section-label">Egresos por categoría</span>
+      <div class="cat-list" id="cat-list">
+        <span class="skeleton skeleton-wide"></span>
+        <span class="skeleton skeleton-wide"></span>
+        <span class="skeleton skeleton-wide"></span>
       </div>
     </div>
-    <div class="metrics">
-      <div class="metric-card income">
-        <div class="metric-label">Ingresos (salario base)</div>
-        <div class="metric-value" id="val-income">
-          <span class="skeleton skeleton-value"></span>
-        </div>
+
+    <!-- Metas de ahorro -->
+    <div class="card">
+      <span class="section-label">Metas de ahorro</span>
+      <div class="goal-list" id="goal-list">
+        <span class="skeleton skeleton-wide"></span>
+        <span class="skeleton skeleton-wide"></span>
       </div>
-      <div class="metric-card expense">
-        <div class="metric-label">Egresos (en USD)</div>
-        <div class="metric-value" id="val-expenses">
-          <span class="skeleton skeleton-value"></span>
-        </div>
-      </div>
-      <div class="metric-card savings">
-        <div class="metric-label">Ahorrado</div>
-        <div class="metric-value" id="val-savings">
-          <span class="skeleton skeleton-value"></span>
-        </div>
-      </div>
-      <div class="metric-card" style="border-color:rgba(96,165,250,0.25)">
-        <div class="metric-label" style="color:#9090b0">Balance real</div>
-        <div class="metric-value" id="val-balance" style="color:#60a5fa">
-          <span class="skeleton skeleton-value"></span>
-        </div>
+      <a href="/finance/savings/" class="view-all-link">Ver todas →</a>
+    </div>
+
+    <!-- Facturas próximas -->
+    <div class="card">
+      <span class="section-label">Facturas pendientes</span>
+      <div class="inv-list" id="inv-list">
+        <span class="skeleton skeleton-wide"></span>
+        <span class="skeleton skeleton-wide"></span>
       </div>
     </div>
+  </div>
+
+  <!-- ── Recent transactions ── -->
+  <div class="card" style="margin-bottom:1.25rem;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+      <span class="section-label" style="margin-bottom:0;">Movimientos recientes</span>
+      <a href="/finance/transactions/" style="font-size:0.78rem; color:#7c6ff7; text-decoration:none;">Ver todos →</a>
+    </div>
+    <div class="tx-list" id="tx-list">
+      <span class="skeleton skeleton-wide"></span>
+      <span class="skeleton skeleton-wide"></span>
+      <span class="skeleton skeleton-wide"></span>
+    </div>
+  </div>
 {% endblock %}
+
 {% block extra_script %}
-  <script>
-    const MONTHS_ES = [
-      'enero','febrero','marzo','abril','mayo','junio',
-      'julio','agosto','septiembre','octubre','noviembre','diciembre'
-    ];
-    let currentYear = new Date().getFullYear();
-    let currentMonth = new Date().getMonth() + 1; // 1-12
+<script>
+  const MONTHS_ES = ['enero','febrero','marzo','abril','mayo','junio',
+    'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  let currentYear  = new Date().getFullYear();
+  let currentMonth = new Date().getMonth() + 1;
 
-    function fmt(amount) {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency', currency: 'USD', maximumFractionDigits: 2
-      }).format(amount);
-    }
+  /* ── Formatters ── */
+  const fmtUSD = v =>
+    new Intl.NumberFormat('en-US', {style:'currency', currency:'USD', maximumFractionDigits:2}).format(v);
 
-    function updateMonthLabel() {
-      document.getElementById('month-label').textContent =
-        MONTHS_ES[currentMonth - 1] + ' ' + currentYear;
-    }
+  const fmtRaw = (v, curr) =>
+    new Intl.NumberFormat('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}).format(v) + ' ' + curr;
 
-    function fmtAmount(value, currency) {
-      const formatted = new Intl.NumberFormat('en-US', {
-        minimumFractionDigits: 2, maximumFractionDigits: 2
-      }).format(value);
-      return formatted + ' ' + currency;
-    }
+  function updateMonthLabel() {
+    document.getElementById('month-label').textContent =
+      MONTHS_ES[currentMonth - 1] + ' ' + currentYear;
+  }
 
-    async function fetchGlobalAccounts() {
-      const container = document.getElementById('accounts-list');
-      try {
-        const res = await fetch('/api/finance/accounts');
-        if (!res.ok) return;
-        const accounts = await res.json();
-        console.log('Accounts API response:', accounts);
-        if (!accounts.length) {
-          container.innerHTML = '<div class="no-accounts">No hay cuentas configuradas.</div>';
-          return;
-        }
-        container.innerHTML = accounts.map(acc => {
-          const balances = acc.current_balance || {};
-          const balanceItems = Object.entries(balances).map(([curr, bal]) => {
-            const value = parseFloat(bal);
-            const cssClass = value < 0 ? 'account-balance negative' : 'account-balance';
-            return '<div style="padding:0.2rem 0;">' +
-              '<span class="' + cssClass + '">' + fmtAmount(value, curr) + '</span>' +
-            '</div>';
-          }).join('');
-          return '<div class="account-item">' +
-            '<div>' +
-              '<div class="account-name">' + acc.name + ' <span class="account-currency">(' + acc.type + ')</span></div>' +
-              (balanceItems || '<span class="account-balance">0.00 USD</span>') +
-            '</div>' +
-          '</div>';
+  /* ══════════════════════════════════════════════
+     1.  ACCOUNTS
+  ══════════════════════════════════════════════ */
+  async function fetchAccounts() {
+    const container = document.getElementById('accounts-list');
+    try {
+      const res = await fetch('/api/finance/accounts');
+      if (!res.ok) return;
+      const accounts = await res.json();
+      if (!accounts.length) {
+        container.innerHTML = '<div class="no-accounts">No hay cuentas configuradas.</div>';
+        return;
+      }
+      container.innerHTML = accounts.map(acc => {
+        const balances = acc.current_balance || {};
+        const balanceItems = Object.entries(balances).map(([curr, bal]) => {
+          const value = parseFloat(bal);
+          const cls   = value < 0 ? 'account-balance negative' : 'account-balance';
+          return `<div style="padding:0.2rem 0;"><span class="${cls}">${fmtRaw(value, curr)}</span></div>`;
         }).join('');
-      } catch (e) { console.error('Error fetching accounts:', e); }
-    }
+        return `<div class="account-item">
+          <div>
+            <div class="account-name">${acc.name}
+              <span class="account-currency">(${acc.type})</span>
+            </div>
+            ${balanceItems || '<span class="account-balance">0.00 USD</span>'}
+          </div>
+        </div>`;
+      }).join('');
+    } catch(e) { console.error(e); }
+  }
 
-    async function refreshBalances() {
-      const btn = document.getElementById('refresh-balances');
-      const container = document.getElementById('accounts-list');
-      
-      // Show loading state
-      btn.disabled = true;
-      btn.style.opacity = '0.5';
-      container.innerHTML = '<div class="no-accounts">Recalculando saldos...</div>';
-      
-      try {
-        const res = await fetch('/api/finance/accounts/refresh-balances', {
-          method: 'POST',
-        });
-        if (res.ok) {
-          await fetchGlobalAccounts();
-        }
-      } catch (e) {
-        console.error('Error refreshing balances:', e);
-      } finally {
-        btn.disabled = false;
-        btn.style.opacity = '1';
+  document.getElementById('refresh-balances').addEventListener('click', async () => {
+    const btn = document.getElementById('refresh-balances');
+    const container = document.getElementById('accounts-list');
+    btn.disabled = true; btn.style.opacity = '0.5';
+    container.innerHTML = '<div class="no-accounts">Recalculando saldos…</div>';
+    try {
+      await fetch('/api/finance/accounts/refresh-balances', {method:'POST'});
+      await fetchAccounts();
+    } finally { btn.disabled = false; btn.style.opacity = '1'; }
+  });
+
+  /* ══════════════════════════════════════════════
+     2.  PROFILE
+  ══════════════════════════════════════════════ */
+  async function loadProfile() {
+    try {
+      const res  = await fetch('/api/auth/me');
+      const data = await res.json();
+      if (res.ok) {
+        const first = data.full_name.split(' ')[0];
+        document.getElementById('greeting').textContent = `¡Hola, ${first}! Bienvenido a tu panel.`;
+        document.title = `${first} — Life Admin`;
+      } else {
+        window.location.href = '/login/';
       }
-    }
+    } catch { window.location.href = '/login/'; }
+  }
 
-    document.getElementById('refresh-balances').addEventListener('click', refreshBalances);
+  /* ══════════════════════════════════════════════
+     3.  NET WORTH  (DH2)
+  ══════════════════════════════════════════════ */
+  async function loadNetWorth() {
+    try {
+      const res  = await fetch('/api/finance/net-worth');
+      const data = await res.json();
+      if (!res.ok) return;
+      document.getElementById('nw-total').textContent = fmtUSD(data.total_usd);
+      document.getElementById('networth-line').textContent =
+        `Patrimonio neto en USD · ${data.accounts.length} cuenta${data.accounts.length !== 1 ? 's' : ''}`;
+      document.getElementById('nw-cash').textContent   = fmtUSD(data.cash_usd);
+      document.getElementById('nw-bank').textContent   = fmtUSD(data.bank_usd);
+      document.getElementById('nw-wallet').textContent = fmtUSD(data.wallet_usd);
+    } catch(e) { console.error('net-worth', e); }
+  }
 
-    async function loadProfile() {
-      try {
-        const res  = await fetch('/api/auth/me');
-        const data = await res.json();
-        if (res.ok) {
-          const first = data.full_name.split(' ')[0];
-          document.getElementById('greeting').textContent = `¡Hola, ${first}! Bienvenido a tu panel.`;
-          document.title = `${first} — Life Admin`;
-        } else {
-          window.location.href = '/login/';
-        }
-      } catch { window.location.href = '/login/'; }
-    }
+  /* ══════════════════════════════════════════════
+     4.  TREND CHART  (DH3)
+  ══════════════════════════════════════════════ */
+  async function loadTrend() {
+    try {
+      const res  = await fetch('/api/finance/trend?months=6');
+      const data = await res.json();
+      if (!res.ok || !data.months) return;
+      drawTrend(data.months);
+    } catch(e) { console.error('trend', e); }
+  }
 
-    async function loadSummary() {
-      updateMonthLabel();
-      console.log(`Loading summary for ${currentYear}-${currentMonth}`);
-      
-      try {
-        const res  = await fetch(`/api/finance/summary/current?year=${currentYear}&month=${currentMonth}`);
-        const data = await res.json();
-        console.log("Dashboard summary response:", data);
-        if (res.ok) {
-          document.getElementById('val-income').textContent   = fmt(data.total_income_usd);
-          document.getElementById('val-expenses').textContent = fmt(data.total_expenses_usd);
-          document.getElementById('val-savings').textContent  = fmt(data.total_savings_usd);
-          document.getElementById('val-balance').textContent  = fmt(data.balance_usd);
-        } else {
-          ['val-income','val-expenses','val-savings','val-balance'].forEach(id => {
-            document.getElementById(id).textContent = '—';
-          });
-        }
-      } catch {
-        ['val-income','val-expenses','val-savings','val-balance'].forEach(id => {
-          document.getElementById(id).textContent = '—';
-        });
+  function drawTrend(months) {
+    const canvas = document.getElementById('trend-canvas');
+    const ctx    = canvas.getContext('2d');
+    const dpr    = window.devicePixelRatio || 1;
+    const W      = canvas.parentElement.clientWidth - 48;
+    const H      = 140;
+    canvas.width  = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.scale(dpr, dpr);
+
+    const allVals = months.flatMap(m =>
+      [parseFloat(m.income_usd), parseFloat(m.expenses_usd), parseFloat(m.savings_usd)]
+    );
+    const maxVal = Math.max(...allVals, 1);
+
+    const padL = 8, padR = 8, padT = 8, padB = 24;
+    const chartW = W - padL - padR;
+    const chartH = H - padT - padB;
+    const barGroupW = chartW / months.length;
+    const barW      = Math.max(barGroupW * 0.22, 4);
+    const gap       = barW * 0.4;
+
+    const colors = ['#34d399', '#f87171', '#a78bfa'];
+    const keys   = ['income_usd', 'expenses_usd', 'savings_usd'];
+
+    months.forEach((m, gi) => {
+      const groupX = padL + gi * barGroupW + barGroupW / 2 - (3 * barW + 2 * gap) / 2;
+      keys.forEach((k, ki) => {
+        const val = parseFloat(m[k]) || 0;
+        const barH = (val / maxVal) * chartH;
+        const x    = groupX + ki * (barW + gap);
+        const y    = padT + chartH - barH;
+        ctx.fillStyle = colors[ki] + 'cc';
+        ctx.beginPath();
+        ctx.roundRect(x, y, barW, barH, [2, 2, 0, 0]);
+        ctx.fill();
+      });
+
+      // Month label
+      ctx.fillStyle = '#60609a';
+      ctx.font      = `${10 * dpr / dpr}px sans-serif`;
+      ctx.textAlign = 'center';
+      const label = MONTHS_ES[(m.month - 1)].substring(0, 3);
+      ctx.fillText(label, padL + gi * barGroupW + barGroupW / 2, H - padB + 14);
+    });
+  }
+
+  /* ══════════════════════════════════════════════
+     5.  MONTHLY SUMMARY (DH9 extended)
+  ══════════════════════════════════════════════ */
+  async function loadSummary() {
+    updateMonthLabel();
+    const url = `/api/finance/summary/current/extended?year=${currentYear}&month=${currentMonth}`;
+    try {
+      const res  = await fetch(url);
+      const data = await res.json();
+      if (res.ok) {
+        document.getElementById('val-income').textContent   = fmtUSD(data.total_income_usd);
+        document.getElementById('val-expenses').textContent = fmtUSD(data.total_expenses_usd);
+        document.getElementById('val-savings').textContent  = fmtUSD(data.total_savings_usd);
+        document.getElementById('val-balance').textContent  = fmtUSD(data.balance_usd);
+
+        const rate = parseFloat(data.savings_rate_pct || 0);
+        document.getElementById('val-savings-rate').textContent =
+          rate > 0 ? `Tasa de ahorro: ${rate.toFixed(1)}%` : '';
+
+        const pct = parseFloat(data.budget_execution_pct || 0);
+        document.getElementById('val-budget-pct').textContent = pct > 0 ? `${pct.toFixed(0)}%` : '—';
+        document.getElementById('val-budget-sub').textContent =
+          pct > 0 ? 'del presupuesto ejecutado' : 'Sin plan este mes';
+      } else {
+        ['val-income','val-expenses','val-savings','val-balance','val-budget-pct'].forEach(id =>
+          document.getElementById(id).textContent = '—'
+        );
       }
+    } catch {
+      ['val-income','val-expenses','val-savings','val-balance','val-budget-pct'].forEach(id =>
+        document.getElementById(id).textContent = '—'
+      );
     }
 
-    // Initialize on page load
-    loadProfile();
+    // Budget bar (B7)
+    loadBudgetStatus();
+    // Category breakdown (DH4)
+    loadExpenseBreakdown();
+  }
+
+  /* ══════════════════════════════════════════════
+     6.  BUDGET STATUS  (B7)
+  ══════════════════════════════════════════════ */
+  async function loadBudgetStatus() {
+    const card = document.getElementById('budget-card');
+    try {
+      const res  = await fetch(`/api/finance/budget/summary?year=${currentYear}&month=${currentMonth}`);
+      if (!res.ok) { card.style.display = 'none'; return; }
+      const data = await res.json();
+      card.style.display = 'block';
+
+      const pct = parseFloat(data.pct_executed);
+      const bar = document.getElementById('budget-bar');
+      bar.style.width = Math.min(pct, 100) + '%';
+      if (pct > 100) bar.classList.add('over'); else bar.classList.remove('over');
+
+      document.getElementById('budget-actual').textContent  = `Real: ${fmtUSD(data.total_actual_usd)}`;
+      document.getElementById('budget-planned').textContent = `Plan: ${fmtUSD(data.total_planned_usd)}`;
+
+      const over = data.over_budget_categories;
+      document.getElementById('budget-overrun').textContent =
+        over > 0 ? `⚠ ${over} categoría${over !== 1 ? 's' : ''} superó el presupuesto` : '';
+    } catch { card.style.display = 'none'; }
+  }
+
+  /* ══════════════════════════════════════════════
+     7.  EXPENSE BREAKDOWN  (DH4)
+  ══════════════════════════════════════════════ */
+  async function loadExpenseBreakdown() {
+    const el = document.getElementById('cat-list');
+    try {
+      const res  = await fetch(`/api/finance/expenses/breakdown?year=${currentYear}&month=${currentMonth}`);
+      const data = await res.json();
+      if (!res.ok || !data.items || !data.items.length) {
+        el.innerHTML = '<span class="empty-state">Sin egresos este mes.</span>';
+        return;
+      }
+      const top5 = data.items.slice(0, 5);
+      el.innerHTML = top5.map(item => {
+        const pct = parseFloat(item.pct_of_total);
+        return `<div class="cat-row">
+          <div class="cat-info">
+            <span class="cat-name">${item.category_name || 'Sin categoría'}</span>
+            <span class="cat-amount">${fmtUSD(item.total_usd)}</span>
+          </div>
+          <div class="cat-bar-bg">
+            <div class="cat-bar-fill" style="width:${pct}%"></div>
+          </div>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      el.innerHTML = '<span class="empty-state">Error cargando categorías.</span>';
+    }
+  }
+
+  /* ══════════════════════════════════════════════
+     8.  SAVINGS GOALS  (SA2 dashboard)
+  ══════════════════════════════════════════════ */
+  async function loadSavingsGoals() {
+    const el = document.getElementById('goal-list');
+    try {
+      const res  = await fetch('/api/finance/savings/dashboard');
+      const data = await res.json();
+      if (!res.ok || !data.goals || !data.goals.length) {
+        el.innerHTML = '<span class="empty-state">No hay metas activas.</span>';
+        return;
+      }
+      const active = data.goals.filter(g => !g.is_completed).slice(0, 4);
+      if (!active.length) {
+        el.innerHTML = '<span class="empty-state">Todas las metas completadas 🎉</span>';
+        return;
+      }
+      el.innerHTML = active.map(g => {
+        const pct  = Math.min(parseFloat(g.progress_pct), 100);
+        const cls  = pct >= 100 ? 'complete' : '';
+        const deadline = g.deadline ? `· Meta: ${g.deadline}` : '';
+        return `<div class="goal-row">
+          <div class="goal-header">
+            <span class="goal-name">${g.motive}</span>
+            <span class="goal-amounts">${fmtUSD(g.deposited_usd)} / ${fmtUSD(g.target_amount_usd)}</span>
+          </div>
+          <div class="goal-progress-bg">
+            <div class="goal-progress-fill ${cls}" style="width:${pct}%"></div>
+          </div>
+          <div class="goal-meta">
+            <span>${pct.toFixed(0)}%</span>
+            ${g.deposited_this_month_usd > 0 ? `<span>+${fmtUSD(g.deposited_this_month_usd)} este mes</span>` : ''}
+            ${deadline}
+          </div>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      el.innerHTML = '<span class="empty-state">Error cargando metas.</span>';
+    }
+  }
+
+  /* ══════════════════════════════════════════════
+     9.  UPCOMING INVOICES  (DH5)
+  ══════════════════════════════════════════════ */
+  async function loadUpcomingInvoices() {
+    const el = document.getElementById('inv-list');
+    try {
+      const res  = await fetch('/api/finance/invoices/upcoming');
+      const data = await res.json();
+      if (!res.ok || !data.invoices || !data.invoices.length) {
+        el.innerHTML = '<span class="empty-state">Sin facturas pendientes.</span>';
+        return;
+      }
+      el.innerHTML = data.invoices.slice(0, 5).map(inv => {
+        const days = inv.days_until_due;
+        let badgeCls, amtCls, badgeTxt;
+        if (inv.is_overdue) {
+          badgeCls = 'overdue'; amtCls = 'inv-overdue';
+          badgeTxt = `Vencida hace ${Math.abs(days)}d`;
+        } else if (days <= 7) {
+          badgeCls = 'soon'; amtCls = 'inv-soon';
+          badgeTxt = days === 0 ? 'Hoy' : `${days}d`;
+        } else {
+          badgeCls = 'ok'; amtCls = 'inv-ok';
+          badgeTxt = `${days}d`;
+        }
+        return `<div class="inv-row">
+          <div>
+            <div class="inv-vendor">${inv.vendor}</div>
+            <div class="inv-due">Vence: ${inv.due_date}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.6rem;">
+            <span class="inv-amount ${amtCls}">${fmtRaw(inv.amount, inv.currency)}</span>
+            <span class="inv-badge ${badgeCls}">${badgeTxt}</span>
+          </div>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      el.innerHTML = '<span class="empty-state">Error cargando facturas.</span>';
+    }
+  }
+
+  /* ══════════════════════════════════════════════
+     10. RECENT TRANSACTIONS  (DH6)
+  ══════════════════════════════════════════════ */
+  async function loadRecentTransactions() {
+    const el = document.getElementById('tx-list');
+    try {
+      const res  = await fetch('/api/finance/transactions/recent?limit=8');
+      const data = await res.json();
+      if (!data || !data.length) {
+        el.innerHTML = '<span class="empty-state">Sin movimientos recientes.</span>';
+        return;
+      }
+      const typeMap = {
+        income: {badge:'badge-income', label:'Ingreso', cls:'income'},
+        expense: {badge:'badge-expense', label:'Egreso', cls:'expense'},
+        savings: {badge:'badge-savings', label:'Ahorro', cls:'savings'},
+        exchange_out: {badge:'badge-exchange', label:'Cambio −', cls:'exchange'},
+        exchange_in:  {badge:'badge-exchange', label:'Cambio +', cls:'exchange'},
+      };
+      el.innerHTML = data.map(tx => {
+        const t   = typeMap[tx.type] || {badge:'badge-exchange', label:tx.type, cls:'exchange'};
+        const desc = tx.description || tx.notes || '—';
+        const sign = ['expense','exchange_out','savings'].includes(tx.type) ? '−' : '+';
+        return `<div class="tx-row">
+          <div class="tx-left">
+            <span class="tx-type-badge ${t.badge}">${t.label}</span>
+            <span class="tx-desc">${desc}</span>
+            <span class="tx-date">${tx.date}</span>
+          </div>
+          <div class="tx-amount ${t.cls}">${sign}${fmtRaw(tx.amount, tx.currency)}</div>
+        </div>`;
+      }).join('');
+    } catch(e) {
+      el.innerHTML = '<span class="empty-state">Error cargando movimientos.</span>';
+    }
+  }
+
+  /* ══════════════════════════════════════════════
+     MONTH NAVIGATION
+  ══════════════════════════════════════════════ */
+  document.getElementById('prev-month').addEventListener('click', () => {
+    currentMonth--;
+    if (currentMonth < 1) { currentMonth = 12; currentYear--; }
     loadSummary();
-    fetchGlobalAccounts();
+  });
+  document.getElementById('next-month').addEventListener('click', () => {
+    currentMonth++;
+    if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+    loadSummary();
+  });
 
-    document.getElementById('prev-month').addEventListener('click', () => {
-      currentMonth--;
-      if (currentMonth < 1) { currentMonth = 12; currentYear--; }
-      loadSummary();
-    });
-
-    document.getElementById('next-month').addEventListener('click', () => {
-      currentMonth++;
-      if (currentMonth > 12) { currentMonth = 1; currentYear++; }
-      loadSummary();
-    });
-  </script>
+  /* ══════════════════════════════════════════════
+     INIT — load everything in parallel
+  ══════════════════════════════════════════════ */
+  loadProfile();
+  fetchAccounts();
+  loadNetWorth();
+  loadTrend();
+  loadSummary();          // also triggers loadBudgetStatus + loadExpenseBreakdown
+  loadSavingsGoals();
+  loadUpcomingInvoices();
+  loadRecentTransactions();
+</script>
 {% endblock %}

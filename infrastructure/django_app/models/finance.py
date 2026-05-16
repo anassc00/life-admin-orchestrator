@@ -84,6 +84,9 @@ class SavingsGoalModel(models.Model):
     target_amount_usd = models.DecimalField(max_digits=14, decimal_places=2)
     expected_monthly_contribution = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     is_completed = models.BooleanField(default=False)
+    deadline = models.DateField(null=True, blank=True)  # SA7
+    priority = models.IntegerField(default=0)  # SA5 — lower = higher priority
+    category = models.CharField(max_length=30, default="other")  # SA8
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -99,7 +102,7 @@ class SavingsDepositModel(models.Model):
     user_id = models.UUIDField(db_index=True)
     goal = models.ForeignKey(
         SavingsGoalModel,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,  # SA9 — prevent orphaned deposits
         related_name="deposits",
     )
     account = models.ForeignKey(
@@ -130,12 +133,16 @@ class BudgetPlanModel(models.Model):
     year = models.IntegerField()
     month = models.IntegerField()
     budget_usd = models.DecimalField(max_digits=14, decimal_places=2, default=500)
+    income_usd = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)  # B8
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "budget_plans"
         unique_together = [("user_id", "year", "month")]
+        indexes = [
+            models.Index(fields=["user_id", "year", "month"], name="budget_user_period_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"BudgetPlan({self.year}-{self.month:02d}, ${self.budget_usd})"
@@ -198,3 +205,45 @@ class ExpenseModel(models.Model):
 
     def __str__(self) -> str:
         return f"Expense({self.category}, {self.amount} {self.currency})"
+
+
+# SA3 — Monthly savings distribution plan
+
+
+class SavingsDistributionPlanModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user_id = models.UUIDField(db_index=True)
+    year = models.IntegerField()
+    month = models.IntegerField()
+    total_planned_usd = models.DecimalField(max_digits=14, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "savings_distribution_plans"
+        unique_together = [("user_id", "year", "month")]
+
+    def __str__(self) -> str:
+        return f"SavingsDistributionPlan({self.year}-{self.month:02d}, ${self.total_planned_usd})"
+
+
+class SavingsDistributionItemModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    plan = models.ForeignKey(
+        SavingsDistributionPlanModel,
+        on_delete=models.CASCADE,
+        related_name="items",
+    )
+    goal = models.ForeignKey(
+        SavingsGoalModel,
+        on_delete=models.CASCADE,
+        related_name="distribution_items",
+    )
+    planned_usd = models.DecimalField(max_digits=14, decimal_places=2)
+
+    class Meta:
+        db_table = "savings_distribution_items"
+        unique_together = [("plan_id", "goal_id")]
+
+    def __str__(self) -> str:
+        return f"SavingsDistributionItem(${self.planned_usd})"

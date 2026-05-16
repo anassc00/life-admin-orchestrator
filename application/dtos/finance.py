@@ -461,3 +461,287 @@ class TransactionReversedResponse(BaseModel):
     amount: Decimal
     currency: Currency
     date: date
+
+
+# ─────────────────────────────────────────────
+# SPRINT 3 — Budget Plan
+# ─────────────────────────────────────────────
+
+
+class CreateBudgetPlanCommand(BaseModel):
+    user_id: UUID
+    year: int
+    month: int
+    budget_usd: Decimal = Decimal("500")
+    income_usd: Decimal | None = None  # B8
+
+
+class BudgetPlanCreatedResponse(BaseModel):
+    plan_id: UUID
+    user_id: UUID
+    year: int
+    month: int
+    budget_usd: Decimal
+    income_usd: Decimal | None = None
+
+
+class SetPlannedItemCommand(BaseModel):
+    user_id: UUID
+    plan_id: UUID
+    category_id: UUID | None = None  # None = savings bucket
+    planned_amount_usd: Decimal
+
+
+class PlannedItemResponse(BaseModel):
+    item_id: UUID
+    plan_id: UUID
+    category_id: UUID | None
+    planned_amount_usd: Decimal
+
+
+class GetBudgetPlanQuery(BaseModel):
+    user_id: UUID
+    year: int
+    month: int
+
+
+class BudgetPlanItemDetailResponse(BaseModel):
+    item_id: UUID
+    category_id: UUID | None
+    category_name: str | None
+    planned_usd: Decimal
+    actual_usd: Decimal
+    deviation_usd: Decimal
+    deviation_pct: Decimal
+    over_budget: bool  # B9
+
+
+class BudgetPlanDetailResponse(BaseModel):
+    plan_id: UUID
+    user_id: UUID
+    year: int
+    month: int
+    budget_usd: Decimal
+    income_usd: Decimal | None
+    total_planned_usd: Decimal
+    total_actual_usd: Decimal
+    items: list[BudgetPlanItemDetailResponse]
+    rule_50_30_20: dict | None = None  # B8
+
+
+class BudgetVsActualSummaryResponse(BaseModel):
+    plan_id: UUID
+    year: int
+    month: int
+    budget_usd: Decimal
+    total_planned_usd: Decimal
+    total_actual_usd: Decimal
+    pct_executed: Decimal
+    over_budget_categories: int
+
+
+class DeletePlannedItemCommand(BaseModel):
+    user_id: UUID
+    plan_id: UUID
+    category_id: UUID | None = None  # None = savings bucket
+
+
+class CopyBudgetPlanCommand(BaseModel):
+    user_id: UUID
+    plan_id: UUID  # destination plan (current month)
+
+
+# ─────────────────────────────────────────────
+# SPRINT 5 — Savings Projections
+# ─────────────────────────────────────────────
+
+
+class SavingsProjectionResponse(BaseModel):
+    goal_id: UUID
+    motive: str
+    target_amount_usd: Decimal
+    deposited_usd: Decimal
+    remaining_usd: Decimal
+    expected_monthly_contribution: Decimal
+    months_to_completion: int | None
+    projected_completion_date: date | None
+    deadline: date | None
+    priority: int
+
+
+class GetSavingsRateQuery(BaseModel):
+    user_id: UUID
+    months: int = 6
+
+
+class SavingsRateMonthItem(BaseModel):
+    year: int
+    month: int
+    income_usd: Decimal
+    savings_usd: Decimal
+    rate_pct: Decimal
+
+
+class SavingsRateResponse(BaseModel):
+    months: list[SavingsRateMonthItem]
+    avg_rate_pct: Decimal
+
+
+class SavingsDashboardGoalItem(BaseModel):
+    goal_id: UUID
+    motive: str
+    target_amount_usd: Decimal
+    deposited_usd: Decimal
+    deposited_this_month_usd: Decimal
+    progress_pct: Decimal
+    is_completed: bool
+    deadline: date | None
+    priority: int
+
+
+class SavingsDashboardResponse(BaseModel):
+    year: int
+    month: int
+    saved_this_month_usd: Decimal
+    savings_rate_pct: Decimal
+    active_goals_count: int
+    completed_goals_count: int
+    goals: list[SavingsDashboardGoalItem]
+
+
+class SavingsDistributionItemCommand(BaseModel):
+    goal_id: UUID
+    planned_usd: Decimal
+
+
+class CreateSavingsDistributionCommand(BaseModel):
+    user_id: UUID
+    year: int
+    month: int
+    items: list[SavingsDistributionItemCommand]
+
+
+class SavingsDistributionResponse(BaseModel):
+    plan_id: UUID
+    year: int
+    month: int
+    total_planned_usd: Decimal
+    items: list[dict]
+
+
+class SuggestSavingsDistributionResponse(BaseModel):
+    monthly_budget_usd: Decimal
+    suggestions: list[dict]
+
+
+# ─────────────────────────────────────────────
+# SPRINT 6 — Dashboard Core
+# ─────────────────────────────────────────────
+
+
+class NetWorthBreakdownItem(BaseModel):
+    account_id: UUID
+    name: str
+    type: str
+    balances: dict[str, str]
+    usd_equivalent: Decimal
+
+
+class NetWorthResponse(BaseModel):
+    total_usd: Decimal
+    cash_usd: Decimal
+    bank_usd: Decimal
+    wallet_usd: Decimal
+    accounts: list[NetWorthBreakdownItem]
+
+
+class FinanceTrendMonthItem(BaseModel):
+    year: int
+    month: int
+    income_usd: Decimal
+    expenses_usd: Decimal
+    savings_usd: Decimal
+    balance_usd: Decimal
+
+
+class FinanceTrendResponse(BaseModel):
+    months: list[FinanceTrendMonthItem]
+
+
+class ExpenseBreakdownItem(BaseModel):
+    category_id: UUID | None
+    category_name: str | None
+    total_usd: Decimal
+    pct_of_total: Decimal
+
+
+class ExpenseBreakdownResponse(BaseModel):
+    year: int
+    month: int
+    total_expenses_usd: Decimal
+    items: list[ExpenseBreakdownItem]
+
+
+class UpcomingInvoiceItem(BaseModel):
+    invoice_id: UUID
+    vendor: str
+    amount: Decimal
+    currency: str
+    due_date: date
+    days_until_due: int
+    is_overdue: bool
+
+
+class UpcomingInvoicesResponse(BaseModel):
+    invoices: list[UpcomingInvoiceItem]
+
+
+class FinanceDashboardResponse(BaseModel):
+    net_worth_usd: Decimal
+    monthly_summary: "MonthlyFinancialSummaryResponse"
+    budget_status: "BudgetVsActualSummaryResponse | None"
+    savings_overview: "SavingsDashboardResponse"
+    upcoming_invoices: list[UpcomingInvoiceItem]
+
+
+# ─────────────────────────────────────────────
+# SPRINT 7 — Annual Report & Cashflow
+# ─────────────────────────────────────────────
+
+
+class AnnualReportMonthItem(BaseModel):
+    month: int
+    income_usd: Decimal
+    expenses_usd: Decimal
+    savings_usd: Decimal
+    balance_usd: Decimal
+
+
+class AnnualReportResponse(BaseModel):
+    year: int
+    months: list[AnnualReportMonthItem]
+    total_income_usd: Decimal
+    total_expenses_usd: Decimal
+    total_savings_usd: Decimal
+    peak_expense_month: int | None
+    peak_savings_month: int | None
+    dominant_category_by_quarter: dict[str, str | None]
+
+
+class CashflowDayItem(BaseModel):
+    day: int
+    date: date
+    income_usd: Decimal
+    expenses_usd: Decimal
+    balance_usd: Decimal
+
+
+class CashflowCalendarResponse(BaseModel):
+    year: int
+    month: int
+    days: list[CashflowDayItem]
+
+
+class DeleteSavingsDepositCommand(BaseModel):
+    user_id: UUID
+    deposit_id: UUID

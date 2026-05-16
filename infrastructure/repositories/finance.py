@@ -16,7 +16,10 @@ from domain.entities.finance import (
     Invoice,
     PlannedItem,
     SavingsDeposit,
+    SavingsDistributionItem,
+    SavingsDistributionPlan,
     SavingsGoal,
+    SavingsGoalCategory,
     Transaction,
     TransactionType,
 )
@@ -27,6 +30,7 @@ from domain.repositories.finance import (
     ExpenseRepository,
     InvoiceRepository,
     SavingsDepositRepository,
+    SavingsDistributionRepository,
     SavingsGoalRepository,
     TransactionRepository,
 )
@@ -38,6 +42,8 @@ from infrastructure.django_app.models.finance import (
     InvoiceModel,
     PlannedItemModel,
     SavingsDepositModel,
+    SavingsDistributionItemModel,
+    SavingsDistributionPlanModel,
     SavingsGoalModel,
     TransactionModel,
 )
@@ -248,6 +254,99 @@ class DjangoTransactionRepository(TransactionRepository):
             result["expenses_usd"] or Decimal("0"),
         )
 
+    def get_expenses_by_category_usd(
+        self, user_id: UUID, year: int, month: int
+    ) -> dict[UUID | None, Decimal]:
+        from django.db.models import (
+            Case,
+            ExpressionWrapper,
+            F,
+            Q,
+            Sum,
+            Value,
+        )
+        from django.db.models import DecimalField as DjDecimalField
+
+        safe_rate = Case(
+            default=F("exchange_rate"),
+            condition=Q(exchange_rate__isnull=True) | Q(exchange_rate=0),
+            then=Value(1.0),
+        )
+        usd_expr = ExpressionWrapper(
+            F("amount") / safe_rate,
+            output_field=DjDecimalField(max_digits=18, decimal_places=6),
+        )
+        rows = (
+            TransactionModel.objects.filter(
+                user_id=user_id,
+                date__year=year,
+                date__month=month,
+                type=TransactionType.EXPENSE.value,
+            )
+            .values("category_id")
+            .annotate(total_usd=Sum(usd_expr))
+        )
+        return {r["category_id"]: r["total_usd"] or Decimal("0") for r in rows}
+
+    def get_monthly_series(self, user_id: UUID, months: int) -> list[dict]:
+        from datetime import date
+
+        from django.db.models import (
+            Case,
+            ExpressionWrapper,
+            F,
+            Q,
+            Sum,
+            Value,
+        )
+        from django.db.models import DecimalField as DjDecimalField
+
+        today = date.today()
+        result = []
+        for i in range(months - 1, -1, -1):
+            # Calculate year/month going back i months
+            total_months = today.year * 12 + today.month - 1 - i
+            y = total_months // 12
+            m = total_months % 12 + 1
+
+            safe_rate = Case(
+                default=F("exchange_rate"),
+                condition=Q(exchange_rate__isnull=True) | Q(exchange_rate=0),
+                then=Value(1.0),
+            )
+            usd_expr = ExpressionWrapper(
+                F("amount") / safe_rate,
+                output_field=DjDecimalField(max_digits=18, decimal_places=6),
+            )
+            agg = TransactionModel.objects.filter(
+                user_id=user_id,
+                date__year=y,
+                date__month=m,
+            ).aggregate(
+                income_usd=Sum(
+                    usd_expr,
+                    filter=Q(type=TransactionType.INCOME.value),
+                ),
+                expenses_usd=Sum(
+                    usd_expr,
+                    filter=Q(type=TransactionType.EXPENSE.value),
+                ),
+            )
+            savings_usd = SavingsDepositModel.objects.filter(
+                user_id=user_id,
+                date__year=y,
+                date__month=m,
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+            result.append({
+                "year": y,
+                "month": m,
+                "income_usd": agg["income_usd"] or Decimal("0"),
+                "expenses_usd": agg["expenses_usd"] or Decimal("0"),
+                "savings_usd": savings_usd,
+            })
+        return result
+
     @staticmethod
     def _to_entity(record: TransactionModel) -> Transaction:
         return Transaction(
@@ -305,6 +404,14 @@ class DjangoInvoiceRepository(InvoiceRepository):
 
     def list_unpaid(self) -> list[Invoice]:
         return [self._to_entity(r) for r in InvoiceModel.objects.filter(is_paid=False)]
+
+    def list_unpaid_by_user(self, user_id: UUID) -> list[Invoice]:
+        return [
+            self._to_entity(r)
+            for r in InvoiceModel.objects.filter(user_id=user_id, is_paid=False).order_by(
+                "due_date"
+            )
+        ]
 
     def list_all(self) -> list[Invoice]:
         return [self._to_entity(r) for r in InvoiceModel.objects.all()]
@@ -450,13 +557,18 @@ class DjangoSavingsGoalRepository(SavingsGoalRepository):
                 "target_amount_usd": goal.target_amount_usd,
                 "expected_monthly_contribution": goal.expected_monthly_contribution,
                 "is_completed": goal.is_completed,
+                "deadline": goal.deadline,
+                "priority": goal.priority,
+                "category": goal.category.value,
             },
         )
 
     def list_by_user(self, user_id: UUID) -> list[SavingsGoal]:
         return [
             self._to_entity(r)
-            for r in SavingsGoalModel.objects.filter(user_id=user_id).order_by("created_at")
+            for r in SavingsGoalModel.objects.filter(user_id=user_id).order_by(
+                "priority", "created_at"
+            )
         ]
 
     @staticmethod
@@ -468,10 +580,22 @@ class DjangoSavingsGoalRepository(SavingsGoalRepository):
             target_amount_usd=record.target_amount_usd,
             expected_monthly_contribution=record.expected_monthly_contribution,
             is_completed=record.is_completed,
+            deadline=record.deadline,
+            priority=record.priority,
+            category=SavingsGoalCategory(record.category) if record.category else SavingsGoalCategory.OTHER,
         )
 
 
 class DjangoSavingsDepositRepository(SavingsDepositRepository):
+    def get_by_id(self, deposit_id: UUID) -> SavingsDeposit | None:
+        try:
+            return self._to_entity(SavingsDepositModel.objects.get(pk=deposit_id))
+        except SavingsDepositModel.DoesNotExist:
+            return None
+
+    def delete(self, deposit_id: UUID) -> None:
+        SavingsDepositModel.objects.filter(pk=deposit_id).delete()
+
     def save(self, deposit: SavingsDeposit) -> None:
         SavingsDepositModel.objects.update_or_create(
             pk=deposit.id,
@@ -502,6 +626,31 @@ class DjangoSavingsDepositRepository(SavingsDepositRepository):
         ).aggregate(total=Sum("amount"))
         return result["total"] or Decimal("0")
 
+    def get_total_deposited_usd(self, goal_id: UUID) -> Decimal:
+        from django.db.models import Q, Sum
+
+        result = SavingsDepositModel.objects.filter(
+            goal_id=goal_id,
+            currency=Currency.USD.value,
+        ).aggregate(total=Sum("amount"))
+        return result["total"] or Decimal("0")
+
+    def get_monthly_deposits_by_goal(
+        self, user_id: UUID, year: int, month: int
+    ) -> list[tuple[UUID, Decimal]]:
+        from django.db.models import Sum
+
+        rows = (
+            SavingsDepositModel.objects.filter(
+                user_id=user_id,
+                date__year=year,
+                date__month=month,
+            )
+            .values("goal_id")
+            .annotate(total=Sum("amount"))
+        )
+        return [(r["goal_id"], r["total"] or Decimal("0")) for r in rows]
+
     @staticmethod
     def _to_entity(record: SavingsDepositModel) -> SavingsDeposit:
         return SavingsDeposit(
@@ -524,6 +673,19 @@ class DjangoBudgetPlanRepository(BudgetPlanRepository):
         except BudgetPlanModel.DoesNotExist:
             return None
 
+    def get_by_id(self, plan_id: UUID) -> BudgetPlan | None:
+        try:
+            record = BudgetPlanModel.objects.get(pk=plan_id)
+            return self._to_entity(record)
+        except BudgetPlanModel.DoesNotExist:
+            return None
+
+    def list_by_user(self, user_id: UUID) -> list[BudgetPlan]:
+        return [
+            self._to_entity(r)
+            for r in BudgetPlanModel.objects.filter(user_id=user_id).order_by("-year", "-month")
+        ]
+
     def save(self, plan: BudgetPlan) -> None:
         BudgetPlanModel.objects.update_or_create(
             pk=plan.id,
@@ -532,8 +694,12 @@ class DjangoBudgetPlanRepository(BudgetPlanRepository):
                 "year": plan.year,
                 "month": plan.month,
                 "budget_usd": plan.budget_usd,
+                "income_usd": plan.income_usd,
             },
         )
+
+    def delete(self, plan_id: UUID) -> None:
+        BudgetPlanModel.objects.filter(pk=plan_id).delete()
 
     def save_planned_items(self, items: list[PlannedItem]) -> None:
         for item in items:
@@ -557,6 +723,26 @@ class DjangoBudgetPlanRepository(BudgetPlanRepository):
             for r in PlannedItemModel.objects.filter(plan_id=plan_id)
         ]
 
+    def delete_planned_item(self, item_id: UUID) -> None:
+        PlannedItemModel.objects.filter(pk=item_id).delete()
+
+    def get_planned_item_by_category(
+        self, plan_id: UUID, category_id: UUID | None
+    ) -> PlannedItem | None:
+        try:
+            if category_id is None:
+                record = PlannedItemModel.objects.get(plan_id=plan_id, category_id__isnull=True)
+            else:
+                record = PlannedItemModel.objects.get(plan_id=plan_id, category_id=category_id)
+            return PlannedItem(
+                id=record.id,
+                plan_id=record.plan_id,
+                category_id=record.category_id,
+                planned_amount_usd=record.planned_amount_usd,
+            )
+        except PlannedItemModel.DoesNotExist:
+            return None
+
     @staticmethod
     def _to_entity(record: BudgetPlanModel) -> BudgetPlan:
         return BudgetPlan(
@@ -565,4 +751,69 @@ class DjangoBudgetPlanRepository(BudgetPlanRepository):
             year=record.year,
             month=record.month,
             budget_usd=record.budget_usd,
+            income_usd=record.income_usd,
+        )
+
+
+class DjangoSavingsDistributionRepository(SavingsDistributionRepository):
+    def get_by_user_and_period(
+        self, user_id: UUID, year: int, month: int
+    ) -> SavingsDistributionPlan | None:
+        try:
+            record = SavingsDistributionPlanModel.objects.prefetch_related("items").get(
+                user_id=user_id, year=year, month=month
+            )
+            return self._to_entity(record)
+        except SavingsDistributionPlanModel.DoesNotExist:
+            return None
+
+    def save(self, plan: SavingsDistributionPlan) -> None:
+        from django.db import transaction as db_tx
+
+        with db_tx.atomic():
+            plan_record, _ = SavingsDistributionPlanModel.objects.update_or_create(
+                pk=plan.id,
+                defaults={
+                    "user_id": plan.user_id,
+                    "year": plan.year,
+                    "month": plan.month,
+                    "total_planned_usd": plan.total_planned_usd,
+                },
+            )
+            # Replace all items
+            SavingsDistributionItemModel.objects.filter(plan_id=plan.id).delete()
+            for item in plan.items:
+                SavingsDistributionItemModel.objects.create(
+                    id=item.id,
+                    plan_id=plan.id,
+                    goal_id=item.goal_id,
+                    planned_usd=item.planned_usd,
+                )
+
+    def list_by_user(self, user_id: UUID) -> list[SavingsDistributionPlan]:
+        return [
+            self._to_entity(r)
+            for r in SavingsDistributionPlanModel.objects.prefetch_related("items").filter(
+                user_id=user_id
+            ).order_by("-year", "-month")
+        ]
+
+    @staticmethod
+    def _to_entity(record: SavingsDistributionPlanModel) -> SavingsDistributionPlan:
+        items = [
+            SavingsDistributionItem(
+                id=item.id,
+                plan_id=item.plan_id,
+                goal_id=item.goal_id,
+                planned_usd=item.planned_usd,
+            )
+            for item in record.items.all()
+        ]
+        return SavingsDistributionPlan(
+            id=record.id,
+            user_id=record.user_id,
+            year=record.year,
+            month=record.month,
+            total_planned_usd=record.total_planned_usd,
+            items=items,
         )

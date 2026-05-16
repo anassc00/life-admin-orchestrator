@@ -121,3 +121,56 @@ class TransactionReversalNotSupportedError(Exception):
             "Only INCOME and EXPENSE transactions can be reversed. "
             "For exchange pairs, use delete and recreate."
         )
+
+
+# --- Budget ---
+
+
+class BudgetPlanNotFoundError(Exception):
+    def __init__(self, year: int | None = None, month: int | None = None) -> None:
+        if year and month:
+            msg = f"Budget plan for {year}-{month:02d} not found."
+        else:
+            msg = "Budget plan not found."
+        super().__init__(msg)
+
+
+class BudgetPlanAlreadyExistsError(Exception):
+    def __init__(self, year: int, month: int) -> None:
+        super().__init__(
+            f"A budget plan for {year}-{month:02d} already exists. "
+            "Use PUT to update the existing plan."
+        )
+
+
+class BudgetPlanAccessForbiddenError(Exception):
+    def __init__(self) -> None:
+        super().__init__("This budget plan does not belong to you.")
+
+
+class PlannedItemNotFoundError(Exception):
+    def __init__(self) -> None:
+        super().__init__("Planned item not found.")
+
+
+class NoPreviousBudgetPlanError(Exception):
+    def __init__(self, year: int, month: int) -> None:
+        super().__init__(
+            f"No budget plan found for the month prior to {year}-{month:02d}. "
+            "Create the previous month's plan first."
+        )
+
+
+class SavingsDepositNotFoundError(Exception):
+    def __init__(self, deposit_id: UUID | None = None) -> None:
+        msg = (
+            f"Savings deposit '{deposit_id}' not found."
+            if deposit_id
+            else "Savings deposit not found."
+        )
+        super().__init__(msg)
+
+
+class SavingsDepositAccessForbiddenError(Exception):
+    def __init__(self) -> None:
+        super().__init__("This savings deposit does not belong to you.")

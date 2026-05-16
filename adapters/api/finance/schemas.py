@@ -298,3 +298,276 @@ class TransactionListItemSchema(Schema):
     date: datetime.date
     notes: str | None = None
     related_transaction_id: UUID | None = None
+
+
+# ─────────────────────────────────────────────
+# Sprint 3 — Budget
+# ─────────────────────────────────────────────
+
+
+class CreateBudgetPlanRequest(Schema):
+    year: int
+    month: int
+    budget_usd: Decimal = Decimal("500")
+    income_usd: Decimal | None = None
+
+
+class BudgetPlanCreatedSchema(Schema):
+    plan_id: UUID
+    user_id: UUID
+    year: int
+    month: int
+    budget_usd: Decimal
+    income_usd: Decimal | None = None
+
+
+class SetPlannedItemRequest(Schema):
+    category_id: UUID | None = None
+    planned_amount_usd: Decimal
+
+
+class PlannedItemSchema(Schema):
+    item_id: UUID
+    plan_id: UUID
+    category_id: UUID | None
+    planned_amount_usd: Decimal
+
+
+class BudgetPlanItemDetailSchema(Schema):
+    item_id: UUID
+    category_id: UUID | None
+    category_name: str | None
+    planned_usd: Decimal
+    actual_usd: Decimal
+    deviation_usd: Decimal
+    deviation_pct: Decimal
+    over_budget: bool
+
+
+class BudgetPlanDetailSchema(Schema):
+    plan_id: UUID
+    user_id: UUID
+    year: int
+    month: int
+    budget_usd: Decimal
+    income_usd: Decimal | None
+    total_planned_usd: Decimal
+    total_actual_usd: Decimal
+    items: list[BudgetPlanItemDetailSchema]
+    rule_50_30_20: dict | None = None
+
+
+class BudgetVsActualSummarySchema(Schema):
+    plan_id: UUID
+    year: int
+    month: int
+    budget_usd: Decimal
+    total_planned_usd: Decimal
+    total_actual_usd: Decimal
+    pct_executed: Decimal
+    over_budget_categories: int
+
+
+# ─────────────────────────────────────────────
+# Sprint 4/5 — Savings Goals (extended)
+# ─────────────────────────────────────────────
+
+
+class SavingsProjectionSchema(Schema):
+    goal_id: UUID
+    motive: str
+    target_amount_usd: Decimal
+    deposited_usd: Decimal
+    remaining_usd: Decimal
+    expected_monthly_contribution: Decimal
+    months_to_completion: int | None
+    projected_completion_date: datetime.date | None
+    deadline: datetime.date | None
+    priority: int
+
+
+class SavingsRateMonthSchema(Schema):
+    year: int
+    month: int
+    income_usd: Decimal
+    savings_usd: Decimal
+    rate_pct: Decimal
+
+
+class SavingsRateResponseSchema(Schema):
+    months: list[SavingsRateMonthSchema]
+    avg_rate_pct: Decimal
+
+
+class SavingsDashboardGoalSchema(Schema):
+    goal_id: UUID
+    motive: str
+    target_amount_usd: Decimal
+    deposited_usd: Decimal
+    deposited_this_month_usd: Decimal
+    progress_pct: Decimal
+    is_completed: bool
+    deadline: datetime.date | None
+    priority: int
+
+
+class SavingsDashboardSchema(Schema):
+    year: int
+    month: int
+    saved_this_month_usd: Decimal
+    savings_rate_pct: Decimal
+    active_goals_count: int
+    completed_goals_count: int
+    goals: list[SavingsDashboardGoalSchema]
+
+
+class SavingsDistributionItemRequest(Schema):
+    goal_id: UUID
+    planned_usd: Decimal
+
+
+class CreateSavingsDistributionRequest(Schema):
+    year: int
+    month: int
+    items: list[SavingsDistributionItemRequest]
+
+
+class SavingsDistributionResponseSchema(Schema):
+    plan_id: UUID
+    year: int
+    month: int
+    total_planned_usd: Decimal
+    items: list[dict]
+
+
+class SuggestSavingsDistributionResponseSchema(Schema):
+    monthly_budget_usd: Decimal
+    suggestions: list[dict]
+
+
+# ─────────────────────────────────────────────
+# Sprint 6 — Dashboard Core
+# ─────────────────────────────────────────────
+
+
+class NetWorthBreakdownSchema(Schema):
+    account_id: UUID
+    name: str
+    type: str
+    balances: dict[str, str]
+    usd_equivalent: Decimal
+
+
+class NetWorthSchema(Schema):
+    total_usd: Decimal
+    cash_usd: Decimal
+    bank_usd: Decimal
+    wallet_usd: Decimal
+    accounts: list[NetWorthBreakdownSchema]
+
+
+class FinanceTrendMonthSchema(Schema):
+    year: int
+    month: int
+    income_usd: Decimal
+    expenses_usd: Decimal
+    savings_usd: Decimal
+    balance_usd: Decimal
+
+
+class FinanceTrendSchema(Schema):
+    months: list[FinanceTrendMonthSchema]
+
+
+class ExpenseBreakdownItemSchema(Schema):
+    category_id: UUID | None
+    category_name: str | None
+    total_usd: Decimal
+    pct_of_total: Decimal
+
+
+class ExpenseBreakdownSchema(Schema):
+    year: int
+    month: int
+    total_expenses_usd: Decimal
+    items: list[ExpenseBreakdownItemSchema]
+
+
+class UpcomingInvoiceSchema(Schema):
+    invoice_id: UUID
+    vendor: str
+    amount: Decimal
+    currency: str
+    due_date: datetime.date
+    days_until_due: int
+    is_overdue: bool
+
+
+class UpcomingInvoicesSchema(Schema):
+    invoices: list[UpcomingInvoiceSchema]
+
+
+class FinanceDashboardSchema(Schema):
+    net_worth_usd: Decimal
+    monthly_summary: MonthlyFinancialSummarySchema
+    budget_status: BudgetVsActualSummarySchema | None
+    savings_overview: SavingsDashboardSchema
+    upcoming_invoices: list[UpcomingInvoiceSchema]
+
+
+# ─────────────────────────────────────────────
+# Sprint 7 — Annual Report & Cashflow
+# ─────────────────────────────────────────────
+
+
+class AnnualReportMonthSchema(Schema):
+    month: int
+    income_usd: Decimal
+    expenses_usd: Decimal
+    savings_usd: Decimal
+    balance_usd: Decimal
+
+
+class AnnualReportSchema(Schema):
+    year: int
+    months: list[AnnualReportMonthSchema]
+    total_income_usd: Decimal
+    total_expenses_usd: Decimal
+    total_savings_usd: Decimal
+    peak_expense_month: int | None
+    peak_savings_month: int | None
+    dominant_category_by_quarter: dict[str, str | None]
+
+
+class CashflowDaySchema(Schema):
+    day: int
+    date: datetime.date
+    income_usd: Decimal
+    expenses_usd: Decimal
+    balance_usd: Decimal
+
+
+class CashflowCalendarSchema(Schema):
+    year: int
+    month: int
+    days: list[CashflowDaySchema]
+
+
+# DH9 — Extended monthly summary
+class ExtendedMonthlyFinancialSummarySchema(Schema):
+    year: int
+    month: int
+    total_income_usd: Decimal
+    total_expenses_usd: Decimal
+    total_savings_usd: Decimal
+    budget_usd: Decimal
+    balance_usd: Decimal
+    savings_rate_pct: Decimal
+    budget_execution_pct: Decimal
+    goals_active_count: int
+    goals_completed_this_month: int
+
+
+class SavingsDepositDeletedResponseSchema(Schema):
+    deposit_id: UUID
+    deleted: bool = True

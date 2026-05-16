@@ -5,6 +5,14 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
+
+class SavingsGoalCategory(StrEnum):
+    EMERGENCY_FUND = "emergency_fund"
+    TRAVEL = "travel"
+    EDUCATION = "education"
+    INVESTMENT = "investment"
+    OTHER = "other"
+
 # --- Finance Enums ---
 
 
@@ -103,6 +111,9 @@ class SavingsGoal(BaseModel):
     target_amount_usd: Decimal
     expected_monthly_contribution: Decimal = Decimal("0")
     is_completed: bool = False
+    deadline: date | None = None  # SA7 — target completion date
+    priority: int = 0  # SA5 — lower = higher priority (0 is top)
+    category: SavingsGoalCategory = SavingsGoalCategory.OTHER  # SA8
 
 
 class SavingsDeposit(BaseModel):
@@ -126,6 +137,7 @@ class BudgetPlan(BaseModel):
     year: int
     month: int
     budget_usd: Decimal = Decimal("500")
+    income_usd: Decimal | None = None  # B8 — expected income for 50/30/20 rule
 
 
 class PlannedItem(BaseModel):
@@ -148,3 +160,26 @@ class Expense(BaseModel):
     category: str
     date: date
     invoice_id: UUID | None = None
+
+
+# SA3 — Monthly savings distribution plan
+
+
+class SavingsDistributionItem(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: UUID = Field(default_factory=uuid4)
+    plan_id: UUID
+    goal_id: UUID
+    planned_usd: Decimal
+
+
+class SavingsDistributionPlan(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: UUID = Field(default_factory=uuid4)
+    user_id: UUID
+    year: int
+    month: int
+    total_planned_usd: Decimal
+    items: list[SavingsDistributionItem] = []
