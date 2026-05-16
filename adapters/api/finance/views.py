@@ -612,6 +612,22 @@ def register_currency_exchange(request, payload: RegisterCurrencyExchangeRequest
         return HTTPStatus.UNPROCESSABLE_ENTITY, ErrorResponse(detail=str(exc))
 
 
+@router.get(
+    "/transactions/recent",
+    response=list[TransactionListItemSchema],
+    summary="Latest N transactions for the current user (DH6)",
+)
+def get_recent_transactions(request, limit: int = 10):
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return []
+    from uuid import UUID
+
+    uc = get_recent_transactions_use_case()
+    results = uc.execute(UUID(user_id_str), limit=limit)
+    return [r.model_dump() for r in results]
+
+
 # --- Edit Transaction ---
 
 
@@ -1397,22 +1413,6 @@ def get_upcoming_invoices(request):
     uc = get_upcoming_invoices_use_case()
     result = uc.execute(UUID(user_id_str))
     return HTTPStatus.OK, result.model_dump()
-
-
-@router.get(
-    "/transactions/recent",
-    response=list[TransactionListItemSchema],
-    summary="Latest N transactions for the current user (DH6)",
-)
-def get_recent_transactions(request, limit: int = 10):
-    user_id_str = request.session.get("user_id")
-    if not user_id_str:
-        return []
-    from uuid import UUID
-
-    uc = get_recent_transactions_use_case()
-    results = uc.execute(UUID(user_id_str), limit=limit)
-    return [r.model_dump() for r in results]
 
 
 @router.get(
