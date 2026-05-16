@@ -28,6 +28,9 @@ urlpatterns = [
     path("finance/savings/", v.finance_savings_page, name="finance_savings"),
     path("finance/planning/", v.finance_planning_page, name="finance_planning"),
     path("profile/", v.profile_page, name="profile"),
+    path("finance/reports/", v.finance_reports_page, name="finance_reports"),
+    path("finance/cashflow/", v.finance_cashflow_page, name="finance_cashflow"),
+    path("finance/invoices/", v.finance_invoices_page, name="finance_invoices"),
     path("admin/", admin.site.urls),
     path("api/", api.urls),
 ]

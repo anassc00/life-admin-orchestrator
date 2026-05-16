@@ -60,3 +60,15 @@ def finance_planning_page(request: HttpRequest) -> HttpResponse:
 
 def profile_page(request: HttpRequest) -> HttpResponse:
     return _protected(request, "profile.html")
+
+
+def finance_reports_page(request: HttpRequest) -> HttpResponse:
+    return _protected(request, "finance_reports.html")
+
+
+def finance_cashflow_page(request: HttpRequest) -> HttpResponse:
+    return _protected(request, "finance_cashflow.html")
+
+
+def finance_invoices_page(request: HttpRequest) -> HttpResponse:
+    return _protected(request, "finance_invoices.html")
