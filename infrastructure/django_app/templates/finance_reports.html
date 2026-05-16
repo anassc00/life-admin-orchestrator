@@ -1,0 +1,311 @@
+{% extends 'base.html' %}
+{% block title %}Reporte anual — Life Admin{% endblock %}
+{% block extra_style %}
+    .main { flex: 1; display: flex; flex-direction: column; padding: 2.5rem 2rem; gap: 1.75rem; min-width: 0; }
+    .page-title-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #7c6ff7; margin-bottom: 0.3rem; }
+    h1 { font-size: 1.4rem; font-weight: 700; color: #fff; }
+
+    /* Year selector bar */
+    .year-bar { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+    .year-bar select { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #e0e0f0; border-radius: 0.55rem; padding: 0.5rem 0.85rem; font-size: 0.92rem; outline: none; cursor: pointer; font-family: inherit; }
+    .year-bar select option { background: #1e1b4b; }
+    .btn-primary { background: #7c6ff7; border: none; color: #fff; font-size: 0.88rem; font-weight: 700; padding: 0.5rem 1.2rem; border-radius: 0.55rem; cursor: pointer; transition: background 0.2s; }
+    .btn-primary:hover { background: #6a5fe5; }
+
+    /* Summary cards */
+    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    @media (max-width: 900px) { .summary-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 500px) { .summary-grid { grid-template-columns: 1fr; } }
+    .summary-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-radius: 1rem; padding: 1.25rem 1.4rem; }
+    .summary-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #7c6ff7; margin-bottom: 0.45rem; }
+    .summary-value { font-size: 1.35rem; font-weight: 700; color: #fff; }
+    .summary-value.income  { color: #34d399; }
+    .summary-value.expense { color: #f87171; }
+    .summary-value.savings { color: #a78bfa; }
+    .summary-value.balance-pos { color: #34d399; }
+    .summary-value.balance-neg { color: #f87171; }
+
+    /* Highlights */
+    .highlights-row { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .highlight-badge { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; font-weight: 600; padding: 0.35rem 0.85rem; border-radius: 0.9rem; }
+    .highlight-expense { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); color: #f87171; }
+    .highlight-savings { background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.25); color: #34d399; }
+
+    /* Chart */
+    .chart-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem; padding: 1.4rem 1.4rem 1rem; }
+    .chart-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #7c6ff7; margin-bottom: 1rem; }
+    #bar-chart { width: 100%; height: 160px; display: block; }
+    .chart-legend { display: flex; gap: 1.25rem; margin-top: 0.65rem; }
+    .legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: #9090b0; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+    .legend-dot.income  { background: #34d399; }
+    .legend-dot.expense { background: #f87171; }
+
+    /* Table */
+    .table-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem; overflow: hidden; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    thead th { padding: 0.75rem 1rem; text-align: left; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #6060a0; border-bottom: 1px solid rgba(255,255,255,0.07); white-space: nowrap; }
+    thead th:not(:first-child) { text-align: right; }
+    tbody tr { border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.12s; }
+    tbody tr:last-child { border-bottom: none; font-weight: 700; background: rgba(124,111,247,0.06); }
+    tbody tr:hover:not(:last-child) { background: rgba(255,255,255,0.03); }
+    td { padding: 0.7rem 1rem; color: #c0c0d8; white-space: nowrap; }
+    td:not(:first-child) { text-align: right; }
+    td.col-month { color: #e0e0f0; font-weight: 500; }
+    td.col-income  { color: #34d399; font-weight: 600; }
+    td.col-expense { color: #f87171; font-weight: 600; }
+    td.col-savings { color: #a78bfa; font-weight: 600; }
+    td.col-balance-pos { color: #34d399; font-weight: 700; }
+    td.col-balance-neg { color: #f87171; font-weight: 700; }
+    td.col-balance-zero { color: #6060a0; }
+
+    /* Empty */
+    .empty-state { padding: 3.5rem 1rem; text-align: center; color: #6060a0; font-size: 0.88rem; }
+{% endblock %}
+{% block content %}
+    <div>
+      <div class="page-title-label">Finanzas</div>
+      <h1>Reporte anual</h1>
+    </div>
+
+    <!-- Year picker -->
+    <div class="year-bar">
+      <select id="year-select"></select>
+      <button class="btn-primary" id="btn-load-report">Ver reporte</button>
+    </div>
+
+    <!-- Summary cards -->
+    <div id="report-body" style="display:none; display:flex; flex-direction:column; gap:1.75rem;">
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="summary-label">Total ingresos</div>
+          <div class="summary-value income" id="sum-income">$0.00</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Total gastos</div>
+          <div class="summary-value expense" id="sum-expense">$0.00</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Total ahorros</div>
+          <div class="summary-value savings" id="sum-savings">$0.00</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Balance neto</div>
+          <div class="summary-value" id="sum-balance">$0.00</div>
+        </div>
+      </div>
+
+      <!-- Highlights -->
+      <div class="highlights-row" id="highlights-row"></div>
+
+      <!-- Bar chart -->
+      <div class="chart-card">
+        <div class="chart-title">Ingresos vs Gastos — mensual</div>
+        <canvas id="bar-chart"></canvas>
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-dot income"></div> Ingresos</div>
+          <div class="legend-item"><div class="legend-dot expense"></div> Gastos</div>
+        </div>
+      </div>
+
+      <!-- Monthly table -->
+      <div class="table-card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Mes</th>
+                <th>Ingresos</th>
+                <th>Gastos</th>
+                <th>Ahorros</th>
+                <th>Balance</th>
+              </tr>
+            </thead>
+            <tbody id="report-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="empty-state" class="empty-state" style="display:none">Sin datos para este año.</div>
+    <div id="loading-state" class="empty-state" style="display:none">Cargando reporte...</div>
+{% endblock %}
+{% block extra_script %}
+<script>
+    const currentYear = new Date().getFullYear();
+    let reportData = null;
+
+    // ── Populate year select ─────────────────────────────────────────
+    (function() {
+      const sel = document.getElementById('year-select');
+      for (let y = currentYear + 2; y >= currentYear - 2; y--) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        if (y === currentYear) opt.selected = true;
+        sel.appendChild(opt);
+      }
+    })();
+
+    document.getElementById('btn-load-report').addEventListener('click', loadReport);
+
+    // Auto-load on page open
+    loadReport();
+
+    async function loadReport() {
+      const year = document.getElementById('year-select').value;
+      const reportBody  = document.getElementById('report-body');
+      const emptyState  = document.getElementById('empty-state');
+      const loadingEl   = document.getElementById('loading-state');
+
+      reportBody.style.display  = 'none';
+      emptyState.style.display  = 'none';
+      loadingEl.style.display   = 'block';
+
+      try {
+        const res = await fetch(`/api/finance/reports/annual?year=${year}`);
+        if (res.status === 401) { window.location.href = '/login/'; return; }
+        const data = await res.json();
+        loadingEl.style.display = 'none';
+
+        if (!data || !data.months || !data.months.length) {
+          emptyState.style.display = 'block';
+          return;
+        }
+
+        reportData = data;
+        renderReport(data);
+        reportBody.style.display = 'flex';
+      } catch {
+        loadingEl.textContent = 'Error al cargar el reporte.';
+      }
+    }
+
+    function fmt(val) {
+      return '$' + parseFloat(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function renderReport(data) {
+      const t = data.totals || {};
+
+      // Summary cards
+      document.getElementById('sum-income').textContent  = fmt(t.income_usd);
+      document.getElementById('sum-expense').textContent = fmt(t.expenses_usd);
+      document.getElementById('sum-savings').textContent = fmt(t.savings_usd);
+      const balEl = document.getElementById('sum-balance');
+      const bal = parseFloat(t.balance_usd || 0);
+      balEl.textContent = fmt(bal);
+      balEl.className = 'summary-value ' + (bal >= 0 ? 'balance-pos' : 'balance-neg');
+
+      // Highlights
+      const hlRow = document.getElementById('highlights-row');
+      hlRow.innerHTML = '';
+      if (data.peak_expense_month) {
+        const b = document.createElement('div');
+        b.className = 'highlight-badge highlight-expense';
+        b.textContent = `Mayor gasto: ${data.peak_expense_month}`;
+        hlRow.appendChild(b);
+      }
+      if (data.peak_savings_month) {
+        const b = document.createElement('div');
+        b.className = 'highlight-badge highlight-savings';
+        b.textContent = `Mayor ahorro: ${data.peak_savings_month}`;
+        hlRow.appendChild(b);
+      }
+
+      // Table
+      const tbody = document.getElementById('report-table-body');
+      tbody.innerHTML = data.months.map(m => {
+        const balance = parseFloat(m.balance_usd || 0);
+        const balClass = balance > 0 ? 'col-balance-pos' : balance < 0 ? 'col-balance-neg' : 'col-balance-zero';
+        return `<tr>
+          <td class="col-month">${m.month_name}</td>
+          <td class="col-income">${fmt(m.income_usd)}</td>
+          <td class="col-expense">${fmt(m.expenses_usd)}</td>
+          <td class="col-savings">${fmt(m.savings_usd)}</td>
+          <td class="${balClass}">${fmt(balance)}</td>
+        </tr>`;
+      }).join('') + `<tr>
+        <td class="col-month">Total</td>
+        <td class="col-income">${fmt(t.income_usd)}</td>
+        <td class="col-expense">${fmt(t.expenses_usd)}</td>
+        <td class="col-savings">${fmt(t.savings_usd)}</td>
+        <td class="${parseFloat(t.balance_usd||0) >= 0 ? 'col-balance-pos' : 'col-balance-neg'}">${fmt(t.balance_usd)}</td>
+      </tr>`;
+
+      // Bar chart
+      drawBarChart(data.months);
+    }
+
+    function drawBarChart(months) {
+      const canvas = document.getElementById('bar-chart');
+      canvas.width  = canvas.offsetWidth || canvas.parentElement.clientWidth || 800;
+      canvas.height = 160;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const W = canvas.width;
+      const H = canvas.height;
+      const padLeft = 8; const padRight = 8; const padTop = 12; const padBottom = 22;
+      const chartW = W - padLeft - padRight;
+      const chartH = H - padTop - padBottom;
+
+      // Max value for scaling
+      let maxVal = 1;
+      months.forEach(m => {
+        maxVal = Math.max(maxVal, parseFloat(m.income_usd || 0), parseFloat(m.expenses_usd || 0));
+      });
+
+      const n = months.length;
+      const groupW = chartW / n;
+      const barW   = Math.min(groupW * 0.35, 18);
+      const gap    = Math.min(groupW * 0.05, 4);
+
+      months.forEach((m, i) => {
+        const x = padLeft + i * groupW + groupW / 2;
+        const income   = parseFloat(m.income_usd   || 0);
+        const expenses = parseFloat(m.expenses_usd || 0);
+
+        const incomeH  = (income   / maxVal) * chartH;
+        const expenseH = (expenses / maxVal) * chartH;
+
+        const xIncome  = x - barW - gap / 2;
+        const xExpense = x + gap / 2;
+
+        // Income bar (green)
+        ctx.fillStyle = 'rgba(52,211,153,0.75)';
+        ctx.beginPath();
+        ctx.roundRect(xIncome, padTop + chartH - incomeH, barW, incomeH, [3, 3, 0, 0]);
+        ctx.fill();
+
+        // Expense bar (red)
+        ctx.fillStyle = 'rgba(248,113,113,0.75)';
+        ctx.beginPath();
+        ctx.roundRect(xExpense, padTop + chartH - expenseH, barW, expenseH, [3, 3, 0, 0]);
+        ctx.fill();
+
+        // Month label
+        ctx.fillStyle = '#6060a0';
+        ctx.font = '9px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        const shortNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        const label = m.month_name ? m.month_name.slice(0, 3) : (shortNames[m.month - 1] || '');
+        ctx.fillText(label, x, H - 5);
+      });
+
+      // Baseline
+      ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padLeft, padTop + chartH);
+      ctx.lineTo(W - padRight, padTop + chartH);
+      ctx.stroke();
+    }
+
+    // Redraw chart on resize
+    window.addEventListener('resize', () => {
+      if (reportData) drawBarChart(reportData.months);
+    });
+</script>
+{% endblock %}

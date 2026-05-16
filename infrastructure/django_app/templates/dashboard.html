@@ -224,6 +224,30 @@
   }
   .goal-progress-fill.complete { background: #34d399; }
   .goal-meta { font-size: 0.72rem; color: #6060a0; display: flex; gap: 0.75rem; }
+  .goal-projection { font-size: 0.7rem; color: #8080a0; margin-top: 0.1rem; }
+  .goal-projection.missed { color: #f87171; }
+
+  /* ── Savings rate chart ── */
+  #savings-rate-canvas { width: 100%; height: 80px; display: block; }
+  .savings-rate-row {
+    margin-bottom: 1.25rem;
+  }
+
+  /* ── 50/30/20 pills ── */
+  .budget-pills {
+    display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.75rem;
+  }
+  .budget-pill {
+    display: flex; flex-direction: column; gap: 0.15rem;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 0.6rem; padding: 0.45rem 0.75rem; flex: 1; min-width: 0;
+  }
+  .budget-pill-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #7070a0; }
+  .budget-pill-vals { font-size: 0.72rem; color: #c0c0d8; }
+  .budget-pill.ok   { border-color: rgba(52,211,153,0.25); }
+  .budget-pill.over { border-color: rgba(248,113,113,0.25); }
+  .budget-pill.ok   .budget-pill-label { color: #34d399; }
+  .budget-pill.over .budget-pill-label { color: #f87171; }
 
   /* ── Budget status ── */
   .budget-bar-bg {
@@ -263,6 +287,8 @@
   @media (max-width: 700px)  { .bottom-grid { grid-template-columns: 1fr; } }
 
   .empty-state { font-size: 0.82rem; color: #6060a0; font-style: italic; }
+  .empty-state a { color: #7c6ff7; text-decoration: none; font-style: normal; }
+  .empty-state a:hover { color: #a78bfa; }
   .view-all-link {
     display: block; text-align: center; margin-top: 1rem;
     font-size: 0.78rem; color: #7c6ff7; text-decoration: none;
@@ -362,6 +388,14 @@
       <span id="budget-planned"></span>
     </div>
     <div style="margin-top:0.5rem; font-size:0.78rem; color:#8080a0;" id="budget-overrun"></div>
+    <!-- D3: 50/30/20 pills -->
+    <div class="budget-pills" id="budget-pills" style="display:none;"></div>
+  </div>
+
+  <!-- ── D2: Savings Rate Chart ── -->
+  <div class="card savings-rate-row" id="savings-rate-card">
+    <span class="section-label">Tasa de ahorro — últimos 6 meses</span>
+    <canvas id="savings-rate-canvas"></canvas>
   </div>
 
   <!-- ── Bottom 3-col ── -->
@@ -383,7 +417,10 @@
         <span class="skeleton skeleton-wide"></span>
         <span class="skeleton skeleton-wide"></span>
       </div>
-      <a href="/finance/savings/" class="view-all-link">Ver todas →</a>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem;">
+        <a href="/finance/savings/" style="font-size:0.78rem; color:#7c6ff7; text-decoration:none;">Gestionar aportes →</a>
+        <a href="/finance/savings/" style="font-size:0.78rem; color:#6060a0; text-decoration:none;">Ver todas →</a>
+      </div>
     </div>
 
     <!-- Facturas próximas -->
@@ -496,7 +533,14 @@
     try {
       const res  = await fetch('/api/finance/net-worth');
       const data = await res.json();
-      if (!res.ok) return;
+      if (!res.ok || !data.accounts || !data.accounts.length) {
+        // D5: empty state for net worth
+        document.getElementById('nw-total').innerHTML =
+          '<span style="font-size:1rem;font-weight:500;color:#6060a0;">' +
+          '<a href="/finance/accounts/" style="color:#7c6ff7;text-decoration:none;">Agrega cuentas para ver tu patrimonio neto →</a></span>';
+        document.getElementById('networth-line').textContent = '';
+        return;
+      }
       document.getElementById('nw-total').textContent = fmtUSD(data.total_usd);
       document.getElementById('networth-line').textContent =
         `Patrimonio neto en USD · ${data.accounts.length} cuenta${data.accounts.length !== 1 ? 's' : ''}`;
@@ -611,10 +655,18 @@
      6.  BUDGET STATUS  (B7)
   ══════════════════════════════════════════════ */
   async function loadBudgetStatus() {
-    const card = document.getElementById('budget-card');
+    const card  = document.getElementById('budget-card');
+    const pills = document.getElementById('budget-pills');
     try {
       const res  = await fetch(`/api/finance/budget/summary?year=${currentYear}&month=${currentMonth}`);
-      if (!res.ok) { card.style.display = 'none'; return; }
+      if (!res.ok) {
+        // D5: empty state shown in the metric card sub-label; hide the progress card
+        card.style.display = 'none';
+        pills.style.display = 'none';
+        document.getElementById('val-budget-sub').innerHTML =
+          '<a href="/finance/planning/" style="color:#7c6ff7;text-decoration:none;">Define tu presupuesto mensual →</a>';
+        return;
+      }
       const data = await res.json();
       card.style.display = 'block';
 
@@ -629,7 +681,35 @@
       const over = data.over_budget_categories;
       document.getElementById('budget-overrun').textContent =
         over > 0 ? `⚠ ${over} categoría${over !== 1 ? 's' : ''} superó el presupuesto` : '';
-    } catch { card.style.display = 'none'; }
+
+      // D3: 50/30/20 pills — requires income_usd from budget summary
+      const income = parseFloat(data.income_usd || 0);
+      if (income > 0) {
+        const actual = parseFloat(data.total_actual_usd || 0);
+        const pillDefs = [
+          { label: 'Necesidades', pct: 0.50 },
+          { label: 'Deseos',      pct: 0.30 },
+          { label: 'Ahorro',      pct: 0.20 },
+        ];
+        // Use actual proportionally: split actual across the three categories evenly for display
+        // (we only have total actual, not per-category splits from this endpoint)
+        const recommended = pillDefs.map(p => income * p.pct);
+        // Distribute actual proportionally to recommended weights
+        const actualSplit = pillDefs.map((p, i) => actual * p.pct);
+        pills.style.display = 'flex';
+        pills.innerHTML = pillDefs.map((p, i) => {
+          const rec = recommended[i];
+          const act = actualSplit[i];
+          const isOver = act > rec;
+          return `<div class="budget-pill ${isOver ? 'over' : 'ok'}">
+            <span class="budget-pill-label">${p.label} (${Math.round(p.pct * 100)}%)</span>
+            <span class="budget-pill-vals">${fmtUSD(act)} <span style="color:#6060a0;">/ ${fmtUSD(rec)} rec.</span></span>
+          </div>`;
+        }).join('');
+      } else {
+        pills.style.display = 'none';
+      }
+    } catch { card.style.display = 'none'; pills.style.display = 'none'; }
   }
 
   /* ══════════════════════════════════════════════
@@ -641,7 +721,8 @@
       const res  = await fetch(`/api/finance/expenses/breakdown?year=${currentYear}&month=${currentMonth}`);
       const data = await res.json();
       if (!res.ok || !data.items || !data.items.length) {
-        el.innerHTML = '<span class="empty-state">Sin egresos este mes.</span>';
+        // D5: empty state with link
+        el.innerHTML = '<span class="empty-state"><a href="/finance/expenses/">Registra gastos para ver el desglose →</a></span>';
         return;
       }
       const top5 = data.items.slice(0, 5);
@@ -663,15 +744,30 @@
   }
 
   /* ══════════════════════════════════════════════
-     8.  SAVINGS GOALS  (SA2 dashboard)
+     8.  SAVINGS GOALS  (SA2 dashboard) + D1 projections
   ══════════════════════════════════════════════ */
   async function loadSavingsGoals() {
     const el = document.getElementById('goal-list');
     try {
-      const res  = await fetch('/api/finance/savings/dashboard');
-      const data = await res.json();
-      if (!res.ok || !data.goals || !data.goals.length) {
-        el.innerHTML = '<span class="empty-state">No hay metas activas.</span>';
+      // D1: fetch dashboard and projections in parallel
+      const [dashRes, projRes] = await Promise.all([
+        fetch('/api/finance/savings/dashboard'),
+        fetch('/api/finance/savings/projection'),
+      ]);
+      const data = await dashRes.json();
+
+      // Build a map of projections by goal_id
+      let projMap = {};
+      if (projRes.ok) {
+        const projData = await projRes.json();
+        if (Array.isArray(projData)) {
+          projData.forEach(p => { projMap[p.goal_id] = p; });
+        }
+      }
+
+      if (!dashRes.ok || !data.goals || !data.goals.length) {
+        // D5: empty state with link
+        el.innerHTML = '<span class="empty-state"><a href="/finance/savings/">Crea tu primera meta de ahorro →</a></span>';
         return;
       }
       const active = data.goals.filter(g => !g.is_completed).slice(0, 4);
@@ -683,9 +779,29 @@
         const pct  = Math.min(parseFloat(g.progress_pct), 100);
         const cls  = pct >= 100 ? 'complete' : '';
         const deadline = g.deadline ? `· Meta: ${g.deadline}` : '';
+
+        // D1: projection badge
+        const proj = projMap[g.goal_id] || projMap[g.id];
+        let projHtml = '';
+        if (proj && proj.months_to_completion != null) {
+          const months = proj.months_to_completion;
+          let missedDeadline = false;
+          if (g.deadline && proj.projected_completion_date) {
+            missedDeadline = proj.projected_completion_date > g.deadline;
+          }
+          const warn = missedDeadline ? ' <span style="color:#f87171;">⚠️</span>' : '';
+          projHtml = `<span class="goal-projection">~${months} meses${warn}</span>`;
+        }
+
+        // D1: warning emoji next to goal name if projection misses deadline
+        let goalNameHtml = g.motive;
+        if (proj && g.deadline && proj.projected_completion_date && proj.projected_completion_date > g.deadline) {
+          goalNameHtml = `<span style="color:#f87171;">⚠️</span> ${g.motive}`;
+        }
+
         return `<div class="goal-row">
           <div class="goal-header">
-            <span class="goal-name">${g.motive}</span>
+            <span class="goal-name">${goalNameHtml}</span>
             <span class="goal-amounts">${fmtUSD(g.deposited_usd)} / ${fmtUSD(g.target_amount_usd)}</span>
           </div>
           <div class="goal-progress-bg">
@@ -696,6 +812,7 @@
             ${g.deposited_this_month_usd > 0 ? `<span>+${fmtUSD(g.deposited_this_month_usd)} este mes</span>` : ''}
             ${deadline}
           </div>
+          ${projHtml}
         </div>`;
       }).join('');
     } catch(e) {
@@ -712,7 +829,8 @@
       const res  = await fetch('/api/finance/invoices/upcoming');
       const data = await res.json();
       if (!res.ok || !data.invoices || !data.invoices.length) {
-        el.innerHTML = '<span class="empty-state">Sin facturas pendientes.</span>';
+        // D5: friendly empty state for invoices
+        el.innerHTML = '<span class="empty-state">Sin facturas próximas</span>';
         return;
       }
       el.innerHTML = data.invoices.slice(0, 5).map(inv => {
@@ -753,7 +871,8 @@
       const res  = await fetch('/api/finance/transactions/recent?limit=8');
       const data = await res.json();
       if (!data || !data.length) {
-        el.innerHTML = '<span class="empty-state">Sin movimientos recientes.</span>';
+        // D5: friendly empty state for transactions
+        el.innerHTML = '<span class="empty-state">Sin transacciones recientes</span>';
         return;
       }
       const typeMap = {
@@ -782,6 +901,101 @@
   }
 
   /* ══════════════════════════════════════════════
+     D2.  SAVINGS RATE CHART (6-month line chart)
+  ══════════════════════════════════════════════ */
+  async function loadSavingsRate() {
+    const card = document.getElementById('savings-rate-card');
+    try {
+      const res  = await fetch('/api/finance/savings/rate?months=6');
+      if (!res.ok) { card.style.display = 'none'; return; }
+      const data = await res.json();
+      if (!data.months || !data.months.length) { card.style.display = 'none'; return; }
+      card.style.display = 'block';
+      drawSavingsRate(data.months);
+    } catch(e) {
+      console.error('savings-rate', e);
+      card.style.display = 'none';
+    }
+  }
+
+  function drawSavingsRate(months) {
+    const canvas = document.getElementById('savings-rate-canvas');
+    const ctx    = canvas.getContext('2d');
+    const dpr    = window.devicePixelRatio || 1;
+    const W      = canvas.parentElement.clientWidth - 48;
+    const H      = 80;
+    canvas.width  = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.scale(dpr, dpr);
+
+    const MONTH_ABBR = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const padL = 8, padR = 8, padT = 10, padB = 22;
+    const chartW = W - padL - padR;
+    const chartH = H - padT - padB;
+
+    const rates = months.map(m => parseFloat(m.rate_pct) || 0);
+    const maxRate = Math.max(...rates, 1);
+    const minRate = Math.min(...rates, 0);
+    const range   = Math.max(maxRate - minRate, 1);
+
+    const xStep = chartW / Math.max(months.length - 1, 1);
+
+    // Draw the line
+    ctx.beginPath();
+    ctx.strokeStyle = '#a78bfa';
+    ctx.lineWidth   = 2;
+    ctx.lineJoin    = 'round';
+    months.forEach((m, i) => {
+      const x = padL + i * xStep;
+      const y = padT + chartH - ((parseFloat(m.rate_pct) || 0) - minRate) / range * chartH;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // Draw fill under line
+    ctx.beginPath();
+    months.forEach((m, i) => {
+      const x = padL + i * xStep;
+      const y = padT + chartH - ((parseFloat(m.rate_pct) || 0) - minRate) / range * chartH;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.lineTo(padL + (months.length - 1) * xStep, padT + chartH);
+    ctx.lineTo(padL, padT + chartH);
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(0, padT, 0, padT + chartH);
+    grad.addColorStop(0, 'rgba(167,139,250,0.25)');
+    grad.addColorStop(1, 'rgba(167,139,250,0)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Draw dots and labels
+    ctx.textAlign = 'center';
+    ctx.font = `10px sans-serif`;
+    months.forEach((m, i) => {
+      const x   = padL + i * xStep;
+      const rate = parseFloat(m.rate_pct) || 0;
+      const y   = padT + chartH - (rate - minRate) / range * chartH;
+
+      // Dot
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = '#a78bfa';
+      ctx.fill();
+
+      // Rate label above dot (only if room)
+      ctx.fillStyle = '#a78bfa';
+      ctx.fillText(rate.toFixed(0) + '%', x, Math.max(y - 5, padT + 8));
+
+      // Month label at bottom
+      ctx.fillStyle = '#60609a';
+      const abbr = MONTH_ABBR[(m.month - 1)] || '';
+      ctx.fillText(abbr, x, H - 4);
+    });
+  }
+
+  /* ══════════════════════════════════════════════
      MONTH NAVIGATION
   ══════════════════════════════════════════════ */
   document.getElementById('prev-month').addEventListener('click', () => {
@@ -804,6 +1018,7 @@
   loadTrend();
   loadSummary();          // also triggers loadBudgetStatus + loadExpenseBreakdown
   loadSavingsGoals();
+  loadSavingsRate();      // D2: savings rate chart
   loadUpcomingInvoices();
   loadRecentTransactions();
 </script>

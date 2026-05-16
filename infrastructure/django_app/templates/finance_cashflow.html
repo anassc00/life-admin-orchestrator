@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% block title %}Cashflow mensual — Life Admin{% endblock %}
+{% block extra_style %}
+    .main { flex: 1; display: flex; flex-direction: column; padding: 2.5rem 2rem; gap: 1.75rem; min-width: 0; }
+    .page-title-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #7c6ff7; margin-bottom: 0.3rem; }
+    h1 { font-size: 1.4rem; font-weight: 700; color: #fff; }
+
+    /* Navigation */
+    .nav-bar { display: flex; align-items: center; gap: 1rem; }
+    .btn-nav { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #9090b0; font-size: 1rem; width: 34px; height: 34px; border-radius: 0.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; line-height: 1; }
+    .btn-nav:hover { background: rgba(255,255,255,0.12); color: #e0e0f0; }
+    .month-label { font-size: 1.1rem; font-weight: 700; color: #fff; min-width: 160px; text-align: center; }
+
+    /* Calendar */
+    .calendar-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem; overflow: hidden; }
+    .cal-header { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .cal-dow { padding: 0.55rem 0.25rem; text-align: center; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #6060a0; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+    .cal-day { min-height: 74px; border-right: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); padding: 0.4rem 0.5rem; position: relative; }
+    .cal-day:nth-child(7n) { border-right: none; }
+    .cal-day.outside { opacity: 0.3; }
+    .cal-day.today { outline: 1px solid rgba(124,111,247,0.5); outline-offset: -1px; }
+    .cal-day.tint-green { background: rgba(52,211,153,0.06); }
+    .cal-day.tint-red   { background: rgba(248,113,113,0.06); }
+    .day-num { font-size: 0.78rem; font-weight: 700; color: #9090b0; margin-bottom: 0.25rem; }
+    .cal-day.today .day-num { color: #c0b8ff; }
+    .day-income  { font-size: 0.7rem; font-weight: 600; color: #34d399; line-height: 1.3; }
+    .day-expense { font-size: 0.7rem; font-weight: 600; color: #f87171; line-height: 1.3; }
+
+    /* Summary bar */
+    .summary-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .summary-pill { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-radius: 0.75rem; padding: 0.85rem 1.25rem; flex: 1; min-width: 130px; }
+    .pill-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #7c6ff7; margin-bottom: 0.3rem; }
+    .pill-value { font-size: 1.1rem; font-weight: 700; color: #fff; }
+    .pill-value.income  { color: #34d399; }
+    .pill-value.expense { color: #f87171; }
+    .pill-value.balance-pos { color: #34d399; }
+    .pill-value.balance-neg { color: #f87171; }
+
+    .loading-state { padding: 3rem 1rem; text-align: center; color: #6060a0; font-size: 0.88rem; }
+{% endblock %}
+{% block content %}
+    <div>
+      <div class="page-title-label">Finanzas</div>
+      <h1>Cashflow mensual</h1>
+    </div>
+
+    <!-- Month navigation -->
+    <div class="nav-bar">
+      <button class="btn-nav" id="btn-prev" title="Mes anterior">&#8592;</button>
+      <div class="month-label" id="month-label">—</div>
+      <button class="btn-nav" id="btn-next" title="Mes siguiente">&#8594;</button>
+    </div>
+
+    <!-- Calendar -->
+    <div class="calendar-card" id="calendar-card">
+      <div class="cal-header">
+        <div class="cal-dow">Lun</div>
+        <div class="cal-dow">Mar</div>
+        <div class="cal-dow">Mié</div>
+        <div class="cal-dow">Jue</div>
+        <div class="cal-dow">Vie</div>
+        <div class="cal-dow">Sáb</div>
+        <div class="cal-dow">Dom</div>
+      </div>
+      <div class="cal-grid" id="cal-grid">
+        <div class="loading-state" style="grid-column: 1/-1;">Cargando...</div>
+      </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="summary-row" id="summary-row">
+      <div class="summary-pill">
+        <div class="pill-label">Ingresos del mes</div>
+        <div class="pill-value income" id="sum-income">$0.00</div>
+      </div>
+      <div class="summary-pill">
+        <div class="pill-label">Gastos del mes</div>
+        <div class="pill-value expense" id="sum-expense">$0.00</div>
+      </div>
+      <div class="summary-pill">
+        <div class="pill-label">Balance neto</div>
+        <div class="pill-value" id="sum-balance">$0.00</div>
+      </div>
+    </div>
+{% endblock %}
+{% block extra_script %}
+<script>
+    const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+    const today = new Date();
+    let viewYear  = today.getFullYear();
+    let viewMonth = today.getMonth() + 1; // 1-based
+
+    document.getElementById('btn-prev').addEventListener('click', () => {
+      viewMonth--;
+      if (viewMonth < 1) { viewMonth = 12; viewYear--; }
+      loadCalendar();
+    });
+
+    document.getElementById('btn-next').addEventListener('click', () => {
+      viewMonth++;
+      if (viewMonth > 12) { viewMonth = 1; viewYear++; }
+      loadCalendar();
+    });
+
+    async function loadCalendar() {
+      document.getElementById('month-label').textContent = `${MONTH_NAMES[viewMonth - 1]} ${viewYear}`;
+      document.getElementById('cal-grid').innerHTML = '<div class="loading-state" style="grid-column:1/-1">Cargando...</div>';
+
+      try {
+        const res = await fetch(`/api/finance/cashflow/calendar?year=${viewYear}&month=${viewMonth}`);
+        if (res.status === 401) { window.location.href = '/login/'; return; }
+        const data = await res.json();
+        renderCalendar(data);
+      } catch {
+        document.getElementById('cal-grid').innerHTML = '<div class="loading-state" style="grid-column:1/-1">Error al cargar.</div>';
+      }
+    }
+
+    function fmt(val) {
+      return '$' + Math.abs(parseFloat(val || 0)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function renderCalendar(data) {
+      const grid = document.getElementById('cal-grid');
+      const days = data.days || [];
+
+      // Build a lookup by day number
+      const dayMap = {};
+      days.forEach(d => { dayMap[d.day] = d; });
+
+      // Figure out how many days in month and starting weekday (Mon=0)
+      const daysInMonth = new Date(viewYear, viewMonth, 0).getDate();
+      let startDow = new Date(viewYear, viewMonth - 1, 1).getDay(); // 0=Sun
+      startDow = (startDow + 6) % 7; // Convert to Mon=0
+
+      const todayStr = today.toISOString().split('T')[0];
+
+      const cells = [];
+
+      // Leading empty cells (previous month)
+      for (let i = 0; i < startDow; i++) {
+        cells.push('<div class="cal-day outside"><div class="day-num"></div></div>');
+      }
+
+      // Actual days
+      for (let d = 1; d <= daysInMonth; d++) {
+        const info = dayMap[d];
+        const income   = info ? parseFloat(info.income_usd   || 0) : 0;
+        const expenses = info ? parseFloat(info.expenses_usd || 0) : 0;
+        const balance  = info ? parseFloat(info.balance_usd  || 0) : 0;
+
+        const dateStr = `${viewYear}-${String(viewMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const isToday = dateStr === todayStr;
+
+        let tintClass = '';
+        if (income > 0 || expenses > 0) {
+          tintClass = balance > 0 ? 'tint-green' : balance < 0 ? 'tint-red' : '';
+        }
+
+        const incomeHtml  = income   > 0 ? `<div class="day-income">+${fmt(income)}</div>`   : '';
+        const expenseHtml = expenses > 0 ? `<div class="day-expense">-${fmt(expenses)}</div>` : '';
+
+        cells.push(`<div class="cal-day${tintClass ? ' ' + tintClass : ''}${isToday ? ' today' : ''}">
+          <div class="day-num">${d}</div>
+          ${incomeHtml}
+          ${expenseHtml}
+        </div>`);
+      }
+
+      // Trailing empty cells to fill last row
+      const total = startDow + daysInMonth;
+      const remainder = total % 7;
+      if (remainder !== 0) {
+        for (let i = 0; i < 7 - remainder; i++) {
+          cells.push('<div class="cal-day outside"><div class="day-num"></div></div>');
+        }
+      }
+
+      grid.innerHTML = cells.join('');
+
+      // Summary totals
+      let totalIncome = 0, totalExpense = 0;
+      days.forEach(d => {
+        totalIncome  += parseFloat(d.income_usd   || 0);
+        totalExpense += parseFloat(d.expenses_usd || 0);
+      });
+      const totalBalance = totalIncome - totalExpense;
+
+      document.getElementById('sum-income').textContent  = '$' + totalIncome.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+      document.getElementById('sum-expense').textContent = '$' + totalExpense.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+      const balEl = document.getElementById('sum-balance');
+      balEl.textContent = (totalBalance >= 0 ? '+$' : '-$') + Math.abs(totalBalance).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+      balEl.className = 'pill-value ' + (totalBalance >= 0 ? 'balance-pos' : 'balance-neg');
+    }
+
+    loadCalendar();
+</script>
+{% endblock %}
