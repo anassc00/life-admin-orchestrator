@@ -6,15 +6,6 @@ intentionally stateless — they create fresh instances on each call.
 For performance-critical paths, introduce a request-scoped cache here.
 """
 
-from application.use_cases.calendar.detect_conflict import DetectConflictUseCase
-from application.use_cases.calendar.schedule_appointment import ScheduleAppointmentUseCase
-from application.use_cases.calendar.send_reminder import SendReminderUseCase
-from application.use_cases.contact.log_interaction import LogInteractionUseCase
-from application.use_cases.contact.update_contact_record import UpdateContactRecordUseCase
-from application.use_cases.document.archive_document import ArchiveDocumentUseCase
-from application.use_cases.document.classify_document import ClassifyDocumentUseCase
-from application.use_cases.document.extract_metadata import ExtractMetadataUseCase
-from application.use_cases.document.register_document import RegisterDocumentUseCase
 from application.use_cases.finance.categorize_expense import CategorizeExpenseUseCase
 from application.use_cases.finance.delete_transaction import DeleteTransactionUseCase
 from application.use_cases.finance.create_expense_category import CreateExpenseCategoryUseCase
@@ -41,11 +32,12 @@ from application.use_cases.finance.register_expense import RegisterExpenseUseCas
 from application.use_cases.finance.register_income import RegisterIncomeUseCase
 from application.use_cases.finance.update_account import UpdateAccountUseCase
 from application.use_cases.users.authenticate_user import AuthenticateUserUseCase
+from application.use_cases.users.change_password import ChangePasswordUseCase
 from application.use_cases.users.get_user_profile import GetUserProfileUseCase
 from application.use_cases.users.register_user import RegisterUserUseCase
-from infrastructure.repositories.calendar import DjangoAppointmentRepository
-from infrastructure.repositories.contact import DjangoContactRepository, DjangoInteractionRepository
-from infrastructure.repositories.document import DjangoDocumentRepository
+from application.use_cases.users.reset_password_confirm import ResetPasswordConfirmUseCase
+from application.use_cases.users.reset_password_request import ResetPasswordRequestUseCase
+from application.use_cases.users.update_profile import UpdateProfileUseCase
 from infrastructure.repositories.finance import (
     DjangoAccountRepository,
     DjangoExpenseCategoryRepository,
@@ -55,7 +47,11 @@ from infrastructure.repositories.finance import (
     DjangoSavingsGoalRepository,
     DjangoTransactionRepository,
 )
-from infrastructure.repositories.user import DjangoPasswordHasher, DjangoUserRepository
+from infrastructure.repositories.user import (
+    DjangoPasswordHasher,
+    DjangoPasswordResetTokenRepository,
+    DjangoUserRepository,
+)
 
 # --- Auth / Users ---
 
@@ -76,6 +72,32 @@ def get_authenticate_user_use_case() -> AuthenticateUserUseCase:
 
 def get_user_profile_use_case() -> GetUserProfileUseCase:
     return GetUserProfileUseCase(user_repo=DjangoUserRepository())
+
+
+def get_update_profile_use_case() -> UpdateProfileUseCase:
+    return UpdateProfileUseCase(user_repo=DjangoUserRepository())
+
+
+def get_change_password_use_case() -> ChangePasswordUseCase:
+    return ChangePasswordUseCase(
+        user_repo=DjangoUserRepository(),
+        password_hasher=DjangoPasswordHasher(),
+    )
+
+
+def get_reset_password_request_use_case() -> ResetPasswordRequestUseCase:
+    return ResetPasswordRequestUseCase(
+        user_repo=DjangoUserRepository(),
+        token_repo=DjangoPasswordResetTokenRepository(),
+    )
+
+
+def get_reset_password_confirm_use_case() -> ResetPasswordConfirmUseCase:
+    return ResetPasswordConfirmUseCase(
+        user_repo=DjangoUserRepository(),
+        token_repo=DjangoPasswordResetTokenRepository(),
+        password_hasher=DjangoPasswordHasher(),
+    )
 
 
 # --- Finance ---
@@ -208,51 +230,3 @@ def get_delete_transaction_use_case() -> DeleteTransactionUseCase:
 
 def get_transactions_by_user_use_case() -> GetTransactionsByUserUseCase:
     return GetTransactionsByUserUseCase(transaction_repo=DjangoTransactionRepository())
-
-
-# --- Calendar ---
-
-
-def get_schedule_appointment_use_case() -> ScheduleAppointmentUseCase:
-    return ScheduleAppointmentUseCase(appointment_repo=DjangoAppointmentRepository())
-
-
-def get_detect_conflict_use_case() -> DetectConflictUseCase:
-    return DetectConflictUseCase(appointment_repo=DjangoAppointmentRepository())
-
-
-def get_send_reminder_use_case() -> SendReminderUseCase:
-    return SendReminderUseCase(appointment_repo=DjangoAppointmentRepository())
-
-
-# --- Documents ---
-
-
-def get_register_document_use_case() -> RegisterDocumentUseCase:
-    return RegisterDocumentUseCase(document_repo=DjangoDocumentRepository())
-
-
-def get_classify_document_use_case() -> ClassifyDocumentUseCase:
-    return ClassifyDocumentUseCase(document_repo=DjangoDocumentRepository())
-
-
-def get_extract_metadata_use_case() -> ExtractMetadataUseCase:
-    return ExtractMetadataUseCase(document_repo=DjangoDocumentRepository())
-
-
-def get_archive_document_use_case() -> ArchiveDocumentUseCase:
-    return ArchiveDocumentUseCase(document_repo=DjangoDocumentRepository())
-
-
-# --- Contacts ---
-
-
-def get_update_contact_record_use_case() -> UpdateContactRecordUseCase:
-    return UpdateContactRecordUseCase(contact_repo=DjangoContactRepository())
-
-
-def get_log_interaction_use_case() -> LogInteractionUseCase:
-    return LogInteractionUseCase(
-        contact_repo=DjangoContactRepository(),
-        interaction_repo=DjangoInteractionRepository(),
-    )

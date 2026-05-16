@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from domain.entities.user import User
+from domain.entities.user import PasswordResetToken, User
 
 
 class UserRepository(ABC):
@@ -14,6 +14,11 @@ class UserRepository(ABC):
     @abstractmethod
     def save(self, user: User) -> None: ...
 
+    @abstractmethod
+    def email_taken_by_other(self, email: str, exclude_user_id: UUID) -> bool:
+        """Return True if email is already used by a different user."""
+        ...
+
 
 class PasswordHasher(ABC):
     @abstractmethod
@@ -21,3 +26,14 @@ class PasswordHasher(ABC):
 
     @abstractmethod
     def verify(self, plain_password: str, hashed_password: str) -> bool: ...
+
+
+class PasswordResetTokenRepository(ABC):
+    @abstractmethod
+    def save(self, token: PasswordResetToken) -> None: ...
+
+    @abstractmethod
+    def get_by_token(self, token: UUID) -> PasswordResetToken | None: ...
+
+    @abstractmethod
+    def mark_used(self, token: UUID) -> None: ...

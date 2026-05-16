@@ -24,3 +24,28 @@ class UserResponse(Schema):
 
 class ErrorResponse(Schema):
     detail: str
+
+
+class UpdateProfileRequest(Schema):
+    first_name: str | None = None
+    last_name: str | None = None
+    email: str | None = None
+
+
+class ChangePasswordRequest(Schema):
+    current_password: str
+    new_password: str
+
+
+class ResetPasswordRequestSchema(Schema):
+    email: str
+
+
+class ResetPasswordRequestResponseSchema(Schema):
+    detail: str
+    reset_token: UUID | None = None
+
+
+class ResetPasswordConfirmSchema(Schema):
+    token: UUID
+    new_password: str

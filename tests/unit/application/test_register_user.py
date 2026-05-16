@@ -24,6 +24,10 @@ class InMemoryUserRepository(UserRepository):
         self._by_email[user.email] = user
         self._by_id[user.id] = user
 
+    def email_taken_by_other(self, email: str, exclude_user_id: UUID) -> bool:
+        u = self._by_email.get(email)
+        return u is not None and u.id != exclude_user_id
+
 
 class FakePasswordHasher(PasswordHasher):
     def hash(self, plain_password: str) -> str:

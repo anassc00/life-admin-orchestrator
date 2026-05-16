@@ -125,7 +125,10 @@ def monthly_report(request, year: int, month: int):
 
 @router.get(
     "/summary/current",
-    response=MonthlyFinancialSummarySchema,
+    response={
+        HTTPStatus.OK: MonthlyFinancialSummarySchema,
+        HTTPStatus.UNAUTHORIZED: ErrorResponse,
+    },
     summary="Get the financial summary (income, expenses, savings) for a specific month (defaults to current month)",
 )
 def monthly_financial_summary(request, year: int = None, month: int = None):
@@ -133,15 +136,7 @@ def monthly_financial_summary(request, year: int = None, month: int = None):
 
     user_id_str = request.session.get("user_id")
     if not user_id_str:
-        return MonthlyFinancialSummarySchema(
-            year=0,
-            month=0,
-            total_income_usd=Decimal("0"),
-            total_expenses_usd=Decimal("0"),
-            total_savings_usd=Decimal("0"),
-            budget_usd=Decimal("500"),
-            balance_usd=Decimal("0"),
-        )
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
     from uuid import UUID
 
     today = date.today()
@@ -156,7 +151,7 @@ def monthly_financial_summary(request, year: int = None, month: int = None):
             month=query_month,
         )
     )
-    return result.model_dump()
+    return HTTPStatus.OK, result.model_dump()
 
 
 @router.get(
