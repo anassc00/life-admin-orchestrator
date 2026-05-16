@@ -54,6 +54,9 @@ class DjangoAccountRepository(AccountRepository):
     def exists_by_name_and_user(self, name: str, user_id: UUID) -> bool:
         return AccountModel.objects.filter(name=name, user_id=user_id).exists()
 
+    def delete(self, account_id: UUID) -> None:
+        AccountModel.objects.filter(pk=account_id).delete()
+
     def save(self, account: Account) -> None:
         AccountModel.objects.update_or_create(
             pk=account.id,
@@ -136,13 +139,62 @@ class DjangoTransactionRepository(TransactionRepository):
         with transaction.atomic():
             TransactionModel.objects.filter(pk__in=[tx_id, related_id]).delete()
 
-    def list_by_user(self, user_id: UUID, year: int = None, month: int = None) -> list[Transaction]:
+    def list_by_user(
+        self,
+        user_id: UUID,
+        year: int = None,
+        month: int = None,
+        account_id: UUID = None,
+        tx_type=None,
+        category_id: UUID = None,
+        min_amount=None,
+        max_amount=None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[Transaction]:
         qs = TransactionModel.objects.filter(user_id=user_id).order_by("-date", "-created_at")
         if year is not None:
             qs = qs.filter(date__year=year)
         if month is not None:
             qs = qs.filter(date__month=month)
+        if account_id is not None:
+            qs = qs.filter(account_id=account_id)
+        if tx_type is not None:
+            qs = qs.filter(type=tx_type.value)
+        if category_id is not None:
+            qs = qs.filter(category_id=category_id)
+        if min_amount is not None:
+            qs = qs.filter(amount__gte=min_amount)
+        if max_amount is not None:
+            qs = qs.filter(amount__lte=max_amount)
+        return [self._to_entity(r) for r in qs[offset : offset + limit]]
+
+    def list_by_account(
+        self,
+        account_id: UUID,
+        year: int = None,
+        month: int = None,
+    ) -> list[Transaction]:
+        qs = TransactionModel.objects.filter(account_id=account_id).order_by("-date", "-created_at")
+        if year is not None:
+            qs = qs.filter(date__year=year)
+        if month is not None:
+            qs = qs.filter(date__month=month)
         return [self._to_entity(r) for r in qs]
+
+    def has_transactions_for_account(self, account_id: UUID) -> bool:
+        return TransactionModel.objects.filter(account_id=account_id).exists()
+
+    def get_base_salary_by_period(
+        self, user_id: UUID, year: int, month: int
+    ) -> Transaction | None:
+        record = TransactionModel.objects.filter(
+            user_id=user_id,
+            date__year=year,
+            date__month=month,
+            is_base_salary=True,
+        ).first()
+        return self._to_entity(record) if record else None
 
     def get_monthly_totals(self, user_id: UUID, year: int, month: int) -> tuple[Decimal, Decimal]:
         from django.db.models import Q, Sum

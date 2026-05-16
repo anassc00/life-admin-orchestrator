@@ -127,6 +127,7 @@ class EditTransactionCommand(BaseModel):
     description: str | None = None
     exchange_rate: Decimal | None = None
     notes: str | None = None
+    category_id: UUID | None = None  # F5
 
 
 class TransactionEditedResponse(BaseModel):
@@ -144,6 +145,15 @@ class GetTransactionsByUserQuery(BaseModel):
     user_id: UUID
     year: int | None = None
     month: int | None = None
+    # F7 — additional filters
+    account_id: UUID | None = None
+    tx_type: TransactionType | None = None
+    category_id: UUID | None = None
+    min_amount: Decimal | None = None
+    max_amount: Decimal | None = None
+    # F1 — pagination
+    limit: int = 100
+    offset: int = 0
 
 
 class TransactionListItemResponse(BaseModel):
@@ -400,3 +410,54 @@ class MonthlyReportResponse(BaseModel):
     total_invoices: int
     unpaid_invoices: int
     expenses_by_category: dict[str, Decimal]
+
+
+# --- Delete Account (F6) ---
+
+
+class DeleteAccountCommand(BaseModel):
+    user_id: UUID
+    account_id: UUID
+
+
+class AccountDeletedResponse(BaseModel):
+    account_id: UUID
+
+
+# --- Account Balance History (F8) ---
+
+
+class GetAccountBalanceHistoryQuery(BaseModel):
+    user_id: UUID
+    account_id: UUID
+    months: int = 6
+
+
+class AccountBalanceHistoryItem(BaseModel):
+    year: int
+    month: int
+    income: Decimal
+    expenses: Decimal
+    net: Decimal
+
+
+class AccountBalanceHistoryResponse(BaseModel):
+    account_id: UUID
+    items: list[AccountBalanceHistoryItem]
+
+
+# --- Reverse Transaction (F9) ---
+
+
+class ReverseTransactionCommand(BaseModel):
+    user_id: UUID
+    transaction_id: UUID
+    password: str
+
+
+class TransactionReversedResponse(BaseModel):
+    original_transaction_id: UUID
+    reversal_transaction_id: UUID
+    amount: Decimal
+    currency: Currency
+    date: date

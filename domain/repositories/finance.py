@@ -13,6 +13,7 @@ from domain.entities.finance import (
     SavingsDeposit,
     SavingsGoal,
     Transaction,
+    TransactionType,
 )
 
 
@@ -28,6 +29,9 @@ class AccountRepository(ABC):
 
     @abstractmethod
     def list_by_user(self, user_id: UUID) -> list[Account]: ...
+
+    @abstractmethod
+    def delete(self, account_id: UUID) -> None: ...
 
 
 class TransactionRepository(ABC):
@@ -49,7 +53,39 @@ class TransactionRepository(ABC):
         ...
 
     @abstractmethod
-    def list_by_user(self, user_id: UUID) -> list[Transaction]: ...
+    def list_by_user(
+        self,
+        user_id: UUID,
+        year: int | None = None,
+        month: int | None = None,
+        account_id: UUID | None = None,
+        tx_type: TransactionType | None = None,
+        category_id: UUID | None = None,
+        min_amount: Decimal | None = None,
+        max_amount: Decimal | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[Transaction]: ...
+
+    @abstractmethod
+    def list_by_account(
+        self,
+        account_id: UUID,
+        year: int | None = None,
+        month: int | None = None,
+    ) -> list[Transaction]: ...
+
+    @abstractmethod
+    def has_transactions_for_account(self, account_id: UUID) -> bool:
+        """Return True if any transaction references this account."""
+        ...
+
+    @abstractmethod
+    def get_base_salary_by_period(
+        self, user_id: UUID, year: int, month: int
+    ) -> Transaction | None:
+        """Return the base-salary income transaction for the given period, or None."""
+        ...
 
     @abstractmethod
     def get_monthly_totals(self, user_id: UUID, year: int, month: int) -> tuple[Decimal, Decimal]:

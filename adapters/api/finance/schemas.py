@@ -93,6 +93,7 @@ class EditTransactionRequest(Schema):
     description: str | None = None
     exchange_rate: Decimal | None = None
     notes: str | None = None
+    category_id: UUID | None = None
     password: str
 
 
@@ -253,6 +254,35 @@ class DeleteTransactionRequest(Schema):
 class TransactionDeletedResponseSchema(Schema):
     transaction_id: UUID
     related_transaction_id: UUID | None = None
+
+
+class AccountDeletedResponseSchema(Schema):
+    account_id: UUID
+
+
+class AccountBalanceHistoryItemSchema(Schema):
+    year: int
+    month: int
+    income: Decimal
+    expenses: Decimal
+    net: Decimal
+
+
+class AccountBalanceHistoryResponseSchema(Schema):
+    account_id: UUID
+    items: list[AccountBalanceHistoryItemSchema]
+
+
+class ReverseTransactionRequest(Schema):
+    password: str
+
+
+class TransactionReversedResponseSchema(Schema):
+    original_transaction_id: UUID
+    reversal_transaction_id: UUID
+    amount: Decimal
+    currency: Currency
+    date: datetime.date
 
 
 class TransactionListItemSchema(Schema):

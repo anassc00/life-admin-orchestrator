@@ -1,6 +1,10 @@
 from application.dtos.finance import IncomeRegisteredResponse, RegisterIncomeCommand
 from domain.entities.finance import Transaction, TransactionType
-from domain.exceptions.finance import AccountAccessForbiddenError, AccountNotFoundError
+from domain.exceptions.finance import (
+    AccountAccessForbiddenError,
+    AccountNotFoundError,
+    DuplicateBaseSalaryError,
+)
 from domain.repositories.finance import AccountRepository, TransactionRepository
 
 
@@ -20,6 +24,14 @@ class RegisterIncomeUseCase:
 
         if account.user_id != command.user_id:
             raise AccountAccessForbiddenError()
+
+        # F4: enforce at most one base-salary per calendar month
+        if command.is_base_salary:
+            existing = self._transaction_repo.get_base_salary_by_period(
+                command.user_id, command.date.year, command.date.month
+            )
+            if existing is not None:
+                raise DuplicateBaseSalaryError(command.date.year, command.date.month)
 
         tx = Transaction(
             user_id=command.user_id,

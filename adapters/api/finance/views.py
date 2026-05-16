@@ -5,6 +5,8 @@ from uuid import UUID
 from ninja import Body, Router
 
 from adapters.api.finance.schemas import (
+    AccountBalanceHistoryResponseSchema,
+    AccountDeletedResponseSchema,
     AccountRegisteredResponseSchema,
     AccountSummarySchema,
     AccountUpdatedResponseSchema,
@@ -29,6 +31,7 @@ from adapters.api.finance.schemas import (
     RegisterCurrencyExchangeRequest,
     RegisterExpenseRequest,
     RegisterIncomeRequest,
+    ReverseTransactionRequest,
     SavingsDepositContributionSchema,
     SavingsDepositResponseSchema,
     SavingsGoalResponseSchema,
@@ -36,6 +39,7 @@ from adapters.api.finance.schemas import (
     TransactionDeletedResponseSchema,
     TransactionEditedResponseSchema,
     TransactionListItemSchema,
+    TransactionReversedResponseSchema,
     UpdateAccountRequest,
 )
 from adapters.api.users.schemas import ErrorResponse
@@ -44,11 +48,13 @@ from application.dtos.finance import (
     CreateExpenseCategoryCommand,
     CreateInvoiceCommand,
     CreateSavingsGoalCommand,
+    DeleteAccountCommand,
     DeleteTransactionCommand,
     DepositToSavingsCommand,
     EditSavingsGoalCommand,
     EditTransactionCommand,
     GenerateMonthlyReportQuery,
+    GetAccountBalanceHistoryQuery,
     GetAccountsByUserQuery,
     GetExpenseCategoriesQuery,
     GetMonthlyFinancialSummaryQuery,
@@ -59,12 +65,15 @@ from application.dtos.finance import (
     RegisterCurrencyExchangeCommand,
     RegisterExpenseCommand,
     RegisterIncomeCommand,
+    ReverseTransactionCommand,
     UpdateAccountCommand,
 )
 from domain.exceptions.finance import (
     AccountAccessForbiddenError,
     AccountAlreadyExistsError,
+    AccountHasTransactionsError,
     AccountNotFoundError,
+    DuplicateBaseSalaryError,
     ExpenseCategoryAlreadyExistsError,
     ExpenseCategoryNotFoundError,
     InvalidEditionCredentialsError,
@@ -75,14 +84,17 @@ from domain.exceptions.finance import (
     SavingsDepositCurrencyError,
     SavingsGoalNotFoundError,
     TransactionNotFoundError,
+    TransactionReversalNotSupportedError,
     UnauthorizedEditError,
 )
 from infrastructure.di import (
+    get_account_balance_history_use_case,
     get_accounts_by_user_use_case,
     get_categorize_expense_use_case,
     get_create_expense_category_use_case,
     get_create_invoice_use_case,
     get_create_savings_goal_use_case,
+    get_delete_account_use_case,
     get_delete_transaction_use_case,
     get_deposit_to_savings_use_case,
     get_edit_savings_goal_use_case,
@@ -95,6 +107,7 @@ from infrastructure.di import (
     get_register_currency_exchange_use_case,
     get_register_expense_use_case,
     get_register_income_use_case,
+    get_reverse_transaction_use_case,
     get_savings_goal_contributions_use_case,
     get_savings_goals_use_case,
     get_transactions_by_user_use_case,
@@ -242,17 +255,46 @@ def monthly_financial_summary(request, year: int = None, month: int = None):
 @router.get(
     "/transactions",
     response=list[TransactionListItemSchema],
-    summary="List all transactions for the current user, ordered by date descending",
+    summary="List transactions for the current user with optional filters and pagination",
 )
-def list_transactions(request, year: int = None, month: int = None):
+def list_transactions(
+    request,
+    year: int = None,
+    month: int = None,
+    account_id: UUID = None,
+    tx_type: str = None,
+    category_id: UUID = None,
+    min_amount: str = None,
+    max_amount: str = None,
+    limit: int = 100,
+    offset: int = 0,
+):
     user_id_str = request.session.get("user_id")
     if not user_id_str:
         return []
-    from uuid import UUID
+    from decimal import Decimal
+    from uuid import UUID as _UUID
+
+    from domain.entities.finance import TransactionType as TxType
+
+    parsed_tx_type = TxType(tx_type) if tx_type else None
+    parsed_min = Decimal(min_amount) if min_amount else None
+    parsed_max = Decimal(max_amount) if max_amount else None
 
     uc = get_transactions_by_user_use_case()
     results = uc.execute(
-        GetTransactionsByUserQuery(user_id=UUID(user_id_str), year=year, month=month)
+        GetTransactionsByUserQuery(
+            user_id=_UUID(user_id_str),
+            year=year,
+            month=month,
+            account_id=account_id,
+            tx_type=parsed_tx_type,
+            category_id=category_id,
+            min_amount=parsed_min,
+            max_amount=parsed_max,
+            limit=limit,
+            offset=offset,
+        )
     )
     return [r.model_dump() for r in results]
 
@@ -331,6 +373,67 @@ def update_account(request, account_id: UUID, payload: UpdateAccountRequest):
         return HTTPStatus.FORBIDDEN, ErrorResponse(detail=str(exc))
 
 
+@router.delete(
+    "/accounts/{account_id}",
+    response={
+        HTTPStatus.OK: AccountDeletedResponseSchema,
+        HTTPStatus.NOT_FOUND: ErrorResponse,
+        HTTPStatus.FORBIDDEN: ErrorResponse,
+        HTTPStatus.CONFLICT: ErrorResponse,
+        HTTPStatus.UNAUTHORIZED: ErrorResponse,
+    },
+    summary="Delete an account (only allowed when it has no transactions)",
+)
+def delete_account(request, account_id: UUID):
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
+    from uuid import UUID as _UUID
+
+    user_id = _UUID(user_id_str)
+    uc = get_delete_account_use_case()
+    try:
+        result = uc.execute(DeleteAccountCommand(user_id=user_id, account_id=account_id))
+        return HTTPStatus.OK, result.model_dump()
+    except AccountNotFoundError as exc:
+        return HTTPStatus.NOT_FOUND, ErrorResponse(detail=str(exc))
+    except AccountAccessForbiddenError as exc:
+        return HTTPStatus.FORBIDDEN, ErrorResponse(detail=str(exc))
+    except AccountHasTransactionsError as exc:
+        return HTTPStatus.CONFLICT, ErrorResponse(detail=str(exc))
+
+
+@router.get(
+    "/accounts/{account_id}/balance-history",
+    response={
+        HTTPStatus.OK: AccountBalanceHistoryResponseSchema,
+        HTTPStatus.NOT_FOUND: ErrorResponse,
+        HTTPStatus.FORBIDDEN: ErrorResponse,
+        HTTPStatus.UNAUTHORIZED: ErrorResponse,
+    },
+    summary="Get monthly balance history for an account (default: last 6 months)",
+)
+def get_account_balance_history(request, account_id: UUID, months: int = 6):
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
+    from uuid import UUID as _UUID
+
+    user_id = _UUID(user_id_str)
+    uc = get_account_balance_history_use_case()
+    try:
+        result = uc.execute(
+            GetAccountBalanceHistoryQuery(
+                user_id=user_id, account_id=account_id, months=months
+            )
+        )
+        return HTTPStatus.OK, result.model_dump()
+    except AccountNotFoundError as exc:
+        return HTTPStatus.NOT_FOUND, ErrorResponse(detail=str(exc))
+    except AccountAccessForbiddenError as exc:
+        return HTTPStatus.FORBIDDEN, ErrorResponse(detail=str(exc))
+
+
 @router.post(
     "/accounts",
     response={
@@ -371,6 +474,8 @@ def register_account(request, payload: RegisterAccountRequest):
         HTTPStatus.CREATED: IncomeRegisteredResponseSchema,
         HTTPStatus.NOT_FOUND: ErrorResponse,
         HTTPStatus.FORBIDDEN: ErrorResponse,
+        HTTPStatus.CONFLICT: ErrorResponse,
+        HTTPStatus.UNAUTHORIZED: ErrorResponse,
     },
     summary="Register an income transaction",
 )
@@ -401,6 +506,8 @@ def register_income(request, payload: RegisterIncomeRequest):
         return HTTPStatus.NOT_FOUND, ErrorResponse(detail=str(exc))
     except AccountAccessForbiddenError as exc:
         return HTTPStatus.FORBIDDEN, ErrorResponse(detail=str(exc))
+    except DuplicateBaseSalaryError as exc:
+        return HTTPStatus.CONFLICT, ErrorResponse(detail=str(exc))
 
 
 # --- Currency Exchange ---
@@ -524,6 +631,44 @@ def delete_transaction(request, transaction_id: UUID, payload: DeleteTransaction
         return HTTPStatus.FORBIDDEN, ErrorResponse(detail=str(exc))
     except InvalidEditionCredentialsError as exc:
         return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail=str(exc))
+
+
+@router.post(
+    "/transactions/{transaction_id}/reverse",
+    response={
+        HTTPStatus.CREATED: TransactionReversedResponseSchema,
+        HTTPStatus.NOT_FOUND: ErrorResponse,
+        HTTPStatus.FORBIDDEN: ErrorResponse,
+        HTTPStatus.UNAUTHORIZED: ErrorResponse,
+        HTTPStatus.UNPROCESSABLE_ENTITY: ErrorResponse,
+    },
+    summary="Reverse an income or expense transaction (creates a counter-transaction). Requires password.",
+)
+def reverse_transaction(request, transaction_id: UUID, payload: ReverseTransactionRequest):
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
+    from uuid import UUID as _UUID
+
+    user_id = _UUID(user_id_str)
+    uc = get_reverse_transaction_use_case()
+    try:
+        result = uc.execute(
+            ReverseTransactionCommand(
+                user_id=user_id,
+                transaction_id=transaction_id,
+                password=payload.password,
+            )
+        )
+        return HTTPStatus.CREATED, result.model_dump()
+    except TransactionNotFoundError as exc:
+        return HTTPStatus.NOT_FOUND, ErrorResponse(detail=str(exc))
+    except UnauthorizedEditError as exc:
+        return HTTPStatus.FORBIDDEN, ErrorResponse(detail=str(exc))
+    except InvalidEditionCredentialsError as exc:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail=str(exc))
+    except TransactionReversalNotSupportedError as exc:
+        return HTTPStatus.UNPROCESSABLE_ENTITY, ErrorResponse(detail=str(exc))
 
 
 # --- Expense Categories ---

@@ -8,7 +8,16 @@ class GetTransactionsByUserUseCase:
 
     def execute(self, query: GetTransactionsByUserQuery) -> list[TransactionListItemResponse]:
         transactions = self._transaction_repo.list_by_user(
-            query.user_id, year=query.year, month=query.month
+            query.user_id,
+            year=query.year,
+            month=query.month,
+            account_id=query.account_id,
+            tx_type=query.tx_type,
+            category_id=query.category_id,
+            min_amount=query.min_amount,
+            max_amount=query.max_amount,
+            limit=query.limit,
+            offset=query.offset,
         )
         return [
             TransactionListItemResponse(

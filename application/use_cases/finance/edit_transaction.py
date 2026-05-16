@@ -64,6 +64,8 @@ class EditTransactionUseCase:
             update_fields["description"] = command.description
         if command.exchange_rate is not None:
             update_fields["exchange_rate"] = command.exchange_rate
+        if command.category_id is not None:
+            update_fields["category_id"] = command.category_id
 
         updated_tx = tx.model_copy(update=update_fields)
         self._transaction_repo.save(updated_tx)

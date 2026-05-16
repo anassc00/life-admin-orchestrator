@@ -7,8 +7,11 @@ For performance-critical paths, introduce a request-scoped cache here.
 """
 
 from application.use_cases.finance.categorize_expense import CategorizeExpenseUseCase
+from application.use_cases.finance.delete_account import DeleteAccountUseCase
 from application.use_cases.finance.delete_transaction import DeleteTransactionUseCase
 from application.use_cases.finance.create_expense_category import CreateExpenseCategoryUseCase
+from application.use_cases.finance.get_account_balance_history import GetAccountBalanceHistoryUseCase
+from application.use_cases.finance.reverse_transaction import ReverseTransactionUseCase
 from application.use_cases.finance.create_invoice import CreateInvoiceUseCase
 from application.use_cases.finance.create_savings_goal import CreateSavingsGoalUseCase
 from application.use_cases.finance.deposit_to_savings import DepositToSavingsUseCase
@@ -231,3 +234,25 @@ def get_delete_transaction_use_case() -> DeleteTransactionUseCase:
 
 def get_transactions_by_user_use_case() -> GetTransactionsByUserUseCase:
     return GetTransactionsByUserUseCase(transaction_repo=DjangoTransactionRepository())
+
+
+def get_delete_account_use_case() -> DeleteAccountUseCase:
+    return DeleteAccountUseCase(
+        account_repo=DjangoAccountRepository(),
+        transaction_repo=DjangoTransactionRepository(),
+    )
+
+
+def get_account_balance_history_use_case() -> GetAccountBalanceHistoryUseCase:
+    return GetAccountBalanceHistoryUseCase(
+        account_repo=DjangoAccountRepository(),
+        transaction_repo=DjangoTransactionRepository(),
+    )
+
+
+def get_reverse_transaction_use_case() -> ReverseTransactionUseCase:
+    return ReverseTransactionUseCase(
+        transaction_repo=DjangoTransactionRepository(),
+        user_repo=DjangoUserRepository(),
+        password_hasher=DjangoPasswordHasher(),
+    )

@@ -147,11 +147,11 @@ class TestRegisterExpenseUseCase:
         )
         return uc, account_repo, category_repo, transaction_repo
 
-    def _command(self, user_id, account_id, category_id):
+    def _command(self, user_id, account_id, category_name="Alimentación"):
         return RegisterExpenseCommand(
             user_id=user_id,
             account_id=account_id,
-            category_id=category_id,
+            category_name=category_name,
             amount=Decimal("50.00"),
             currency=Currency.USD,
             exchange_rate=Decimal("1.0"),
@@ -165,9 +165,9 @@ class TestRegisterExpenseUseCase:
         account = _make_account(user_id=user_id)
         category = _make_category(user_id=user_id)
         acc_repo.get_by_id.return_value = account
-        cat_repo.get_by_id.return_value = category
+        cat_repo.get_by_name.return_value = category
 
-        uc.execute(self._command(user_id, account.id, category.id))
+        uc.execute(self._command(user_id, account.id, category.name))
 
         tx_repo.save.assert_called_once()
         saved_tx = tx_repo.save.call_args[0][0]
@@ -181,7 +181,7 @@ class TestRegisterExpenseUseCase:
         acc_repo.get_by_id.return_value = None
 
         with pytest.raises(AccountNotFoundError):
-            uc.execute(self._command(uuid4(), uuid4(), uuid4()))
+            uc.execute(self._command(uuid4(), uuid4()))
 
         tx_repo.save.assert_not_called()
 
@@ -191,7 +191,7 @@ class TestRegisterExpenseUseCase:
         acc_repo.get_by_id.return_value = account
 
         with pytest.raises(AccountAccessForbiddenError):
-            uc.execute(self._command(uuid4(), account.id, uuid4()))
+            uc.execute(self._command(uuid4(), account.id))
 
         tx_repo.save.assert_not_called()
 
@@ -200,9 +200,9 @@ class TestRegisterExpenseUseCase:
         user_id = uuid4()
         account = _make_account(user_id=user_id)
         acc_repo.get_by_id.return_value = account
-        cat_repo.get_by_id.return_value = None
+        cat_repo.get_by_name.return_value = None
 
         with pytest.raises(ExpenseCategoryNotFoundError):
-            uc.execute(self._command(user_id, account.id, uuid4()))
+            uc.execute(self._command(user_id, account.id))
 
         tx_repo.save.assert_not_called()

@@ -97,3 +97,27 @@ class SavingsGoalNotFoundError(Exception):
     def __init__(self, goal_id: UUID | None = None) -> None:
         msg = f"Savings goal '{goal_id}' not found." if goal_id else "Savings goal not found."
         super().__init__(msg)
+
+
+class DuplicateBaseSalaryError(Exception):
+    def __init__(self, year: int, month: int) -> None:
+        super().__init__(
+            f"A base salary income already exists for {year}-{month:02d}. "
+            "Only one base salary per period is allowed."
+        )
+
+
+class AccountHasTransactionsError(Exception):
+    def __init__(self) -> None:
+        super().__init__(
+            "Cannot delete this account because it has associated transactions. "
+            "Delete all transactions for this account first."
+        )
+
+
+class TransactionReversalNotSupportedError(Exception):
+    def __init__(self) -> None:
+        super().__init__(
+            "Only INCOME and EXPENSE transactions can be reversed. "
+            "For exchange pairs, use delete and recreate."
+        )
