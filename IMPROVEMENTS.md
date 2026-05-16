@@ -1,7 +1,14 @@
 # Mejoras pendientes — Life Admin Orchestrator
 
-Auditoría técnica realizada el 2026-05-15 (segunda revisión, post-sprint de correcciones).
-Los módulos Calendar, Contacts y Documents fueron eliminados. Las mejoras F1–F6 y U1–U5 fueron implementadas.
+Auditoría técnica realizada el 2026-05-15 (tercera revisión, post-sprint F + A).
+Los módulos Calendar, Contacts y Documents fueron eliminados.
+
+**Sprints completados:**
+- ✅ **S1–S4** — `user_id` en Invoice/Expense, ownership checks en ProcessInvoice/ProcessInvoice+account
+- ✅ **U1–U5** — RBAC, profile update, change password, reset flow
+- ✅ **F1–F9** — Paginación, filtros, base salary único, category_id en edit, delete account, balance history, reverse transaction
+- ✅ **A2** — Índices compuestos en TransactionModel y SavingsDepositModel
+- ✅ **A3** — `DjangoBudgetPlanRepository` ya existe y está implementado
 
 ---
 
@@ -175,15 +182,96 @@ F10, F11, B9, SA5, SA6, SA9, DH8, A6, A7, A8
 
 ---
 
-## Hoja de ruta sugerida
+## Hoja de ruta
 
-Para llegar a un dashboard funcional y una planificación mensual completa, el orden recomendado es:
+### ✅ Completado
+- S1–S4, U1–U5, F1–F9, A2, A3
 
-1. **Sprint 1 — Cerrar brechas de seguridad**: S1, S2, S3, S4
-2. **Sprint 2 — Fixes de lógica finance**: F2, F3, F4 + índices A2
-3. **Sprint 3 — Módulo presupuesto (backend)**: B1 → B2 → B3 → B4 → B7
-4. **Sprint 4 — Dashboard endpoints**: DH1 → DH2 → DH3 → DH4
-5. **Sprint 5 — Proyecciones de ahorro**: SA1 → SA2 → SA7
-6. **Sprint 6 — Distribución de ahorro y planning avanzado**: SA3 → SA4 → B6 → B8
+---
 
-*Para implementar un ítem, referenciar su ID (ej. "implementa B2 y B3").*
+### Sprint 3 — Módulo de presupuesto (base)
+> **Objetivo:** CRUD completo del plan mensual con comparación plan vs real.
+> **Dependencias:** ninguna (repositorios ya existen).
+
+| Orden | ID | Descripción | Por qué en este orden |
+|-------|----|-------------|----------------------|
+| 1 | B2 | `CreateBudgetPlanUseCase` + `POST /api/finance/budget` | Base de todo el módulo; sin plan no hay ítems |
+| 2 | B4 | `SetPlannedItemUseCase` + `POST /api/finance/budget/{id}/items` | Necesario para que un plan tenga contenido |
+| 3 | B3 | `GetBudgetPlanUseCase` + `GET /api/finance/budget` (con vs real) | Consume B2+B4; usa TransactionRepository ya existente para el "real" |
+| 4 | B7 | `GetBudgetVsActualSummaryUseCase` + `GET /api/finance/budget/summary` | Versión resumida de B3; lo necesita DH1 |
+| 5 | B5 | `DeletePlannedItemUseCase` + `DELETE /api/finance/budget/{id}/items/{cat_id}` | CRUD completo; no bloquea nada anterior |
+| 6 | B6 | `CopyBudgetPlanUseCase` + `POST /api/finance/budget/{id}/copy-from-previous` | Conveniencia; requiere que B2+B4 estén listos |
+
+---
+
+### Sprint 4 — Modelo de datos de ahorro
+> **Objetivo:** Enriquecer `SavingsGoal` con `deadline` y `category` antes de construir proyecciones y dashboard.
+> **Dependencias:** ninguna. Hacerlo antes de SA1/SA2 porque las proyecciones usan `deadline`.
+
+| Orden | ID | Descripción | Por qué en este orden |
+|-------|----|-------------|----------------------|
+| 1 | SA9 | FK `savings_deposits → savings_goal` cambiar a `PROTECT` | Migración sin lógica; hacerla antes de añadir campos |
+| 2 | SA7 | Agregar `deadline: date \| None` a `SavingsGoal` + migración | SA1 necesita `deadline` para calcular `months_to_completion` |
+| 3 | SA5 | Agregar `priority: int` a `SavingsGoal` + migración | SA6 necesita prioridad para sugerir distribución |
+
+---
+
+### Sprint 5 — Proyecciones y dashboard de ahorro
+> **Objetivo:** Endpoints de análisis de ahorro para el dashboard.
+> **Dependencias:** Sprint 4 (SA7, SA5 completados).
+
+| Orden | ID | Descripción | Por qué en este orden |
+|-------|----|-------------|----------------------|
+| 1 | SA1 | `GetSavingsProjectionUseCase` + `GET /api/finance/savings/projection` | Proyección por meta; usa `deadline` de SA7 |
+| 2 | SA4 | `GetSavingsRateUseCase` + `GET /api/finance/savings/rate?months=6` | Tasa de ahorro histórica; usa TransactionRepository (ya existe) |
+| 3 | SA2 | `GetSavingsDashboardUseCase` + `GET /api/finance/savings/dashboard` | Agrega SA1 + SA4 + depósitos del mes; endpoint único para el widget |
+| 4 | SA3 | `CreateMonthlySavingsDistributionUseCase` | Plan de distribución mensual; requiere SA1+SA2 para tener sentido |
+| 5 | SA6 | `SuggestSavingsDistributionUseCase` | Necesita SA5 (priority) y SA1 (projections); va después de SA3 |
+
+---
+
+### Sprint 6 — Dashboard: endpoints core
+> **Objetivo:** Endpoints de alto valor que reemplazan múltiples llamadas del frontend.
+> **Dependencias:** B7 (budget summary) y SA2 (savings dashboard) para DH1 completo.
+
+| Orden | ID | Descripción | Por qué en este orden |
+|-------|----|-------------|----------------------|
+| 1 | DH2 | `GET /api/finance/net-worth` | Sin dependencias; solo suma balances de cuentas ya calculados |
+| 2 | DH3 | `GET /api/finance/trend?months=6` | Sin dependencias; usa `get_monthly_totals_usd` ya existente |
+| 3 | DH4 | `GET /api/finance/expenses/breakdown?year=&month=` | Sin dependencias; agrega TransactionModel por category_id |
+| 4 | DH5 | `GET /api/finance/invoices/upcoming` | Sin dependencias; filtra InvoiceModel por is_paid + due_date |
+| 5 | DH6 | `GET /api/finance/transactions/recent?limit=10` | Sin dependencias; simplifica list_by_user ya existente |
+| 6 | DH1 | `GET /api/finance/dashboard` | Va último: agrega DH2 + DH3 + B7 + SA2 + DH5 en una sola llamada |
+
+---
+
+### Sprint 7 — Dashboard: reportes y extensiones
+> **Objetivo:** Reportes avanzados y extensión del resumen existente.
+> **Dependencias:** Sprint 6 completado.
+
+| Orden | ID | Descripción | Por qué en este orden |
+|-------|----|-------------|----------------------|
+| 1 | DH9 | Extender `GET /api/finance/summary/current` | Agrega `savings_rate_pct`, `budget_execution_pct`; no rompe contrato existente |
+| 2 | DH7 | `GET /api/finance/reports/annual?year=` | Reporte anual; usa DH3 como base conceptual |
+| 3 | DH10 | Rates de referencia multi-moneda | Nuevo endpoint de configuración; independiente |
+| 4 | DH8 | `GET /api/finance/cashflow/calendar?year=&month=` | El más complejo; va último |
+
+---
+
+### Sprint 8 — Presupuesto avanzado
+> **Objetivo:** Features de planning que requieren que el módulo base (Sprint 3) esté en uso real.
+> **Dependencias:** Sprint 3 completado y con datos reales.
+
+| Orden | ID | Descripción | Por qué en este orden |
+|-------|----|-------------|----------------------|
+| 1 | B8 | Campo `income_usd` en `BudgetPlan` + regla 50/30/20 | Requiere que los usuarios hayan creado planes reales |
+| 2 | B9 | Alertas de desvío (`over_budget: true`) en `GetBudgetPlan` | Extensión de B3; sin datos reales no se puede validar |
+
+---
+
+### Pendientes bajos (sin sprint asignado)
+`F10` (transacciones recurrentes), `F11` (onboarding), `A1` (balance cache), `A4` (FinanceQueryService), `A5` (DI modular), `A6` (signals cleanup), `A7` (domain events), `A8` (pagination wrapper)
+
+---
+
+*Para implementar un sprint, referenciar los IDs (ej. "implementa Sprint 3").*
