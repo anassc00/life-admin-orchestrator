@@ -105,11 +105,24 @@ class CurrencyExchangeRegisteredResponse(BaseModel):
 # --- Edit Transaction ---
 
 
+class DeleteTransactionCommand(BaseModel):
+    user_id: UUID
+    transaction_id: UUID
+    password: str
+
+
+class TransactionDeletedResponse(BaseModel):
+    transaction_id: UUID
+    related_transaction_id: UUID | None = None
+
+
 class EditTransactionCommand(BaseModel):
     user_id: UUID
     transaction_id: UUID
     password: str
+    account_id: UUID | None = None
     amount: Decimal | None = None
+    currency: Currency | None = None
     date: str | None = None  # Accept string, parse in use case
     description: str | None = None
     exchange_rate: Decimal | None = None
@@ -118,7 +131,9 @@ class EditTransactionCommand(BaseModel):
 
 class TransactionEditedResponse(BaseModel):
     transaction_id: UUID
+    account_id: UUID
     amount: Decimal
+    currency: Currency
     date: date
     description: str | None = None
     exchange_rate: Decimal
@@ -166,11 +181,16 @@ class InvoiceCreatedResponse(BaseModel):
 
 class ProcessInvoiceCommand(BaseModel):
     invoice_id: UUID
+    # Provide these to create the corresponding expense transaction on payment
+    user_id: UUID | None = None
+    account_id: UUID | None = None
+    exchange_rate: Decimal = Decimal("1")
 
 
 class InvoiceProcessedResponse(BaseModel):
     invoice_id: UUID
     status: str
+    transaction_id: UUID | None = None
 
 
 # --- Expense ---

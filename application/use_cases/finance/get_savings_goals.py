@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from application.dtos.finance import GetSavingsGoalsQuery, SavingsGoalSummaryResponse
+from domain.entities.finance import Currency
 from domain.repositories.finance import SavingsDepositRepository, SavingsGoalRepository
 
 
@@ -18,7 +19,10 @@ class GetSavingsGoalsUseCase:
         result = []
         for goal in goals:
             deposits = self._deposit_repo.list_by_goal(goal.id)
-            deposited_usd = sum((d.amount for d in deposits), Decimal("0"))
+            # Only count USD deposits — USDT excluded — to match EditSavingsGoal behaviour
+            deposited_usd = sum(
+                (d.amount for d in deposits if d.currency == Currency.USD), Decimal("0")
+            )
             result.append(
                 SavingsGoalSummaryResponse(
                     goal_id=goal.id,

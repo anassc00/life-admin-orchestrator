@@ -25,7 +25,7 @@ class GetMonthlyFinancialSummaryUseCase:
         total_savings_usd = self._savings_repo.get_monthly_savings_usd(
             query.user_id, query.year, query.month
         )
-        balance_usd = total_income_usd - total_expenses_usd - total_savings_usd
+        balance_usd = total_income_usd - total_expenses_usd
         return MonthlyFinancialSummaryResponse(
             year=query.year,
             month=query.month,

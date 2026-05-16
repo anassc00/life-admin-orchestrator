@@ -16,6 +16,7 @@ from application.use_cases.document.classify_document import ClassifyDocumentUse
 from application.use_cases.document.extract_metadata import ExtractMetadataUseCase
 from application.use_cases.document.register_document import RegisterDocumentUseCase
 from application.use_cases.finance.categorize_expense import CategorizeExpenseUseCase
+from application.use_cases.finance.delete_transaction import DeleteTransactionUseCase
 from application.use_cases.finance.create_expense_category import CreateExpenseCategoryUseCase
 from application.use_cases.finance.create_invoice import CreateInvoiceUseCase
 from application.use_cases.finance.create_savings_goal import CreateSavingsGoalUseCase
@@ -111,6 +112,7 @@ def get_edit_transaction_use_case() -> EditTransactionUseCase:
         transaction_repo=DjangoTransactionRepository(),
         user_repo=DjangoUserRepository(),
         password_hasher=DjangoPasswordHasher(),
+        account_repo=DjangoAccountRepository(),
     )
 
 
@@ -119,7 +121,10 @@ def get_create_invoice_use_case() -> CreateInvoiceUseCase:
 
 
 def get_process_invoice_use_case() -> ProcessInvoiceUseCase:
-    return ProcessInvoiceUseCase(invoice_repo=DjangoInvoiceRepository())
+    return ProcessInvoiceUseCase(
+        invoice_repo=DjangoInvoiceRepository(),
+        transaction_repo=DjangoTransactionRepository(),
+    )
 
 
 def get_categorize_expense_use_case() -> CategorizeExpenseUseCase:
@@ -161,11 +166,14 @@ def get_create_savings_goal_use_case() -> CreateSavingsGoalUseCase:
 
 
 def get_deposit_to_savings_use_case() -> DepositToSavingsUseCase:
+    from django.db import transaction
+
     return DepositToSavingsUseCase(
         savings_goal_repo=DjangoSavingsGoalRepository(),
         savings_deposit_repo=DjangoSavingsDepositRepository(),
         transaction_repo=DjangoTransactionRepository(),
         account_repo=DjangoAccountRepository(),
+        atomic_context=transaction.atomic,
     )
 
 
@@ -187,6 +195,14 @@ def get_savings_goal_contributions_use_case() -> GetSavingsGoalContributionsUseC
     return GetSavingsGoalContributionsUseCase(
         savings_goal_repo=DjangoSavingsGoalRepository(),
         savings_deposit_repo=DjangoSavingsDepositRepository(),
+    )
+
+
+def get_delete_transaction_use_case() -> DeleteTransactionUseCase:
+    return DeleteTransactionUseCase(
+        transaction_repo=DjangoTransactionRepository(),
+        user_repo=DjangoUserRepository(),
+        password_hasher=DjangoPasswordHasher(),
     )
 
 

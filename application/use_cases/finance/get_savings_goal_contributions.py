@@ -1,9 +1,8 @@
 from uuid import UUID
 
 from application.dtos.finance import SavingsDepositContributionResponse
-from domain.entities.finance import SavingsGoal, SavingsDeposit
-from domain.repositories.finance import SavingsGoalRepository, SavingsDepositRepository
-from domain.exceptions.finance import SavingsGoalNotFoundError
+from domain.exceptions.finance import AccountAccessForbiddenError, SavingsGoalNotFoundError
+from domain.repositories.finance import SavingsDepositRepository, SavingsGoalRepository
 
 
 class GetSavingsGoalContributionsUseCase:
@@ -19,6 +18,9 @@ class GetSavingsGoalContributionsUseCase:
         goal = self._goal_repo.get_by_id(goal_id)
         if not goal:
             raise SavingsGoalNotFoundError(goal_id)
+
+        if goal.user_id != user_id:
+            raise AccountAccessForbiddenError()
 
         deposits = self._deposit_repo.list_by_goal(goal_id)
 

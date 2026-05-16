@@ -33,6 +33,12 @@
     .amount-neutral { color: #c0c0d8; font-weight: 600; }
     .btn-edit { background: transparent; border: 1px solid rgba(124, 111, 247, 0.3); color: #9090b0; font-size: 0.75rem; padding: 0.3rem 0.65rem; border-radius: 0.45rem; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
     .btn-edit:hover { color: #c0b8ff; border-color: rgba(124, 111, 247, 0.6); }
+    .btn-delete { background: transparent; border: 1px solid rgba(248, 113, 113, 0.25); color: #9090b0; font-size: 0.75rem; padding: 0.3rem 0.65rem; border-radius: 0.45rem; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+    .btn-delete:hover { color: #f87171; border-color: rgba(248, 113, 113, 0.55); }
+    .btn-danger { background: #ef4444; border: none; color: #fff; font-size: 0.85rem; font-weight: 700; padding: 0.5rem 1.1rem; border-radius: 0.55rem; cursor: pointer; transition: background 0.2s; }
+    .btn-danger:hover { background: #dc2626; }
+    .btn-danger:disabled { background: rgba(239, 68, 68, 0.4); cursor: not-allowed; }
+    #toast.error { background: rgba(248, 113, 113, 0.15); border-color: rgba(248, 113, 113, 0.35); color: #f87171; }
     .empty-state { padding: 3rem 1rem; text-align: center; color: #6060a0; font-size: 0.88rem; }
     .skeleton-row td { padding: 0.85rem 1rem; }
     .skel { height: 0.8rem; border-radius: 0.3rem; background: rgba(255, 255, 255, 0.06); animation: pulse 1.4s ease-in-out infinite; }
@@ -46,9 +52,11 @@
     .modal-title { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 0.3rem; }
     .modal-sub { font-size: 0.78rem; color: #6060a0; margin-bottom: 1.25rem; }
     .modal label { display: block; font-size: 0.78rem; font-weight: 600; color: #9090b0; margin-bottom: 0.35rem; }
-    .modal input, .modal textarea { width: 100%; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); color: #e0e0f0; border-radius: 0.55rem; padding: 0.6rem 0.85rem; font-size: 0.92rem; outline: none; transition: border-color 0.2s; font-family: inherit; margin-bottom: 1rem; }
-    .modal input:focus, .modal textarea:focus { border-color: #7c6ff7; }
+    .modal input, .modal textarea, .modal select { width: 100%; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); color: #e0e0f0; border-radius: 0.55rem; padding: 0.6rem 0.85rem; font-size: 0.92rem; outline: none; transition: border-color 0.2s; font-family: inherit; margin-bottom: 1rem; }
+    .modal input:focus, .modal textarea:focus, .modal select:focus { border-color: #7c6ff7; }
+    .modal select option { background: #1a1730; }
     .modal textarea { resize: vertical; min-height: 80px; }
+    .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
     .modal-actions { display: flex; gap: 0.65rem; justify-content: flex-end; margin-top: 0.25rem; }
     .btn-cancel { background: transparent; border: 1px solid rgba(255, 255, 255, 0.12); color: #9090b0; font-size: 0.85rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 0.55rem; cursor: pointer; }
     .btn-cancel:hover { color: #e0e0f0; }
@@ -83,6 +91,7 @@
         <option value="USD">USD</option>
         <option value="USDT">USDT</option>
         <option value="VES">VES</option>
+        <option value="MXN">MXN</option>
       </select>
       <div class="month-filter">
         <select id="filter-month">
@@ -141,8 +150,29 @@
         <div class="modal-title">Editar transacción</div>
         <div class="modal-sub" id="edit-modal-sub">Puedes modificar los campos de esta transacción.</div>
         <div class="modal-error" id="edit-error"></div>
-        <label for="edit-amount">Monto</label>
-        <input id="edit-amount" type="number" step="0.01" placeholder="0.00" />
+
+        <div class="modal-row">
+          <div>
+            <label for="edit-amount">Monto</label>
+            <input id="edit-amount" type="number" step="0.01" placeholder="0.00" />
+          </div>
+          <div>
+            <label for="edit-currency">Moneda</label>
+            <select id="edit-currency">
+              <option value="">Sin cambio</option>
+              <option value="USD">USD</option>
+              <option value="USDT">USDT</option>
+              <option value="VES">VES</option>
+              <option value="MXN">MXN</option>
+            </select>
+          </div>
+        </div>
+
+        <label for="edit-account">Cuenta</label>
+        <select id="edit-account">
+          <option value="">Sin cambio</option>
+        </select>
+
         <label for="edit-date">Fecha</label>
         <input id="edit-date" type="date" />
         <label for="edit-description">Descripción</label>
@@ -175,6 +205,24 @@
       </div>
     </div>
 
+    <!-- Delete Transaction Modal -->
+    <div class="modal-backdrop" id="delete-modal">
+      <div class="modal">
+        <div class="security-icon">🗑️</div>
+        <div class="modal-title">Eliminar transacción</div>
+        <div class="modal-sub" id="delete-modal-sub">Esta acción no se puede deshacer.</div>
+        <div class="security-note" id="delete-pair-warning" style="display:none">⚠️ Esta transacción forma parte de un par de cambio de divisas. <strong>Se eliminarán ambas partes</strong> de la operación.</div>
+        <div class="security-note">Por seguridad, cualquier eliminación requiere autenticación.</div>
+        <div class="modal-error" id="delete-error"></div>
+        <label for="delete-password">Contraseña</label>
+        <input id="delete-password" type="password" placeholder="Tu contraseña actual" autocomplete="current-password" />
+        <div class="modal-actions">
+          <button class="btn-cancel" id="delete-cancel">Cancelar</button>
+          <button class="btn-danger" id="delete-confirm">Eliminar</button>
+        </div>
+      </div>
+    </div>
+
     <div id="toast">Transacción actualizada correctamente</div>
 {% endblock %}
 {% block extra_script %}
@@ -193,12 +241,31 @@
     };
 
     let allTx = [];
+    let allAccounts = [];
     let editingTx = null;
+    let deletingTxId = null;
+    let deletingRelatedId = null;
     let pendingNotes = null;
     let pendingAmount = null;
+    let pendingCurrency = null;
+    let pendingAccountId = null;
     let pendingDate = null;
     let pendingDescription = null;
     let pendingExchangeRate = null;
+
+    async function loadAccounts() {
+      try {
+        const res = await fetch('/api/finance/accounts');
+        if (!res.ok) return;
+        allAccounts = await res.json();
+        const sel = document.getElementById('edit-account');
+        // Keep the "Sin cambio" option, then append accounts
+        sel.innerHTML = '<option value="">Sin cambio</option>' +
+          allAccounts.map(a =>
+            `<option value="${a.account_id}">${escHtml(a.name)} (${a.type})</option>`
+          ).join('');
+      } catch (e) { console.error('Error loading accounts:', e); }
+    }
 
     function escHtml(str) {
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -275,12 +342,20 @@
           <td style="font-size:0.8rem;color:#7c6ff7;font-weight:700">${tx.currency}</td>
           <td style="font-size:0.8rem;color:#6060a0">${rate}</td>
           <td>${categoryLabel}</td>
-          <td><button class="btn-edit" data-id="${tx.transaction_id}" data-notes="${escAttr(tx.notes || '')}">Editar</button></td>
+          <td>
+            <div style="display:flex;gap:0.4rem">
+              <button class="btn-edit" data-id="${tx.transaction_id}">Editar</button>
+              <button class="btn-delete" data-id="${tx.transaction_id}" data-related="${escAttr(tx.related_transaction_id || '')}">Eliminar</button>
+            </div>
+          </td>
         </tr>`;
       }).join('');
-      
+
       tbody.querySelectorAll('.btn-edit').forEach(btn => {
         btn.addEventListener('click', () => openEditModal(btn.dataset.id));
+      });
+      tbody.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.addEventListener('click', () => openDeleteModal(btn.dataset.id, btn.dataset.related));
       });
     }
 
@@ -308,16 +383,22 @@
       editingTx = txId;
       const tx = allTx.find(t => t.transaction_id === txId);
       if (!tx) return;
-      
+
       document.getElementById('edit-modal-sub').textContent =
         `Transacción del ${tx.date} · ${TYPE_LABELS[tx.type] || tx.type}`;
-      
+
       document.getElementById('edit-amount').value = tx.amount || '';
+      document.getElementById('edit-currency').value = tx.currency || '';
       document.getElementById('edit-date').value = tx.date || '';
       document.getElementById('edit-description').value = tx.description || '';
       document.getElementById('edit-exchange-rate').value = tx.exchange_rate !== 1 ? tx.exchange_rate : '';
       document.getElementById('edit-notes').value = tx.notes || '';
-      
+
+      // Pre-select the current account if it matches one in the list
+      const accountSel = document.getElementById('edit-account');
+      // Try to match by account_id stored in transaction (may not always be present in list response)
+      accountSel.value = '';
+
       document.getElementById('edit-error').style.display = 'none';
       document.getElementById('edit-modal').classList.add('open');
       document.getElementById('edit-amount').focus();
@@ -350,11 +431,12 @@
     });
 
     document.getElementById('edit-next').addEventListener('click', () => {
-      pendingNotes = document.getElementById('edit-notes').value.trim() || null;
-      if (!pendingNotes) { alert('Añade una nota.'); return; }
-      pendingAmount = document.getElementById('edit-amount').value;
-      pendingDate = document.getElementById('edit-date').value;
-      pendingDescription = document.getElementById('edit-description').value.trim();
+      pendingNotes        = document.getElementById('edit-notes').value.trim() || null;
+      pendingAmount       = document.getElementById('edit-amount').value;
+      pendingCurrency     = document.getElementById('edit-currency').value || null;
+      pendingAccountId    = document.getElementById('edit-account').value || null;
+      pendingDate         = document.getElementById('edit-date').value;
+      pendingDescription  = document.getElementById('edit-description').value.trim();
       pendingExchangeRate = document.getElementById('edit-exchange-rate').value;
       document.getElementById('edit-modal').classList.remove('open');
       openPwdModal();
@@ -385,9 +467,11 @@
 
       const payload = { password };
       if (pendingNotes !== null && pendingNotes !== '') payload.notes = pendingNotes;
-      if (pendingAmount) payload.amount = parseFloat(pendingAmount);
-      if (pendingDate) payload.date = pendingDate;
-      if (pendingDescription) payload.description = pendingDescription;
+      if (pendingAmount)       payload.amount        = parseFloat(pendingAmount);
+      if (pendingCurrency)     payload.currency      = pendingCurrency;
+      if (pendingAccountId)    payload.account_id    = pendingAccountId;
+      if (pendingDate)         payload.date          = pendingDate;
+      if (pendingDescription)  payload.description   = pendingDescription;
       if (pendingExchangeRate) payload.exchange_rate = parseFloat(pendingExchangeRate);
 
       try {
@@ -405,15 +489,17 @@
         const data = await res.json();
         const idx = allTx.findIndex(t => t.transaction_id === editingTx);
         if (idx !== -1) {
-          if (payload.amount) allTx[idx].amount = payload.amount;
-          if (payload.date) allTx[idx].date = payload.date;
-          if (payload.description !== undefined) allTx[idx].description = payload.description;
+          if (payload.amount)        allTx[idx].amount        = payload.amount;
+          if (payload.currency)      allTx[idx].currency      = payload.currency;
+          if (payload.account_id)    allTx[idx].account_id    = payload.account_id;
+          if (payload.date)          allTx[idx].date          = payload.date;
+          if (payload.description)   allTx[idx].description   = payload.description;
           if (payload.exchange_rate) allTx[idx].exchange_rate = payload.exchange_rate;
           allTx[idx].notes = pendingNotes;
         }
         document.getElementById('pwd-modal').classList.remove('open');
         applyFilters();
-        showToast();
+        showToast('Transacción actualizada correctamente');
         editingTx = null;
        } catch (error) {
          btn.disabled = false; btn.textContent = 'Guardar cambio';
@@ -426,8 +512,78 @@
       el.textContent = msg; el.style.display = 'block';
     }
 
-    function showToast() {
+    function openDeleteModal(txId, relatedId) {
+      deletingTxId = txId;
+      deletingRelatedId = relatedId || null;
+      const tx = allTx.find(t => t.transaction_id === txId);
+      if (tx) {
+        document.getElementById('delete-modal-sub').textContent =
+          `Transacción del ${tx.date} · ${TYPE_LABELS[tx.type] || tx.type} · ${Number(tx.amount).toFixed(2)} ${tx.currency}`;
+      }
+      document.getElementById('delete-pair-warning').style.display = relatedId ? 'block' : 'none';
+      document.getElementById('delete-password').value = '';
+      document.getElementById('delete-error').style.display = 'none';
+      document.getElementById('delete-modal').classList.add('open');
+      document.getElementById('delete-password').focus();
+    }
+
+    document.getElementById('delete-cancel').addEventListener('click', () => {
+      document.getElementById('delete-modal').classList.remove('open');
+    });
+
+    document.getElementById('delete-modal').addEventListener('click', e => {
+      if (e.target === document.getElementById('delete-modal')) {
+        document.getElementById('delete-modal').classList.remove('open');
+      }
+    });
+
+    document.getElementById('delete-password').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('delete-confirm').click();
+    });
+
+    document.getElementById('delete-confirm').addEventListener('click', async () => {
+      if (!deletingTxId) return;
+      const password = document.getElementById('delete-password').value;
+      if (!password) { showModalError('delete-error', 'Introduce tu contraseña.'); return; }
+      const btn = document.getElementById('delete-confirm');
+      btn.disabled = true; btn.textContent = 'Eliminando...';
+
+      try {
+        const res = await fetch(`/api/finance/transactions/${deletingTxId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+          body: JSON.stringify({ password }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          btn.disabled = false; btn.textContent = 'Eliminar';
+          showModalError('delete-error', formatApiError(data) || `Error ${res.status}`);
+          return;
+        }
+        const data = await res.json();
+        // Remove deleted transaction(s) from local state
+        const idsToRemove = new Set([deletingTxId]);
+        if (data.related_transaction_id) idsToRemove.add(data.related_transaction_id);
+        allTx = allTx.filter(t => !idsToRemove.has(t.transaction_id));
+        document.getElementById('delete-modal').classList.remove('open');
+        applyFilters();
+        showToast('Transacción eliminada correctamente', true);
+        deletingTxId = null;
+        deletingRelatedId = null;
+      } catch (err) {
+        btn.disabled = false; btn.textContent = 'Eliminar';
+        showModalError('delete-error', 'Error de conexión.');
+      }
+    });
+
+    function showToast(message, isDelete) {
       const t = document.getElementById('toast');
+      t.textContent = message || 'Transacción actualizada correctamente';
+      if (isDelete) {
+        t.classList.add('error');
+      } else {
+        t.classList.remove('error');
+      }
       t.classList.add('show');
       setTimeout(() => t.classList.remove('show'), 3000);
     }
@@ -438,10 +594,10 @@
 
     if (new URLSearchParams(location.search).get('exchange') === '1') {
       history.replaceState(null, '', '/finance/transactions/');
-      document.getElementById('toast').textContent = 'Cambio de divisas registrado correctamente';
-      showToast();
+      showToast('Cambio de divisas registrado correctamente');
     }
 
     loadTransactions();
+    loadAccounts();
 </script>
 {% endblock %}

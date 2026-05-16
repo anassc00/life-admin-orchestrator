@@ -129,6 +129,13 @@ class DjangoTransactionRepository(TransactionRepository):
             )
             TransactionModel.objects.update_or_create(pk=tx_in.id, defaults=self._to_record(tx_in))
 
+    def delete(self, transaction_id: UUID) -> None:
+        TransactionModel.objects.filter(pk=transaction_id).delete()
+
+    def delete_pair(self, tx_id: UUID, related_id: UUID) -> None:
+        with transaction.atomic():
+            TransactionModel.objects.filter(pk__in=[tx_id, related_id]).delete()
+
     def list_by_user(self, user_id: UUID, year: int = None, month: int = None) -> list[Transaction]:
         qs = TransactionModel.objects.filter(user_id=user_id).order_by("-date", "-created_at")
         if year is not None:

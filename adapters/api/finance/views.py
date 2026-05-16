@@ -13,6 +13,7 @@ from adapters.api.finance.schemas import (
     CreateInvoiceRequest,
     CreateSavingsGoalRequest,
     CurrencyExchangeRegisteredResponseSchema,
+    DeleteTransactionRequest,
     DepositToSavingsRequest,
     EditSavingsGoalRequest,
     EditTransactionRequest,
@@ -32,6 +33,7 @@ from adapters.api.finance.schemas import (
     SavingsDepositResponseSchema,
     SavingsGoalResponseSchema,
     SavingsGoalSummaryResponseSchema,
+    TransactionDeletedResponseSchema,
     TransactionEditedResponseSchema,
     TransactionListItemSchema,
     UpdateAccountRequest,
@@ -40,6 +42,7 @@ from adapters.api.users.schemas import ErrorResponse
 from application.dtos.finance import (
     CreateExpenseCategoryCommand,
     CreateSavingsGoalCommand,
+    DeleteTransactionCommand,
     DepositToSavingsCommand,
     EditSavingsGoalCommand,
     EditTransactionCommand,
@@ -75,6 +78,7 @@ from infrastructure.di import (
     get_create_expense_category_use_case,
     get_create_invoice_use_case,
     get_create_savings_goal_use_case,
+    get_delete_transaction_use_case,
     get_deposit_to_savings_use_case,
     get_edit_savings_goal_use_case,
     get_edit_transaction_use_case,
@@ -394,6 +398,44 @@ def edit_transaction(request, transaction_id: UUID, payload: EditTransactionRequ
 
         result = uc.execute(
             EditTransactionCommand(user_id=user_id, transaction_id=transaction_id, **payload_dict)
+        )
+        return HTTPStatus.OK, result.model_dump()
+    except TransactionNotFoundError as exc:
+        return HTTPStatus.NOT_FOUND, ErrorResponse(detail=str(exc))
+    except UnauthorizedEditError as exc:
+        return HTTPStatus.FORBIDDEN, ErrorResponse(detail=str(exc))
+    except InvalidEditionCredentialsError as exc:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail=str(exc))
+
+
+# --- Delete Transaction ---
+
+
+@router.delete(
+    "/transactions/{transaction_id}",
+    response={
+        HTTPStatus.OK: TransactionDeletedResponseSchema,
+        HTTPStatus.NOT_FOUND: ErrorResponse,
+        HTTPStatus.FORBIDDEN: ErrorResponse,
+        HTTPStatus.UNAUTHORIZED: ErrorResponse,
+    },
+    summary="Delete a transaction (requires password confirmation). Exchange pairs are deleted atomically.",
+)
+def delete_transaction(request, transaction_id: UUID, payload: DeleteTransactionRequest):
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
+    from uuid import UUID as _UUID
+
+    user_id = _UUID(user_id_str)
+    uc = get_delete_transaction_use_case()
+    try:
+        result = uc.execute(
+            DeleteTransactionCommand(
+                user_id=user_id,
+                transaction_id=transaction_id,
+                password=payload.password,
+            )
         )
         return HTTPStatus.OK, result.model_dump()
     except TransactionNotFoundError as exc:

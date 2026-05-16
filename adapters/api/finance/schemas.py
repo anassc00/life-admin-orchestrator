@@ -90,7 +90,9 @@ class CurrencyExchangeRegisteredResponseSchema(Schema):
 
 
 class EditTransactionRequest(Schema):
+    account_id: UUID | None = None
     amount: Decimal | None = None
+    currency: Currency | None = None
     date: datetime.date | None = None
     description: str | None = None
     exchange_rate: Decimal | None = None
@@ -100,7 +102,9 @@ class EditTransactionRequest(Schema):
 
 class TransactionEditedResponseSchema(Schema):
     transaction_id: UUID
+    account_id: UUID
     amount: Decimal
+    currency: Currency
     date: datetime.date
     description: str | None = None
     exchange_rate: Decimal
@@ -249,6 +253,15 @@ class ExpenseRegisteredResponseSchema(Schema):
     currency: Currency
     category_id: UUID
     description: str | None = None
+
+
+class DeleteTransactionRequest(Schema):
+    password: str
+
+
+class TransactionDeletedResponseSchema(Schema):
+    transaction_id: UUID
+    related_transaction_id: UUID | None = None
 
 
 class TransactionListItemSchema(Schema):

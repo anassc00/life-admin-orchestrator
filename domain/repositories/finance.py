@@ -41,6 +41,14 @@ class TransactionRepository(ABC):
     def save_exchange_pair(self, tx_out: Transaction, tx_in: Transaction) -> None: ...
 
     @abstractmethod
+    def delete(self, transaction_id: UUID) -> None: ...
+
+    @abstractmethod
+    def delete_pair(self, tx_id: UUID, related_id: UUID) -> None:
+        """Delete both sides of an exchange pair atomically."""
+        ...
+
+    @abstractmethod
     def list_by_user(self, user_id: UUID) -> list[Transaction]: ...
 
     @abstractmethod

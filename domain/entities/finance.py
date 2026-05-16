@@ -18,6 +18,7 @@ class Currency(StrEnum):
     VES = "VES"
     USD = "USD"
     USDT = "USDT"
+    MXN = "MXN"
 
 
 class TransactionType(StrEnum):

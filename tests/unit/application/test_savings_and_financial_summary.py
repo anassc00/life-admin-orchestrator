@@ -272,6 +272,197 @@ class TestDepositToSavingsUseCase:
 
         deposit_repo.save.assert_not_called()
 
+    # --- F6: auto-complete goal ---
+
+    def _make_deposit_uc_with_existing_deposits(self, existing_deposits, goal_target):
+        """Helper that builds a UC where list_by_goal returns existing + new deposit."""
+        goal_repo = MagicMock()
+        deposit_repo = MagicMock()
+        tx_repo = MagicMock()
+        account_repo = MagicMock()
+
+        user_id = uuid4()
+        account = _account(user_id, [Currency.USD])
+        goal = SavingsGoal(
+            user_id=user_id,
+            motive="Target goal",
+            target_amount_usd=goal_target,
+            is_completed=False,
+        )
+
+        goal_repo.get_by_id.return_value = goal
+        account_repo.get_by_id.return_value = account
+
+        # list_by_goal will include the already-existing deposits
+        # (the new one is added by save but we simulate it in list_by_goal)
+        deposit_repo.list_by_goal.return_value = existing_deposits
+
+        uc = DepositToSavingsUseCase(
+            savings_goal_repo=goal_repo,
+            savings_deposit_repo=deposit_repo,
+            transaction_repo=tx_repo,
+            account_repo=account_repo,
+        )
+        return uc, user_id, goal, account, goal_repo
+
+    def test_goal_is_auto_completed_when_target_reached(self):
+        from domain.entities.finance import SavingsDeposit
+
+        user_id = uuid4()
+        goal_id = uuid4()
+        existing = [
+            SavingsDeposit(
+                user_id=user_id,
+                goal_id=goal_id,
+                account_id=uuid4(),
+                amount=Decimal("800"),
+                currency=Currency.USD,
+                date=date(2026, 4, 1),
+            )
+        ]
+        # After depositing 200 more → total = 1000 = target
+        # list_by_goal returns the combined list (existing + new)
+        goal_repo = MagicMock()
+        deposit_repo = MagicMock()
+        tx_repo = MagicMock()
+        account_repo = MagicMock()
+
+        user_id2 = uuid4()
+        account = _account(user_id2, [Currency.USD])
+        goal = SavingsGoal(
+            user_id=user_id2,
+            motive="Car",
+            target_amount_usd=Decimal("1000"),
+        )
+        goal_repo.get_by_id.return_value = goal
+        account_repo.get_by_id.return_value = account
+        # Simulate that after save, list includes both old + new deposit totaling 1000
+        deposit_repo.list_by_goal.return_value = [
+            SavingsDeposit(
+                user_id=user_id2,
+                goal_id=goal.id,
+                account_id=account.id,
+                amount=Decimal("800"),
+                currency=Currency.USD,
+                date=date(2026, 4, 1),
+            ),
+            SavingsDeposit(
+                user_id=user_id2,
+                goal_id=goal.id,
+                account_id=account.id,
+                amount=Decimal("200"),
+                currency=Currency.USD,
+                date=date(2026, 5, 1),
+            ),
+        ]
+
+        uc = DepositToSavingsUseCase(
+            savings_goal_repo=goal_repo,
+            savings_deposit_repo=deposit_repo,
+            transaction_repo=tx_repo,
+            account_repo=account_repo,
+        )
+
+        uc.execute(
+            DepositToSavingsCommand(
+                user_id=user_id2,
+                goal_id=goal.id,
+                account_id=account.id,
+                amount=Decimal("200"),
+                currency=Currency.USD,
+                date=date(2026, 5, 1),
+            )
+        )
+
+        # goal_repo.save called to mark as completed
+        goal_repo.save.assert_called_once()
+        saved_goal = goal_repo.save.call_args[0][0]
+        assert saved_goal.is_completed is True
+
+    def test_goal_not_completed_when_target_not_yet_reached(self):
+        goal_repo = MagicMock()
+        deposit_repo = MagicMock()
+        tx_repo = MagicMock()
+        account_repo = MagicMock()
+
+        user_id = uuid4()
+        account = _account(user_id, [Currency.USD])
+        goal = SavingsGoal(
+            user_id=user_id,
+            motive="Laptop",
+            target_amount_usd=Decimal("1000"),
+        )
+        goal_repo.get_by_id.return_value = goal
+        account_repo.get_by_id.return_value = account
+        deposit_repo.list_by_goal.return_value = [
+            SavingsDeposit(  # type: ignore[name-defined]
+                user_id=user_id,
+                goal_id=goal.id,
+                account_id=account.id,
+                amount=Decimal("300"),
+                currency=Currency.USD,
+                date=date(2026, 5, 1),
+            )
+        ]
+
+        uc = DepositToSavingsUseCase(
+            savings_goal_repo=goal_repo,
+            savings_deposit_repo=deposit_repo,
+            transaction_repo=tx_repo,
+            account_repo=account_repo,
+        )
+
+        uc.execute(
+            DepositToSavingsCommand(
+                user_id=user_id,
+                goal_id=goal.id,
+                account_id=account.id,
+                amount=Decimal("300"),
+                currency=Currency.USD,
+                date=date(2026, 5, 1),
+            )
+        )
+
+        goal_repo.save.assert_not_called()
+
+    def test_usdt_deposit_does_not_trigger_auto_complete(self):
+        """USDT deposits don't count toward the USD target."""
+        goal_repo = MagicMock()
+        deposit_repo = MagicMock()
+        tx_repo = MagicMock()
+        account_repo = MagicMock()
+
+        user_id = uuid4()
+        account = _account(user_id, [Currency.USDT])
+        goal = SavingsGoal(
+            user_id=user_id,
+            motive="Car",
+            target_amount_usd=Decimal("500"),
+        )
+        goal_repo.get_by_id.return_value = goal
+        account_repo.get_by_id.return_value = account
+
+        uc = DepositToSavingsUseCase(
+            savings_goal_repo=goal_repo,
+            savings_deposit_repo=deposit_repo,
+            transaction_repo=tx_repo,
+            account_repo=account_repo,
+        )
+
+        uc.execute(
+            DepositToSavingsCommand(
+                user_id=user_id,
+                goal_id=goal.id,
+                account_id=account.id,
+                amount=Decimal("600"),  # exceeds target but in USDT
+                currency=Currency.USDT,
+                date=date(2026, 5, 1),
+            )
+        )
+
+        # No auto-complete since USDT deposits don't count
+        goal_repo.save.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # Enhanced GetMonthlyFinancialSummaryUseCase
@@ -283,8 +474,8 @@ class TestEnhancedMonthlyFinancialSummary:
         """
         income:   $400 (base salary, from VES 14400 at rate 36 = $400)
         expenses: $300 (200 USD direct + VES 3600 at rate 36 = $100)
-        savings:  $50  (USD deposit)
-        balance:  $400 - $300 - $50 = $50
+        savings:  $50  (USD deposit - not deducted from balance)
+        balance:  $400 - $300 = $100 (savings remain in account)
         budget:   $500 (fixed default)
         """
         tx_repo = MagicMock()
@@ -304,7 +495,7 @@ class TestEnhancedMonthlyFinancialSummary:
         assert result.total_expenses_usd == Decimal("300")
         assert result.total_savings_usd == Decimal("50")
         assert result.budget_usd == Decimal("500")
-        assert result.balance_usd == Decimal("50")
+        assert result.balance_usd == Decimal("100")
 
     def test_returns_zeros_when_no_activity(self):
         tx_repo = MagicMock()
