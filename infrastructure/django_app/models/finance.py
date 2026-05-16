@@ -50,6 +50,12 @@ class TransactionModel(models.Model):
 
     class Meta:
         db_table = "transactions"
+        indexes = [
+            # Covers list_by_user filtered by date range (main transactions endpoint)
+            models.Index(fields=["user_id", "date"], name="tx_user_date_idx"),
+            # Covers list_by_account (balance history endpoint)
+            models.Index(fields=["account_id", "date"], name="tx_account_date_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"Transaction({self.type}, {self.amount} {self.currency})"
@@ -109,6 +115,10 @@ class SavingsDepositModel(models.Model):
 
     class Meta:
         db_table = "savings_deposits"
+        indexes = [
+            # Covers get_monthly_savings_usd (user_id + date range)
+            models.Index(fields=["user_id", "date"], name="deposit_user_date_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"SavingsDeposit({self.amount} {self.currency})"
