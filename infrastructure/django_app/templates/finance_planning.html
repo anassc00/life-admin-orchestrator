@@ -1,189 +1,789 @@
 {% extends 'base.html' %}
 {% block title %}Planificación — Life Admin{% endblock %}
+
 {% block extra_style %}
-    .main { flex: 1; padding: 2.5rem 2rem; min-width: 0; }
-    .page-title-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #7c6ff7; margin-bottom: 0.3rem; }
-    h1 { font-size: 1.4rem; font-weight: 700; color: #fff; margin-bottom: 1.75rem; }
-    .budget-card { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.75rem; }
-    .budget-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem; }
-    .budget-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #7c6ff7; }
-    .budget-amount { font-size: 1.6rem; font-weight: 800; color: #fff; }
-    .budget-bar { height: 10px; background: rgba(255, 255, 255, 0.08); border-radius: 5px; overflow: hidden; margin-bottom: 0.75rem; }
-    .budget-fill { height: 100%; background: linear-gradient(90deg, #7c6ff7, #f87171); border-radius: 5px; transition: width 0.4s ease; }
-    .budget-legend { display: flex; gap: 1.5rem; font-size: 0.76rem; flex-wrap: wrap; }
-    .legend-item { display: flex; align-items: center; gap: 0.4rem; }
-    .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .dot-planned { background: #7c6ff7; }
-    .dot-savings { background: #34d399; }
-    .dot-remaining { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25); }
-    .planning-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-    @media (max-width: 800px) { .planning-grid { grid-template-columns: 1fr; } }
-    .plan-section { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 0.9rem; overflow: hidden; }
-    .plan-section-header { display: flex; justify-content: space-between; align-items: center; padding: 0.9rem 1.1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.07); }
-    .plan-section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #7c6ff7; }
-    .plan-section-total { font-size: 0.82rem; font-weight: 700; color: #c0b8ff; }
-    .plan-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 1.1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
-    .plan-item:last-child { border-bottom: none; }
-    .plan-item-name { flex: 1; font-size: 0.85rem; color: #c0c0d8; }
-    .plan-item-amount { display: flex; align-items: center; gap: 0.3rem; }
-    .plan-item-amount span { color: #6060a0; font-size: 0.8rem; }
-    .plan-input { width: 90px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); color: #e0e0f0; border-radius: 0.45rem; padding: 0.4rem 0.6rem; font-size: 0.85rem; text-align: right; outline: none; transition: border-color 0.2s; font-family: inherit; }
-    .plan-input:focus { border-color: #7c6ff7; }
-    .savings-plan-row { display: flex; align-items: center; padding: 0.8rem 1.1rem; gap: 0.75rem; }
-    .savings-plan-label { flex: 1; font-size: 0.85rem; color: #c0c0d8; }
-    .save-row { margin-top: 1.75rem; display: flex; justify-content: flex-end; gap: 1rem; align-items: center; }
-    .save-status { font-size: 0.78rem; color: #6060a0; }
-    .btn-save { background: #7c6ff7; border: none; color: #fff; font-size: 0.9rem; font-weight: 700; padding: 0.65rem 1.5rem; border-radius: 0.65rem; cursor: pointer; transition: background 0.2s; }
-    .btn-save:hover { background: #6a5fe5; }
-    .btn-save:disabled { background: rgba(124, 111, 247, 0.4); cursor: not-allowed; }
-    .no-categories { font-size: 0.82rem; color: #6060a0; padding: 1rem 1.1rem; }
+  /* ── Layout ── */
+  .main { flex: 1; display: flex; flex-direction: column; padding: 2.5rem 2rem; gap: 1.5rem; min-width: 0; }
+  .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .page-title-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #7c6ff7; margin-bottom: 0.3rem; }
+  h1 { font-size: 1.4rem; font-weight: 700; color: #fff; }
+
+  /* ── Month nav ── */
+  .month-nav { display: flex; align-items: center; gap: 0.5rem; }
+  .month-nav button { background: none; border: 1px solid rgba(255,255,255,0.2); color: #9090b0; padding: 0.3rem 0.65rem; border-radius: 0.4rem; cursor: pointer; font-size: 0.9rem; transition: border-color 0.15s, color 0.15s; }
+  .month-nav button:hover { border-color: rgba(124,111,247,0.5); color: #a78bfa; }
+  .month-nav .month-label { font-size: 0.92rem; font-weight: 600; color: #c0b8ff; min-width: 140px; text-align: center; }
+
+  /* ── Cards ── */
+  .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem; padding: 1.5rem; }
+  .section-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #7c6ff7; display: block; margin-bottom: 0.9rem; }
+
+  /* ── Execution progress bar ── */
+  .exec-bar-wrap { margin-bottom: 0.5rem; }
+  .exec-bar-bg { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
+  .exec-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #34d399, #7c6ff7); transition: width 0.5s ease; }
+  .exec-bar-fill.over { background: linear-gradient(90deg, #f87171, #ef4444); }
+  .exec-bar-nums { display: flex; justify-content: space-between; margin-top: 0.4rem; font-size: 0.76rem; color: #8080a0; }
+
+  /* ── Plan header stats ── */
+  .plan-header-row { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+  .plan-stat { display: flex; flex-direction: column; gap: 0.15rem; }
+  .plan-stat-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: #6060a0; }
+  .plan-stat-value { font-size: 1.1rem; font-weight: 700; color: #fff; }
+  .plan-stat-value.income-val { color: #34d399; }
+  .plan-stat-sep { width: 1px; height: 2.5rem; background: rgba(255,255,255,0.09); }
+
+  /* ── 50/30/20 pills ── */
+  .budget-pills { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.75rem; }
+  .pill { display: flex; flex-direction: column; align-items: center; padding: 0.4rem 0.9rem; border-radius: 2rem; font-size: 0.75rem; font-weight: 700; border: 1px solid transparent; gap: 0.05rem; }
+  .pill-needs  { background: rgba(96,165,250,0.1);  border-color: rgba(96,165,250,0.3);  color: #60a5fa; }
+  .pill-wants  { background: rgba(251,191,36,0.1);  border-color: rgba(251,191,36,0.3);  color: #fbbf24; }
+  .pill-saves  { background: rgba(52,211,153,0.1);  border-color: rgba(52,211,153,0.3);  color: #34d399; }
+  .pill-title  { font-size: 0.62rem; font-weight: 500; opacity: 0.8; }
+  .pill-amount { font-size: 0.78rem; margin-top: 0.1rem; }
+
+  /* ── No plan empty state ── */
+  .empty-plan { background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.1); border-radius: 1rem; padding: 2.5rem 2rem; text-align: center; }
+  .empty-plan-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+  .empty-plan h2 { font-size: 1.1rem; font-weight: 700; color: #c0c0d8; margin-bottom: 0.5rem; }
+  .empty-plan p { font-size: 0.85rem; color: #6060a0; margin-bottom: 1.75rem; }
+  .create-form { text-align: left; max-width: 360px; margin: 0 auto; }
+  .create-form label { display: block; font-size: 0.78rem; font-weight: 600; color: #9090b0; margin-bottom: 0.35rem; }
+  .create-form input { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #e0e0f0; border-radius: 0.55rem; padding: 0.6rem 0.85rem; font-size: 0.92rem; margin-bottom: 1rem; outline: none; transition: border-color 0.2s; font-family: inherit; }
+  .create-form input:focus { border-color: #7c6ff7; }
+  .create-form-btns { display: flex; gap: 0.65rem; }
+
+  /* ── Table ── */
+  .table-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem; overflow: hidden; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  thead th { padding: 0.75rem 1rem; text-align: left; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #6060a0; border-bottom: 1px solid rgba(255,255,255,0.07); white-space: nowrap; }
+  thead th.right { text-align: right; }
+  tbody tr { border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.12s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  tbody tr.over-budget { background: rgba(248,113,113,0.06); }
+  tbody tr.over-budget:hover { background: rgba(248,113,113,0.10); }
+  td { padding: 0.7rem 1rem; color: #c0c0d8; vertical-align: middle; white-space: nowrap; }
+  td.right { text-align: right; }
+  td.cat-name { font-weight: 500; color: #ddd; }
+
+  /* ── Inline edit input ── */
+  .inline-input { width: 90px; background: rgba(255,255,255,0.08); border: 1px solid rgba(124,111,247,0.5); color: #e0e0f0; border-radius: 0.4rem; padding: 0.3rem 0.5rem; font-size: 0.85rem; text-align: right; outline: none; font-family: inherit; transition: border-color 0.2s; }
+  .inline-input:focus { border-color: #7c6ff7; box-shadow: 0 0 0 2px rgba(124,111,247,0.2); }
+  .amount-display { cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; color: #c0b8ff; border-bottom: 1px dashed rgba(124,111,247,0.4); padding-bottom: 1px; transition: color 0.15s; }
+  .amount-display:hover { color: #a78bfa; border-bottom-color: #7c6ff7; }
+  .amount-display::before { content: '$'; font-size: 0.75rem; color: #6060a0; }
+
+  /* ── Deviation ── */
+  .dev-positive { color: #34d399; font-weight: 600; }
+  .dev-negative { color: #f87171; font-weight: 600; }
+  .dev-zero { color: #6060a0; }
+
+  /* ── Progress mini bar ── */
+  .pct-cell { display: flex; align-items: center; gap: 0.5rem; min-width: 90px; }
+  .mini-bar-bg { flex: 1; height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+  .mini-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg,#7c6ff7,#a78bfa); transition: width 0.4s ease; }
+  .mini-bar-fill.over { background: linear-gradient(90deg,#f87171,#ef4444); }
+  .pct-text { font-size: 0.72rem; color: #8080a0; min-width: 2.5rem; text-align: right; }
+
+  /* ── Action buttons ── */
+  .btn-del { background: transparent; border: 1px solid rgba(248,113,113,0.25); color: #9090b0; font-size: 0.75rem; padding: 0.28rem 0.6rem; border-radius: 0.4rem; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+  .btn-del:hover { color: #f87171; border-color: rgba(248,113,113,0.55); }
+
+  /* ── Totals row ── */
+  .totals-row td { border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.85rem; padding-bottom: 0.85rem; font-weight: 700; color: #fff; }
+  .totals-row .dev-label { color: #6060a0; font-size: 0.72rem; }
+
+  /* ── Table footer actions ── */
+  .table-footer { padding: 1rem 1rem; display: flex; align-items: center; gap: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); }
+
+  /* ── Buttons ── */
+  .btn-primary { background: #7c6ff7; border: none; color: #fff; font-size: 0.88rem; font-weight: 700; padding: 0.55rem 1.2rem; border-radius: 0.6rem; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+  .btn-primary:hover { background: #6a5fe5; }
+  .btn-primary:disabled { background: rgba(124,111,247,0.4); cursor: not-allowed; }
+  .btn-secondary { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #9090b0; font-size: 0.88rem; font-weight: 600; padding: 0.55rem 1.2rem; border-radius: 0.6rem; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .btn-secondary:hover { color: #c0b8ff; border-color: rgba(124,111,247,0.4); background: rgba(124,111,247,0.08); }
+  .btn-ghost-purple { background: rgba(124,111,247,0.12); border: 1px solid rgba(124,111,247,0.3); color: #c0b8ff; font-size: 0.85rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 0.55rem; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
+  .btn-ghost-purple:hover { background: rgba(124,111,247,0.22); }
+
+  /* ── Skeleton ── */
+  .skel { height: 0.8rem; border-radius: 0.3rem; background: rgba(255,255,255,0.06); animation: pulse 1.4s ease-in-out infinite; }
+  .skel-row td { padding: 0.85rem 1rem; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+  /* ── Modal ── */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+  .modal-backdrop.open { opacity: 1; pointer-events: auto; }
+  .modal { background: #1a1730; border: 1px solid rgba(124,111,247,0.25); border-radius: 1.25rem; padding: 1.75rem; width: 90%; max-width: 400px; transform: translateY(14px); transition: transform 0.2s; }
+  .modal-backdrop.open .modal { transform: translateY(0); }
+  .modal-title { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 1.25rem; }
+  .modal label { display: block; font-size: 0.78rem; font-weight: 600; color: #9090b0; margin-bottom: 0.35rem; }
+  .modal select, .modal input { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #e0e0f0; border-radius: 0.55rem; padding: 0.6rem 0.85rem; font-size: 0.92rem; margin-bottom: 1rem; outline: none; transition: border-color 0.2s; font-family: inherit; }
+  .modal select:focus, .modal input:focus { border-color: #7c6ff7; }
+  .modal select option { background: #1a1730; }
+  .modal-error { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: #f87171; padding: 0.55rem 0.8rem; border-radius: 0.5rem; font-size: 0.8rem; margin-bottom: 1rem; display: none; }
+  .modal-actions { display: flex; gap: 0.65rem; justify-content: flex-end; }
+  .btn-cancel { background: transparent; border: 1px solid rgba(255,255,255,0.12); color: #9090b0; font-size: 0.85rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 0.55rem; cursor: pointer; transition: color 0.15s; }
+  .btn-cancel:hover { color: #e0e0f0; }
+
+  /* ── Toast ── */
+  #toast { position: fixed; bottom: 1.5rem; right: 1.5rem; padding: 0.7rem 1.1rem; border-radius: 0.6rem; font-size: 0.83rem; font-weight: 600; opacity: 0; transform: translateY(8px); transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 999; background: rgba(52,211,153,0.15); border: 1px solid rgba(52,211,153,0.35); color: #34d399; }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.error { background: rgba(248,113,113,0.15); border-color: rgba(248,113,113,0.35); color: #f87171; }
+
+  /* ── Loading spinner ── */
+  .spinner { display: inline-block; width: 1rem; height: 1rem; border: 2px solid rgba(255,255,255,0.15); border-top-color: #7c6ff7; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-row { padding: 2.5rem; text-align: center; color: #6060a0; font-size: 0.88rem; display: flex; align-items: center; justify-content: center; gap: 0.6rem; }
 {% endblock %}
+
 {% block content %}
-    <div class="page-title-label">Finanzas</div>
-    <h1 id="page-heading">Planificación mensual</h1>
+  <!-- ── Page header ── -->
+  <div class="page-header">
+    <div>
+      <div class="page-title-label">Finanzas</div>
+      <h1>Planificación mensual</h1>
+    </div>
+    <div class="month-nav">
+      <button id="btn-prev-month" title="Mes anterior">&#8592;</button>
+      <span class="month-label" id="month-label">Cargando...</span>
+      <button id="btn-next-month" title="Mes siguiente">&#8594;</button>
+    </div>
+  </div>
 
-    <div class="budget-card">
-      <div class="budget-header">
-        <span class="budget-title">Presupuesto base</span>
-        <span class="budget-amount">$500 <span style="font-size:0.85rem;color:#6060a0;font-weight:400">USD / mes</span></span>
-      </div>
-      <div class="budget-bar">
-        <div class="budget-fill" id="budget-fill" style="width:0%"></div>
-      </div>
-      <div class="budget-legend">
-        <div class="legend-item"><div class="legend-dot dot-planned"></div><span>Gastos planificados: <strong id="legend-expenses">$0</strong></span></div>
-        <div class="legend-item"><div class="legend-dot dot-savings"></div><span>Ahorro planificado: <strong id="legend-savings">$0</strong></span></div>
-        <div class="legend-item"><div class="legend-dot dot-remaining"></div><span>Disponible: <strong id="legend-remaining">$500</strong></span></div>
+  <!-- ── Dynamic content area ── -->
+  <div id="content-area">
+    <div class="loading-row"><span class="spinner"></span> Cargando plan...</div>
+  </div>
+
+  <!-- ── Add category modal ── -->
+  <div class="modal-backdrop" id="modal-add">
+    <div class="modal">
+      <div class="modal-title">Agregar categoria al plan</div>
+      <div class="modal-error" id="modal-add-error"></div>
+      <label for="modal-cat-select">Categoria</label>
+      <select id="modal-cat-select">
+        <option value="">Selecciona una categoria...</option>
+      </select>
+      <label for="modal-planned-amt">Monto planeado (USD)</label>
+      <input id="modal-planned-amt" type="number" step="0.01" min="0" placeholder="0.00" />
+      <div class="modal-actions">
+        <button class="btn-cancel" id="modal-add-cancel">Cancelar</button>
+        <button class="btn-primary" id="modal-add-confirm">Agregar</button>
       </div>
     </div>
+  </div>
 
-    <div class="planning-grid">
-      <div class="plan-section">
-        <div class="plan-section-header">
-          <span class="plan-section-title">Gastos fijos</span>
-          <span class="plan-section-total" id="fixed-total">$0</span>
-        </div>
-        <div id="fixed-items"><div class="no-categories">Cargando categorías...</div></div>
-      </div>
-
-      <div class="plan-section">
-        <div class="plan-section-header">
-          <span class="plan-section-title">Gastos variables</span>
-          <span class="plan-section-total" id="variable-total">$0</span>
-        </div>
-        <div id="variable-items"><div class="no-categories">Cargando categorías...</div></div>
-      </div>
-    </div>
-
-    <div class="plan-section" style="margin-top:1.5rem">
-      <div class="plan-section-header">
-        <span class="plan-section-title">Ahorro planificado</span>
-        <span class="plan-section-total" id="savings-total">$0</span>
-      </div>
-      <div class="savings-plan-row">
-        <span class="savings-plan-label">Monto a ahorrar este mes</span>
-        <div class="plan-item-amount">
-          <span>$</span>
-          <input class="plan-input" type="number" step="0.01" min="0" id="savings-plan-input" placeholder="0" value="0" />
-        </div>
-      </div>
-    </div>
-
-    <div class="save-row">
-      <span class="save-status" id="save-status"></span>
-      <button class="btn-save" id="btn-save">Guardar planificación</button>
-    </div>
+  <!-- ── Toast ── -->
+  <div id="toast"></div>
 {% endblock %}
+
 {% block extra_script %}
 <script>
-    const BUDGET = 500;
-    let categories = [];
-    let planInputs = {};
+  /* ════════════════════════════════════════════
+     CONSTANTS & STATE
+  ════════════════════════════════════════════ */
+  const MONTHS_ES = ['enero','febrero','marzo','abril','mayo','junio',
+    'julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
-    const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-    const now = new Date();
-    document.getElementById('page-heading').textContent =
-      `Planificación — ${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+  const now = new Date();
+  let curYear  = now.getFullYear();
+  let curMonth = now.getMonth() + 1;
 
-    async function loadCategories() {
-      const res = await fetch('/api/finance/categories');
+  let planData     = null;   // current budget plan from API
+  let allCategories = [];    // all expense categories
+  let editingCells = {};     // { categoryId: inputEl } for inline edits in progress
+
+  /* ════════════════════════════════════════════
+     UTILITIES
+  ════════════════════════════════════════════ */
+  function getCookie(name) {
+    return document.cookie.split('; ').find(r => r.startsWith(name + '='))?.split('=')[1] || '';
+  }
+
+  const fmtUSD = v =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(v);
+
+  const fmtAmt = v => '$' + parseFloat(v).toFixed(2);
+
+  let toastTimer;
+  function showToast(msg, isError = false) {
+    const t = document.getElementById('toast');
+    clearTimeout(toastTimer);
+    t.textContent = msg;
+    t.className   = 'show' + (isError ? ' error' : '');
+    toastTimer    = setTimeout(() => { t.className = ''; }, 3500);
+  }
+
+  function updateMonthLabel() {
+    document.getElementById('month-label').textContent =
+      MONTHS_ES[curMonth - 1] + ' ' + curYear;
+  }
+
+  function apiHeaders() {
+    return { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') };
+  }
+
+  /* ════════════════════════════════════════════
+     DATA LOADING
+  ════════════════════════════════════════════ */
+  async function loadCategories() {
+    try {
+      const res  = await fetch('/api/finance/categories');
       if (res.status === 401) { window.location.href = '/login/'; return; }
-      categories = await res.json();
-      renderItems();
-      updateBudgetBar();
-    }
+      allCategories = res.ok ? (await res.json()) : [];
+    } catch { allCategories = []; }
+  }
 
-    function renderItems() {
-      const fixed = categories.filter(c => c.is_fixed_expense);
-      const variable = categories.filter(c => !c.is_fixed_expense);
-      renderGroup('fixed-items', fixed);
-      renderGroup('variable-items', variable);
-    }
+  async function loadPlan() {
+    const area = document.getElementById('content-area');
+    area.innerHTML = '<div class="loading-row"><span class="spinner"></span> Cargando...</div>';
 
-    function renderGroup(containerId, cats) {
-      const container = document.getElementById(containerId);
-      if (!cats.length) {
-        container.innerHTML = '<div class="no-categories">Sin categorías de este tipo.</div>';
+    try {
+      const res = await fetch(`/api/finance/budget?year=${curYear}&month=${curMonth}`);
+      if (res.status === 401) { window.location.href = '/login/'; return; }
+      if (res.status === 404 || !res.ok) {
+        planData = null;
+        renderEmptyState();
         return;
       }
-      container.innerHTML = '';
-      cats.forEach(cat => {
-        const row = document.createElement('div');
-        row.className = 'plan-item';
-        const nameEl = document.createElement('span');
-        nameEl.className = 'plan-item-name';
-        nameEl.textContent = cat.name;
-        const amtEl = document.createElement('div');
-        amtEl.className = 'plan-item-amount';
-        amtEl.innerHTML = '<span>$</span>';
-        const input = document.createElement('input');
-        input.className = 'plan-input';
-        input.type = 'number';
-        input.step = '0.01';
-        input.min = '0';
-        input.placeholder = '0';
-        input.value = Number(cat.default_amount_usd).toFixed(2);
-        input.dataset.categoryId = cat.category_id;
-        input.addEventListener('input', updateBudgetBar);
-        planInputs[cat.category_id] = input;
-        amtEl.appendChild(input);
-        row.appendChild(nameEl);
-        row.appendChild(amtEl);
-        container.appendChild(row);
-      });
+      planData = await res.json();
+      renderPlan();
+    } catch {
+      planData = null;
+      renderEmptyState();
+    }
+  }
+
+  /* ════════════════════════════════════════════
+     RENDER: EMPTY STATE (no plan)
+  ════════════════════════════════════════════ */
+  function renderEmptyState() {
+    const monthLabel = MONTHS_ES[curMonth - 1] + ' ' + curYear;
+    document.getElementById('content-area').innerHTML = `
+      <div class="empty-plan">
+        <div class="empty-plan-icon">&#128202;</div>
+        <h2>Sin plan para ${monthLabel}</h2>
+        <p>Crea un presupuesto para este mes o copia el del mes anterior.</p>
+        <div class="create-form">
+          <div id="create-error" style="background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);color:#f87171;padding:0.55rem 0.8rem;border-radius:0.5rem;font-size:0.8rem;margin-bottom:1rem;display:none;"></div>
+          <label for="new-budget">Presupuesto total (USD)</label>
+          <input id="new-budget" type="number" step="0.01" min="0" placeholder="500.00" />
+          <label for="new-income">Ingreso esperado (USD) <span style="color:#6060a0;font-weight:400;">opcional</span></label>
+          <input id="new-income" type="number" step="0.01" min="0" placeholder="0.00" />
+          <div class="create-form-btns">
+            <button class="btn-primary" id="btn-create-plan">Crear plan</button>
+            <button class="btn-ghost-purple" id="btn-copy-prev">Copiar mes anterior</button>
+          </div>
+        </div>
+      </div>`;
+
+    document.getElementById('btn-create-plan').addEventListener('click', handleCreatePlan);
+    document.getElementById('btn-copy-prev').addEventListener('click', handleCopyPrev);
+  }
+
+  /* ════════════════════════════════════════════
+     RENDER: FULL PLAN UI
+  ════════════════════════════════════════════ */
+  function renderPlan() {
+    const p          = planData;
+    const budget     = parseFloat(p.budget_usd) || 0;
+    const income     = parseFloat(p.income_usd) || 0;
+    const totalPlanned = (p.items || []).reduce((s, i) => s + parseFloat(i.planned_usd), 0);
+    const totalActual  = (p.items || []).reduce((s, i) => s + parseFloat(i.actual_usd), 0);
+    const totalDev     = totalPlanned - totalActual;
+    const execPct      = totalPlanned > 0 ? Math.min((totalActual / totalPlanned) * 100, 100) : 0;
+    const execOver     = totalPlanned > 0 && totalActual > totalPlanned;
+
+    /* ── 50/30/20 pills ── */
+    let pillsHTML = '';
+    if (income > 0) {
+      const needs  = income * 0.50;
+      const wants  = income * 0.30;
+      const saves  = income * 0.20;
+      pillsHTML = `
+        <div class="budget-pills">
+          <div class="pill pill-needs"><span class="pill-title">Necesidades (50%)</span><span class="pill-amount">${fmtAmt(needs)}</span></div>
+          <div class="pill pill-wants"><span class="pill-title">Deseos (30%)</span><span class="pill-amount">${fmtAmt(wants)}</span></div>
+          <div class="pill pill-saves"><span class="pill-title">Ahorro (20%)</span><span class="pill-amount">${fmtAmt(saves)}</span></div>
+        </div>`;
     }
 
-    function updateBudgetBar() {
-      let expenseTotal = 0;
-      Object.values(planInputs).forEach(inp => {
-        expenseTotal += parseFloat(inp.value) || 0;
-      });
-      const savingsAmount = parseFloat(document.getElementById('savings-plan-input').value) || 0;
-      const totalPlanned = expenseTotal + savingsAmount;
-      const pct = Math.min(100, (totalPlanned / BUDGET) * 100);
-      document.getElementById('budget-fill').style.width = pct + '%';
-      document.getElementById('legend-expenses').textContent = '$' + expenseTotal.toFixed(2);
-      document.getElementById('legend-savings').textContent = '$' + savingsAmount.toFixed(2);
-      document.getElementById('legend-remaining').textContent = '$' + Math.max(0, BUDGET - totalPlanned).toFixed(2);
+    /* ── Table rows ── */
+    const rowsHTML = (p.items && p.items.length > 0)
+      ? p.items.map(item => renderItemRow(item)).join('')
+      : `<tr><td colspan="6" style="padding:2rem;text-align:center;color:#6060a0;font-size:0.88rem;">
+           Sin items aun. Agrega una categoria abajo.
+         </td></tr>`;
 
-      const fixedTotal = categories.filter(c => c.is_fixed_expense)
-        .reduce((s, c) => s + (parseFloat(planInputs[c.category_id]?.value) || 0), 0);
-      const varTotal = categories.filter(c => !c.is_fixed_expense)
-        .reduce((s, c) => s + (parseFloat(planInputs[c.category_id]?.value) || 0), 0);
-      document.getElementById('fixed-total').textContent = '$' + fixedTotal.toFixed(2);
-      document.getElementById('variable-total').textContent = '$' + varTotal.toFixed(2);
-      document.getElementById('savings-total').textContent = '$' + savingsAmount.toFixed(2);
-    }
+    /* ── Total row ── */
+    const devClass = totalDev >= 0 ? 'dev-positive' : 'dev-negative';
+    const overBudgetCount = (p.items || []).filter(i => i.over_budget).length;
+    const overBudgetNote  = overBudgetCount > 0
+      ? `<span style="font-size:0.75rem;color:#f87171;margin-left:0.5rem;">
+           &#9888; ${overBudgetCount} categor${overBudgetCount === 1 ? 'ia' : 'ias'} sobre presupuesto
+         </span>`
+      : '';
 
-    document.getElementById('savings-plan-input').addEventListener('input', updateBudgetBar);
+    document.getElementById('content-area').innerHTML = `
+      <!-- ── Header card ── -->
+      <div class="card" style="display:flex;flex-direction:column;gap:1rem;">
+        <div class="plan-header-row">
+          <div class="plan-stat">
+            <span class="plan-stat-label">Presupuesto</span>
+            <span class="plan-stat-value">${fmtAmt(budget)}</span>
+          </div>
+          ${income > 0 ? `
+          <div class="plan-stat-sep"></div>
+          <div class="plan-stat">
+            <span class="plan-stat-label">Ingreso esperado</span>
+            <span class="plan-stat-value income-val">${fmtAmt(income)}</span>
+          </div>` : ''}
+          <div class="plan-stat-sep"></div>
+          <div class="plan-stat">
+            <span class="plan-stat-label">Total planeado</span>
+            <span class="plan-stat-value">${fmtAmt(totalPlanned)}</span>
+          </div>
+          <div class="plan-stat-sep"></div>
+          <div class="plan-stat">
+            <span class="plan-stat-label">Gasto real</span>
+            <span class="plan-stat-value" style="${execOver ? 'color:#f87171' : 'color:#34d399'}">${fmtAmt(totalActual)}</span>
+          </div>
+        </div>
+        ${pillsHTML}
+        <div class="exec-bar-wrap">
+          <div class="section-label" style="margin-bottom:0.4rem;">Ejecucion del presupuesto</div>
+          <div class="exec-bar-bg">
+            <div class="exec-bar-fill${execOver ? ' over' : ''}" style="width:${execPct.toFixed(1)}%"></div>
+          </div>
+          <div class="exec-bar-nums">
+            <span>Real: ${fmtAmt(totalActual)}</span>
+            <span>${execPct.toFixed(0)}% del plan &bull; Plan: ${fmtAmt(totalPlanned)}</span>
+          </div>
+        </div>
+      </div>
 
-    document.getElementById('btn-save').addEventListener('click', () => {
-      const statusEl = document.getElementById('save-status');
-      statusEl.textContent = '✓ Planificación guardada localmente';
-      statusEl.style.color = '#34d399';
-      setTimeout(() => { statusEl.textContent = ''; }, 3000);
+      <!-- ── Items table ── -->
+      <div class="table-card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Categoria</th>
+                <th class="right">Planeado</th>
+                <th class="right">Real</th>
+                <th class="right">Desvio</th>
+                <th>%</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="plan-tbody">
+              ${rowsHTML}
+            </tbody>
+            <tfoot>
+              <tr class="totals-row">
+                <td>Total ${overBudgetNote}</td>
+                <td class="right">${fmtAmt(totalPlanned)}</td>
+                <td class="right">${fmtAmt(totalActual)}</td>
+                <td class="right ${devClass}">${totalDev >= 0 ? '+' : ''}${fmtAmt(Math.abs(totalDev))}</td>
+                <td></td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="table-footer">
+          <button class="btn-ghost-purple" id="btn-open-add-modal">+ Agregar categoria</button>
+          <button class="btn-secondary" id="btn-copy-prev-plan" style="margin-left:auto;">Copiar mes anterior</button>
+        </div>
+      </div>`;
+
+    /* ── Attach events ── */
+    attachTableEvents();
+    document.getElementById('btn-open-add-modal').addEventListener('click', openAddModal);
+    document.getElementById('btn-copy-prev-plan').addEventListener('click', handleCopyPrev);
+  }
+
+  /* ════════════════════════════════════════════
+     RENDER: SINGLE TABLE ROW
+  ════════════════════════════════════════════ */
+  function renderItemRow(item) {
+    const planned  = parseFloat(item.planned_usd) || 0;
+    const actual   = parseFloat(item.actual_usd)  || 0;
+    const dev      = parseFloat(item.deviation_usd);  // planned - actual
+    const devClass = dev >= 0 ? 'dev-positive' : 'dev-negative';
+    const devSign  = dev >= 0 ? '+' : '';
+    const pct      = planned > 0 ? Math.min((actual / planned) * 100, 200) : (actual > 0 ? 100 : 0);
+    const pctCapped = Math.min(pct, 100);
+    const isOver   = item.over_budget;
+
+    return `<tr class="${isOver ? 'over-budget' : ''}" data-cat-id="${item.category_id}">
+      <td class="cat-name">${item.category_name}</td>
+      <td class="right" id="cell-planned-${item.category_id}">
+        <span class="amount-display" title="Click para editar" data-catid="${item.category_id}" data-val="${planned.toFixed(2)}">${planned.toFixed(2)}</span>
+      </td>
+      <td class="right">${fmtAmt(actual)}</td>
+      <td class="right ${devClass}">${devSign}${fmtAmt(Math.abs(dev))}</td>
+      <td>
+        <div class="pct-cell">
+          <div class="mini-bar-bg">
+            <div class="mini-bar-fill${isOver ? ' over' : ''}" style="width:${pctCapped}%"></div>
+          </div>
+          <span class="pct-text">${pct.toFixed(0)}%</span>
+        </div>
+      </td>
+      <td>
+        <button class="btn-del" data-catid="${item.category_id}" title="Eliminar">&#x2715;</button>
+      </td>
+    </tr>`;
+  }
+
+  /* ════════════════════════════════════════════
+     TABLE EVENTS (inline edit + delete)
+  ════════════════════════════════════════════ */
+  function attachTableEvents() {
+    const tbody = document.getElementById('plan-tbody');
+    if (!tbody) return;
+
+    /* Click on amount-display → switch to inline input */
+    tbody.addEventListener('click', e => {
+      const el = e.target.closest('.amount-display');
+      if (!el) return;
+      const catId = el.dataset.catid;
+      if (editingCells[catId]) return;  // already editing
+      startInlineEdit(catId, parseFloat(el.dataset.val));
     });
 
-    loadCategories();
-  </script>
+    /* Delete button */
+    tbody.addEventListener('click', e => {
+      const btn = e.target.closest('.btn-del');
+      if (!btn) return;
+      handleDeleteItem(btn.dataset.catid);
+    });
+  }
+
+  function startInlineEdit(catId, currentVal) {
+    const cell = document.getElementById(`cell-planned-${catId}`);
+    if (!cell) return;
+
+    const input = document.createElement('input');
+    input.type      = 'number';
+    input.step      = '0.01';
+    input.min       = '0';
+    input.className = 'inline-input';
+    input.value     = currentVal.toFixed(2);
+
+    editingCells[catId] = input;
+    cell.innerHTML = '';
+    cell.appendChild(input);
+    input.focus();
+    input.select();
+
+    const commit = () => commitInlineEdit(catId, parseFloat(input.value));
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+      if (e.key === 'Escape') { cancelInlineEdit(catId, currentVal); }
+    });
+  }
+
+  function cancelInlineEdit(catId, originalVal) {
+    const cell = document.getElementById(`cell-planned-${catId}`);
+    if (!cell) return;
+    delete editingCells[catId];
+    cell.innerHTML = `<span class="amount-display" title="Click para editar" data-catid="${catId}" data-val="${originalVal.toFixed(2)}">${originalVal.toFixed(2)}</span>`;
+    attachTableEvents();
+  }
+
+  async function commitInlineEdit(catId, newVal) {
+    if (editingCells[catId] === undefined) return;   // already committed
+    const input    = editingCells[catId];
+    const cell     = document.getElementById(`cell-planned-${catId}`);
+    delete editingCells[catId];
+
+    const val = isNaN(newVal) || newVal < 0 ? 0 : newVal;
+
+    /* Optimistic UI */
+    if (cell) {
+      cell.innerHTML = `<span class="amount-display" title="Click para editar" data-catid="${catId}" data-val="${val.toFixed(2)}">${val.toFixed(2)}</span>`;
+    }
+
+    try {
+      const res = await fetch(`/api/finance/budget/${planData.plan_id}/items`, {
+        method:  'POST',
+        headers: apiHeaders(),
+        body:    JSON.stringify({ category_id: catId, planned_usd: val }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.detail || 'Error al guardar', true);
+        return;
+      }
+      showToast('Monto actualizado');
+      /* Refresh plan silently */
+      await refreshPlanSilent();
+    } catch {
+      showToast('Error de conexion', true);
+    }
+  }
+
+  /* ════════════════════════════════════════════
+     DELETE ITEM
+  ════════════════════════════════════════════ */
+  async function handleDeleteItem(catId) {
+    if (!planData) return;
+    try {
+      const res = await fetch(`/api/finance/budget/${planData.plan_id}/items/${catId}`, {
+        method:  'DELETE',
+        headers: apiHeaders(),
+      });
+      if (!res.ok && res.status !== 204) {
+        showToast('Error al eliminar', true);
+        return;
+      }
+      showToast('Categoria eliminada');
+      await refreshPlanSilent();
+    } catch {
+      showToast('Error de conexion', true);
+    }
+  }
+
+  /* ════════════════════════════════════════════
+     REFRESH PLAN (silent — no loader)
+  ════════════════════════════════════════════ */
+  async function refreshPlanSilent() {
+    try {
+      const res = await fetch(`/api/finance/budget?year=${curYear}&month=${curMonth}`);
+      if (res.status === 401) { window.location.href = '/login/'; return; }
+      if (!res.ok) { planData = null; renderEmptyState(); return; }
+      planData = await res.json();
+      renderPlan();
+    } catch { /* keep stale UI */ }
+  }
+
+  /* ════════════════════════════════════════════
+     CREATE PLAN
+  ════════════════════════════════════════════ */
+  async function handleCreatePlan() {
+    const errEl   = document.getElementById('create-error');
+    const budget  = parseFloat(document.getElementById('new-budget').value);
+    const income  = parseFloat(document.getElementById('new-income').value) || null;
+    const btn     = document.getElementById('btn-create-plan');
+
+    errEl.style.display = 'none';
+    if (isNaN(budget) || budget <= 0) {
+      errEl.textContent   = 'Ingresa un presupuesto valido.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled    = true;
+    btn.textContent = 'Creando...';
+
+    try {
+      const payload = { year: curYear, month: curMonth, budget_usd: budget };
+      if (income && income > 0) payload.income_usd = income;
+
+      const res = await fetch('/api/finance/budget', {
+        method:  'POST',
+        headers: apiHeaders(),
+        body:    JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        errEl.textContent   = formatApiError(data);
+        errEl.style.display = 'block';
+        btn.disabled        = false;
+        btn.textContent     = 'Crear plan';
+        return;
+      }
+      planData = data;
+      showToast('Plan creado correctamente');
+      renderPlan();
+    } catch {
+      errEl.textContent   = 'Error de conexion.';
+      errEl.style.display = 'block';
+      btn.disabled        = false;
+      btn.textContent     = 'Crear plan';
+    }
+  }
+
+  /* ════════════════════════════════════════════
+     COPY FROM PREVIOUS MONTH
+  ════════════════════════════════════════════ */
+  async function handleCopyPrev() {
+    /* If no plan yet, we need to create one first or the endpoint handles it.
+       The endpoint is POST /api/finance/budget/{planId}/copy-from-previous.
+       If there's no current plan, we need a plan_id — so create a placeholder first. */
+    let pid = planData ? planData.plan_id : null;
+
+    if (!pid) {
+      /* Quick-create a minimal plan so we have an ID to copy into */
+      const budget = parseFloat(document.getElementById('new-budget')?.value) || 0;
+      if (budget <= 0) {
+        showToast('Ingresa el presupuesto antes de copiar', true);
+        return;
+      }
+      try {
+        const res = await fetch('/api/finance/budget', {
+          method:  'POST',
+          headers: apiHeaders(),
+          body:    JSON.stringify({ year: curYear, month: curMonth, budget_usd: budget }),
+        });
+        if (!res.ok) { showToast('Error creando plan base', true); return; }
+        const data = await res.json();
+        pid = data.plan_id;
+        planData = data;
+      } catch {
+        showToast('Error de conexion', true);
+        return;
+      }
+    }
+
+    try {
+      const res = await fetch(`/api/finance/budget/${pid}/copy-from-previous`, {
+        method:  'POST',
+        headers: apiHeaders(),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.detail || 'No hay plan anterior para copiar', true);
+        return;
+      }
+      showToast('Plan copiado del mes anterior');
+      await refreshPlanSilent();
+    } catch {
+      showToast('Error de conexion', true);
+    }
+  }
+
+  /* ════════════════════════════════════════════
+     ADD CATEGORY MODAL
+  ════════════════════════════════════════════ */
+  function openAddModal() {
+    const sel = document.getElementById('modal-cat-select');
+    sel.innerHTML = '<option value="">Selecciona una categoria...</option>';
+
+    /* Filter out categories already in plan */
+    const usedIds = new Set((planData?.items || []).map(i => i.category_id));
+    const available = allCategories.filter(c => !usedIds.has(c.category_id));
+
+    if (!available.length) {
+      sel.innerHTML = '<option value="">Todas las categorias ya estan incluidas</option>';
+    } else {
+      available.forEach(c => {
+        const o = document.createElement('option');
+        o.value       = c.category_id;
+        o.textContent = c.name + (c.is_fixed_expense ? ' (fijo)' : '');
+        if (c.default_amount_usd > 0) o.dataset.defaultAmt = c.default_amount_usd;
+        sel.appendChild(o);
+      });
+    }
+
+    /* Pre-fill amount when category changes */
+    sel.onchange = () => {
+      const opt = sel.selectedOptions[0];
+      const def = opt?.dataset?.defaultAmt;
+      document.getElementById('modal-planned-amt').value = def ? parseFloat(def).toFixed(2) : '';
+    };
+
+    document.getElementById('modal-planned-amt').value = '';
+    document.getElementById('modal-add-error').style.display = 'none';
+    document.getElementById('modal-add').classList.add('open');
+  }
+
+  function closeAddModal() {
+    document.getElementById('modal-add').classList.remove('open');
+  }
+
+  document.getElementById('modal-add-cancel').addEventListener('click', closeAddModal);
+  document.getElementById('modal-add').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal-add')) closeAddModal();
+  });
+
+  document.getElementById('modal-add-confirm').addEventListener('click', async () => {
+    const errEl  = document.getElementById('modal-add-error');
+    const catId  = document.getElementById('modal-cat-select').value;
+    const amt    = parseFloat(document.getElementById('modal-planned-amt').value);
+    const btn    = document.getElementById('modal-add-confirm');
+
+    errEl.style.display = 'none';
+    if (!catId)       { errEl.textContent = 'Selecciona una categoria.'; errEl.style.display = 'block'; return; }
+    if (isNaN(amt) || amt < 0) { errEl.textContent = 'Ingresa un monto valido.'; errEl.style.display = 'block'; return; }
+
+    btn.disabled    = true;
+    btn.textContent = 'Guardando...';
+
+    try {
+      const res = await fetch(`/api/finance/budget/${planData.plan_id}/items`, {
+        method:  'POST',
+        headers: apiHeaders(),
+        body:    JSON.stringify({ category_id: catId, planned_usd: amt }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        errEl.textContent   = formatApiError(data);
+        errEl.style.display = 'block';
+        btn.disabled        = false;
+        btn.textContent     = 'Agregar';
+        return;
+      }
+      closeAddModal();
+      showToast('Categoria agregada');
+      await refreshPlanSilent();
+    } catch {
+      errEl.textContent   = 'Error de conexion.';
+      errEl.style.display = 'block';
+      btn.disabled        = false;
+      btn.textContent     = 'Agregar';
+    }
+  });
+
+  /* ════════════════════════════════════════════
+     MONTH NAVIGATION
+  ════════════════════════════════════════════ */
+  document.getElementById('btn-prev-month').addEventListener('click', () => {
+    curMonth--;
+    if (curMonth < 1) { curMonth = 12; curYear--; }
+    editingCells = {};
+    updateMonthLabel();
+    loadPlan();
+  });
+
+  document.getElementById('btn-next-month').addEventListener('click', () => {
+    curMonth++;
+    if (curMonth > 12) { curMonth = 1; curYear++; }
+    editingCells = {};
+    updateMonthLabel();
+    loadPlan();
+  });
+
+  /* ════════════════════════════════════════════
+     ERROR FORMATTER
+  ════════════════════════════════════════════ */
+  function formatApiError(data) {
+    if (!data) return 'Error desconocido.';
+    const detail = data.detail || data;
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+      return detail.map(e => {
+        const field = e.loc ? e.loc[e.loc.length - 1] : (e.field || 'campo');
+        return `${field}: ${e.msg || e.message || 'error de validacion'}`;
+      }).join(' | ');
+    }
+    return 'Error al procesar la solicitud.';
+  }
+
+  /* ════════════════════════════════════════════
+     INIT
+  ════════════════════════════════════════════ */
+  async function init() {
+    updateMonthLabel();
+    await loadCategories();
+    await loadPlan();
+  }
+
+  init();
+</script>
 {% endblock %}
