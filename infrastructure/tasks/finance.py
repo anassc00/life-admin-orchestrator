@@ -3,6 +3,7 @@ from celery import shared_task
 from infrastructure.di import (
     get_categorize_expense_use_case,
     get_create_invoice_use_case,
+    get_execute_recurring_transactions_use_case,
 )
 
 
@@ -17,3 +18,13 @@ def process_finance_document_task(self, raw_document: str) -> dict:
     )
     result = agent.run(raw_document)
     return {"error": result.get("error")}
+
+
+@shared_task(name="tasks.finance.generate_recurring_transactions")
+def generate_recurring_transactions_task() -> dict:
+    """F10 — Daily task: generate transactions for all due recurring definitions."""
+    from datetime import date
+
+    uc = get_execute_recurring_transactions_use_case()
+    created = uc.execute(date.today())
+    return {"created": created}

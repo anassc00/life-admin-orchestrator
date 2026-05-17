@@ -6,7 +6,13 @@ intentionally stateless — they create fresh instances on each call.
 For performance-critical paths, introduce a request-scoped cache here.
 """
 
+from application.use_cases.finance.create_recurring_transaction import CreateRecurringTransactionUseCase
+from application.use_cases.finance.delete_recurring_transaction import DeleteRecurringTransactionUseCase
+from application.use_cases.finance.execute_recurring_transactions import ExecuteRecurringTransactionsUseCase
+from application.use_cases.finance.get_user_exchange_rate import GetUserExchangeRateUseCase
+from application.use_cases.finance.list_recurring_transactions import ListRecurringTransactionsUseCase
 from application.use_cases.finance.onboard_user import OnboardUserUseCase
+from application.use_cases.finance.set_user_exchange_rate import SetUserExchangeRateUseCase
 from application.use_cases.finance.categorize_expense import CategorizeExpenseUseCase
 from application.use_cases.finance.delete_savings_deposit import DeleteSavingsDepositUseCase
 from application.use_cases.finance.copy_budget_plan import CopyBudgetPlanUseCase
@@ -68,10 +74,12 @@ from infrastructure.repositories.finance import (
     DjangoExpenseCategoryRepository,
     DjangoExpenseRepository,
     DjangoInvoiceRepository,
+    DjangoRecurringTransactionRepository,
     DjangoSavingsDepositRepository,
     DjangoSavingsDistributionRepository,
     DjangoSavingsGoalRepository,
     DjangoTransactionRepository,
+    DjangoUserExchangeRateRepository,
 )
 from infrastructure.repositories.user import (
     DjangoPasswordHasher,
@@ -424,3 +432,44 @@ def get_annual_report_use_case() -> GetAnnualReportUseCase:
 
 def get_cashflow_calendar_use_case() -> GetCashflowCalendarUseCase:
     return GetCashflowCalendarUseCase(transaction_repo=DjangoTransactionRepository())
+
+
+# ─────────────────────────────────────────────
+# DH10 — User exchange rates
+# ─────────────────────────────────────────────
+
+
+def get_user_exchange_rate_use_case() -> GetUserExchangeRateUseCase:
+    return GetUserExchangeRateUseCase(rate_repo=DjangoUserExchangeRateRepository())
+
+
+def get_set_user_exchange_rate_use_case() -> SetUserExchangeRateUseCase:
+    return SetUserExchangeRateUseCase(rate_repo=DjangoUserExchangeRateRepository())
+
+
+# ─────────────────────────────────────────────
+# F10 — Recurring transactions
+# ─────────────────────────────────────────────
+
+
+def get_create_recurring_transaction_use_case() -> CreateRecurringTransactionUseCase:
+    return CreateRecurringTransactionUseCase(
+        rt_repo=DjangoRecurringTransactionRepository(),
+        account_repo=DjangoAccountRepository(),
+    )
+
+
+def get_list_recurring_transactions_use_case() -> ListRecurringTransactionsUseCase:
+    return ListRecurringTransactionsUseCase(rt_repo=DjangoRecurringTransactionRepository())
+
+
+def get_delete_recurring_transaction_use_case() -> DeleteRecurringTransactionUseCase:
+    return DeleteRecurringTransactionUseCase(rt_repo=DjangoRecurringTransactionRepository())
+
+
+def get_execute_recurring_transactions_use_case() -> ExecuteRecurringTransactionsUseCase:
+    return ExecuteRecurringTransactionsUseCase(
+        rt_repo=DjangoRecurringTransactionRepository(),
+        transaction_repo=DjangoTransactionRepository(),
+        account_repo=DjangoAccountRepository(),
+    )

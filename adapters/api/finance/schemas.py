@@ -4,7 +4,7 @@ from uuid import UUID
 
 from ninja import Schema
 
-from domain.entities.finance import AccountType, Currency, IncomeCategory, TransactionType
+from domain.entities.finance import AccountType, Currency, Frequency, IncomeCategory, TransactionType
 
 
 class RegisterAccountRequest(Schema):
@@ -571,3 +571,58 @@ class ExtendedMonthlyFinancialSummarySchema(Schema):
 class SavingsDepositDeletedResponseSchema(Schema):
     deposit_id: UUID
     deleted: bool = True
+
+
+# DH10 — Exchange rates
+
+
+class SetExchangeRateRequest(Schema):
+    year: int
+    month: int
+    usd_ves: Decimal
+    usd_mxn: Decimal | None = None
+
+
+class ExchangeRateSchema(Schema):
+    id: UUID
+    year: int
+    month: int
+    usd_ves: Decimal
+    usd_mxn: Decimal | None = None
+
+
+# F10 — Recurring transactions
+
+
+class CreateRecurringTransactionRequest(Schema):
+    account_id: UUID
+    type: TransactionType
+    amount: Decimal
+    currency: Currency
+    description: str
+    frequency: Frequency
+    day: int
+    category_id: UUID | None = None
+
+
+class RecurringTransactionSchema(Schema):
+    id: UUID
+    account_id: UUID
+    type: TransactionType
+    amount: Decimal
+    currency: Currency
+    description: str
+    frequency: Frequency
+    day: int
+    category_id: UUID | None = None
+    is_active: bool
+    last_generated: datetime.date | None = None
+
+
+class RecurringTransactionDeletedSchema(Schema):
+    id: UUID
+    deleted: bool = True
+
+
+class ExecuteRecurringResponse(Schema):
+    created: int

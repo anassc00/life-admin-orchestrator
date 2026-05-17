@@ -8,13 +8,16 @@ from domain.entities.finance import (
     BudgetPlan,
     Expense,
     ExpenseCategory,
+    Frequency,
     Invoice,
     PlannedItem,
+    RecurringTransaction,
     SavingsDeposit,
     SavingsDistributionPlan,
     SavingsGoal,
     Transaction,
     TransactionType,
+    UserExchangeRate,
 )
 
 
@@ -259,3 +262,41 @@ class ExpenseCategoryRepository(ABC):
 
     @abstractmethod
     def list_by_user(self, user_id: UUID) -> list[ExpenseCategory]: ...
+
+
+# DH10 — User exchange rates
+
+
+class UserExchangeRateRepository(ABC):
+    @abstractmethod
+    def get_by_user_and_period(
+        self, user_id: UUID, year: int, month: int
+    ) -> UserExchangeRate | None: ...
+
+    @abstractmethod
+    def save(self, rate: UserExchangeRate) -> None: ...
+
+    @abstractmethod
+    def list_by_user(self, user_id: UUID) -> list[UserExchangeRate]: ...
+
+
+# F10 — Recurring transactions
+
+
+class RecurringTransactionRepository(ABC):
+    @abstractmethod
+    def get_by_id(self, rt_id: UUID) -> RecurringTransaction | None: ...
+
+    @abstractmethod
+    def save(self, rt: RecurringTransaction) -> None: ...
+
+    @abstractmethod
+    def list_by_user(self, user_id: UUID) -> list[RecurringTransaction]: ...
+
+    @abstractmethod
+    def delete(self, rt_id: UUID) -> None: ...
+
+    @abstractmethod
+    def list_active_due(self, as_of_date: date) -> list[RecurringTransaction]:
+        """Return active recurring transactions whose next trigger is on or before as_of_date."""
+        ...

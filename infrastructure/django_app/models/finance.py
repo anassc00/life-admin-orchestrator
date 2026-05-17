@@ -10,6 +10,8 @@ class AccountModel(models.Model):
     type = models.CharField(max_length=20)
     supported_currencies = models.JSONField(default=list)
     default_currencies = models.JSONField(default=list)
+    # A1 — Materialised balance cache (currency → amount string) updated on every write
+    balance_cache = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -247,3 +249,53 @@ class SavingsDistributionItemModel(models.Model):
 
     def __str__(self) -> str:
         return f"SavingsDistributionItem(${self.planned_usd})"
+
+
+# DH10 — User-configured exchange rates per month
+
+
+class UserExchangeRateModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user_id = models.UUIDField(db_index=True)
+    year = models.IntegerField()
+    month = models.IntegerField()
+    usd_ves = models.DecimalField(max_digits=14, decimal_places=4)  # VES per 1 USD
+    usd_mxn = models.DecimalField(max_digits=14, decimal_places=4, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "user_exchange_rates"
+        unique_together = [("user_id", "year", "month")]
+
+    def __str__(self) -> str:
+        return f"UserExchangeRate({self.year}-{self.month:02d}, VES={self.usd_ves})"
+
+
+# F10 — Recurring transactions
+
+
+class RecurringTransactionModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user_id = models.UUIDField(db_index=True)
+    account = models.ForeignKey(
+        AccountModel,
+        on_delete=models.CASCADE,
+        related_name="recurring_transactions",
+    )
+    type = models.CharField(max_length=20)  # income or expense
+    amount = models.DecimalField(max_digits=18, decimal_places=6)
+    currency = models.CharField(max_length=10)
+    description = models.CharField(max_length=500)
+    category_id = models.UUIDField(null=True, blank=True)
+    frequency = models.CharField(max_length=20, default="monthly")  # monthly or weekly
+    day = models.IntegerField(default=1)  # day_of_month (1-28) or day_of_week (0-6)
+    is_active = models.BooleanField(default=True)
+    last_generated = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "recurring_transactions"
+
+    def __str__(self) -> str:
+        return f"RecurringTransaction({self.type}, {self.amount} {self.currency}, {self.frequency})"

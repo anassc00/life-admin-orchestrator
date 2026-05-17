@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import date
 from decimal import Decimal
 from enum import StrEnum
@@ -183,3 +185,41 @@ class SavingsDistributionPlan(BaseModel):
     month: int
     total_planned_usd: Decimal
     items: list[SavingsDistributionItem] = []
+
+
+# DH10 — User-configured exchange rates for a given month
+class UserExchangeRate(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: UUID = Field(default_factory=uuid4)
+    user_id: UUID
+    year: int
+    month: int
+    usd_ves: Decimal  # VES per 1 USD
+    usd_mxn: Decimal | None = None  # MXN per 1 USD
+
+
+# F10 — Recurring / scheduled transactions
+
+
+class Frequency(StrEnum):
+    MONTHLY = "monthly"
+    WEEKLY = "weekly"
+
+
+class RecurringTransaction(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    id: UUID = Field(default_factory=uuid4)
+    user_id: UUID
+    account_id: UUID
+    type: TransactionType  # INCOME or EXPENSE only
+    amount: Decimal
+    currency: Currency
+    description: str
+    category_id: UUID | None = None  # for EXPENSE
+    frequency: Frequency = Frequency.MONTHLY
+    # For MONTHLY: day 1-28.  For WEEKLY: 0=Mon … 6=Sun
+    day: int = 1
+    is_active: bool = True
+    last_generated: "date | None" = None

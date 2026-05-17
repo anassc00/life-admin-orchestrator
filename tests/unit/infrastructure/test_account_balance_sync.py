@@ -1,95 +1,93 @@
-"""Tests for account balance signal triggering and refresh endpoint."""
+"""Tests for A1 balance cache — refresh endpoint and cache-backed list_by_user."""
 
+import uuid
 from datetime import date
 from decimal import Decimal
 
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 
-from domain.entities.finance import AccountType, Currency, TransactionType
-from infrastructure.django_app.models.finance import AccountModel, TransactionModel
-from infrastructure.django_app.models.user import UserModel
+from domain.entities.finance import Account, AccountType, Currency, Transaction, TransactionType
 
 
-class TestBalanceSignalTrigger(TestCase):
-    """Test that balances are recalculated when transactions are created/edited/deleted."""
+class TestBalanceCacheViaRepo(TestCase):
+    """Balance cache is kept in sync by DjangoTransactionRepository.save/delete."""
 
     def setUp(self):
+        from infrastructure.django_app.models.user import UserModel
+        from infrastructure.repositories.finance import DjangoAccountRepository
+
         self.user = UserModel.objects.create(
             first_name="Test",
             last_name="User",
             email="test@example.com",
             hashed_password="hashed",
         )
-        self.account = AccountModel.objects.create(
+        account = Account(
+            id=uuid.uuid4(),
             user_id=self.user.id,
             name="Test Account",
-            type=AccountType.WALLET.value,
-            supported_currencies=[Currency.USD.value],
-            default_currencies=[Currency.USD.value],
+            type=AccountType.WALLET,
+            supported_currencies=[Currency.USD],
+            default_currencies=[Currency.USD],
         )
+        DjangoAccountRepository().save(account)
+        self.account_id = account.id
+
+    def _save_tx(self, tx_type, amount, currency=Currency.USD):
+        from infrastructure.repositories.finance import DjangoTransactionRepository
+
+        tx = Transaction(
+            id=uuid.uuid4(),
+            user_id=self.user.id,
+            account_id=self.account_id,
+            type=tx_type,
+            amount=amount,
+            currency=currency,
+            exchange_rate=Decimal("1.0"),
+            date=date.today(),
+        )
+        DjangoTransactionRepository().save(tx)
+        return tx
 
     def test_balance_updates_on_transaction_create(self):
-        """Creating a transaction should update the account balance."""
-        # Verify initial balance is 0
         from infrastructure.repositories.finance import DjangoAccountRepository
 
         repo = DjangoAccountRepository()
-        accounts = repo.list_by_user(self.user.id)
-        assert accounts[0].current_balance["USD"] == "0.00"
+        assert repo.list_by_user(self.user.id)[0].current_balance["USD"] == "0.00"
 
-        # Create a transaction
-        TransactionModel.objects.create(
-            user_id=self.user.id,
-            account=self.account,
-            type=TransactionType.INCOME.value,
-            amount=Decimal("100.00"),
-            currency=Currency.USD.value,
-            exchange_rate=Decimal("1.0"),
-            date=date.today(),
-        )
+        self._save_tx(TransactionType.INCOME, Decimal("100.00"))
 
-        # Balance should be updated automatically
-        accounts = repo.list_by_user(self.user.id)
-        assert accounts[0].current_balance["USD"] == "100.00"
+        assert repo.list_by_user(self.user.id)[0].current_balance["USD"] == "100.00"
 
     def test_balance_updates_on_transaction_delete(self):
-        """Deleting a transaction should update the account balance."""
-        # Create a transaction
-        tx = TransactionModel.objects.create(
-            user_id=self.user.id,
-            account=self.account,
-            type=TransactionType.INCOME.value,
-            amount=Decimal("100.00"),
-            currency=Currency.USD.value,
-            exchange_rate=Decimal("1.0"),
-            date=date.today(),
-        )
+        from infrastructure.repositories.finance import DjangoAccountRepository, DjangoTransactionRepository
 
-        # Verify balance is 100
-        from infrastructure.repositories.finance import DjangoAccountRepository
-
+        tx = self._save_tx(TransactionType.INCOME, Decimal("100.00"))
         repo = DjangoAccountRepository()
-        accounts = repo.list_by_user(self.user.id)
-        assert accounts[0].current_balance["USD"] == "100.00"
+        assert repo.list_by_user(self.user.id)[0].current_balance["USD"] == "100.00"
 
-        # Delete the transaction
-        tx.delete()
-
-        # Balance should be back to 0
-        accounts = repo.list_by_user(self.user.id)
-        assert accounts[0].current_balance["USD"] == "0.00"
+        DjangoTransactionRepository().delete(tx.id)
+        assert repo.list_by_user(self.user.id)[0].current_balance["USD"] == "0.00"
 
 
-class TestRefreshBalancesEndpoint(TestCase):
-    """Test the POST /api/finance/accounts/refresh-balances endpoint."""
+class TestRefreshBalancesEndpoint(TransactionTestCase):
+    """POST /api/finance/accounts/refresh-balances recalculates stale caches.
+
+    Uses TransactionTestCase (not TestCase) so setUp data is committed and
+    visible to the HTTP request handler's database connection.
+    """
 
     def setUp(self):
+        from infrastructure.django_app.models.finance import AccountModel, TransactionModel
+        from infrastructure.django_app.models.user import UserModel
+
         self.user = UserModel.objects.create(
             first_name="Test",
             last_name="User",
             email="test2@example.com",
             hashed_password="hashed",
         )
+        # Create account and transactions directly via ORM to simulate a stale cache
         self.account = AccountModel.objects.create(
             user_id=self.user.id,
             name="Test Account",
@@ -97,7 +95,6 @@ class TestRefreshBalancesEndpoint(TestCase):
             supported_currencies=[Currency.USD.value, Currency.VES.value],
             default_currencies=[Currency.USD.value],
         )
-        # Create some transactions
         TransactionModel.objects.create(
             user_id=self.user.id,
             account=self.account,
@@ -118,11 +115,9 @@ class TestRefreshBalancesEndpoint(TestCase):
         )
 
     def test_refresh_balances_endpoint_returns_updated_balances(self):
-        """POST /refresh-balances should recalculate and return account balances."""
         from django.test import Client
 
         client = Client()
-        # Simulate logged-in session
         session = client.session
         session["user_id"] = str(self.user.id)
         session.save()
@@ -134,8 +129,9 @@ class TestRefreshBalancesEndpoint(TestCase):
         assert data[0]["current_balance"]["USD"] == "400.00"
 
     def test_refresh_balances_recalculates_all_user_accounts(self):
-        """Refresh should update all accounts for the user."""
-        # Create another account
+        from django.test import Client
+        from infrastructure.django_app.models.finance import AccountModel, TransactionModel
+
         account2 = AccountModel.objects.create(
             user_id=self.user.id,
             name="Second Account",
@@ -153,8 +149,6 @@ class TestRefreshBalancesEndpoint(TestCase):
             date=date.today(),
         )
 
-        from django.test import Client
-
         client = Client()
         session = client.session
         session["user_id"] = str(self.user.id)
@@ -164,7 +158,6 @@ class TestRefreshBalancesEndpoint(TestCase):
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 2
-        # Find accounts by name
         acc1 = next(a for a in data if a["name"] == "Test Account")
         acc2 = next(a for a in data if a["name"] == "Second Account")
         assert acc1["current_balance"]["USD"] == "400.00"

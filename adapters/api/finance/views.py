@@ -47,6 +47,11 @@ from adapters.api.finance.schemas import (
     ReverseTransactionRequest,
     SavingsDashboardSchema,
     SavingsDepositContributionSchema,
+    CreateRecurringTransactionRequest,
+    ExecuteRecurringResponse,
+    ExchangeRateSchema,
+    RecurringTransactionDeletedSchema,
+    RecurringTransactionSchema,
     SavingsDepositDeletedResponseSchema,
     SavingsDepositResponseSchema,
     SavingsDistributionResponseSchema,
@@ -54,6 +59,7 @@ from adapters.api.finance.schemas import (
     SavingsGoalSummaryResponseSchema,
     SavingsProjectionSchema,
     SavingsRateResponseSchema,
+    SetExchangeRateRequest,
     SetPlannedItemRequest,
     SuggestSavingsDistributionResponseSchema,
     TransactionDeletedResponseSchema,
@@ -116,6 +122,8 @@ from domain.exceptions.finance import (
     InvoiceNotFoundError,
     NoPreviousBudgetPlanError,
     PlannedItemNotFoundError,
+    RecurringTransactionAccessForbiddenError,
+    RecurringTransactionNotFoundError,
     SavingsDepositAccessForbiddenError,
     SavingsDepositCurrencyError,
     SavingsDepositNotFoundError,
@@ -167,8 +175,14 @@ from infrastructure.di import (
     get_set_planned_item_use_case,
     get_suggest_savings_distribution_use_case,
     get_transactions_by_user_use_case,
+    get_create_recurring_transaction_use_case,
+    get_delete_recurring_transaction_use_case,
+    get_execute_recurring_transactions_use_case,
+    get_list_recurring_transactions_use_case,
+    get_set_user_exchange_rate_use_case,
     get_upcoming_invoices_use_case,
     get_update_account_use_case,
+    get_user_exchange_rate_use_case,
 )
 
 router = Router(tags=["Finance"])
@@ -376,23 +390,54 @@ def list_accounts(request):
     return [r.model_dump() for r in results]
 
 
+# A1 — must be registered BEFORE /accounts/{account_id} to avoid 405
 @router.post(
     "/accounts/refresh-balances",
     response={
         HTTPStatus.OK: list[AccountSummarySchema],
+        HTTPStatus.UNAUTHORIZED: ErrorResponse,
     },
-    summary="Recalculate and return all account balances",
+    summary="Recalculate and persist balance cache for all user accounts",
 )
 def refresh_account_balances(request):
-    """Force recalculation of all account balances for the current user."""
+    """Force-recalculates the balance cache for every account owned by the current user.
+    Useful when the cache is suspected to be stale. Returns updated account list.
+    """
+    from decimal import Decimal
+    from uuid import UUID
+
+    from django.db.models import Sum
+
+    from infrastructure.django_app.models.finance import AccountModel, TransactionModel
+
     user_id_str = request.session.get("user_id")
     if not user_id_str:
         return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
-    from uuid import UUID
+    user_id = UUID(user_id_str)
 
-    uc = get_accounts_by_user_use_case()
-    results = uc.execute(GetAccountsByUserQuery(user_id=UUID(user_id_str)))
-    return [r.model_dump() for r in results]
+    INCOME_TYPES = ["income", "exchange_in"]
+    EXPENSE_TYPES = ["expense", "exchange_out"]
+
+    result = []
+    for record in AccountModel.objects.filter(user_id=user_id):
+        bal: dict[str, str] = {}
+        for currency in record.supported_currencies:
+            txs = TransactionModel.objects.filter(account_id=record.id, currency=currency)
+            income = txs.filter(type__in=INCOME_TYPES).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+            expense = txs.filter(type__in=EXPENSE_TYPES).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+            bal[currency] = str((income - expense).quantize(Decimal("0.01")))
+        AccountModel.objects.filter(pk=record.id).update(balance_cache=bal)
+        result.append(
+            {
+                "account_id": record.id,
+                "name": record.name,
+                "type": record.type,
+                "supported_currencies": record.supported_currencies,
+                "default_currencies": record.default_currencies,
+                "current_balance": bal,
+            }
+        )
+    return HTTPStatus.OK, result
 
 
 @router.patch(
@@ -520,6 +565,9 @@ def register_account(request, payload: RegisterAccountRequest):
         return HTTPStatus.CREATED, result.model_dump()
     except AccountAlreadyExistsError as exc:
         return HTTPStatus.CONFLICT, ErrorResponse(detail=str(exc))
+
+
+# A1 — Balance cache refresh (recovery / admin endpoint)
 
 
 # --- Income ---
@@ -1544,3 +1592,164 @@ def get_cashflow_calendar(request, year: int = None, month: int = None):
     uc = get_cashflow_calendar_use_case()
     result = uc.execute(UUID(user_id_str), year=year, month=month)
     return HTTPStatus.OK, result.model_dump()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DH10 — User exchange rates
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.get(
+    "/exchange-rates",
+    response={HTTPStatus.OK: list[ExchangeRateSchema], HTTPStatus.UNAUTHORIZED: ErrorResponse},
+    summary="List user-configured exchange rates (all months)",
+)
+def list_exchange_rates(request):
+    from uuid import UUID
+
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
+    uc = get_user_exchange_rate_use_case()
+    rates = uc.list(UUID(user_id_str))
+    return HTTPStatus.OK, [r.model_dump() for r in rates]
+
+
+@router.put(
+    "/exchange-rates",
+    response={
+        HTTPStatus.OK: ExchangeRateSchema,
+        HTTPStatus.UNAUTHORIZED: ErrorResponse,
+    },
+    summary="Set (upsert) exchange rate for a given year/month",
+)
+def set_exchange_rate(request, payload: SetExchangeRateRequest):
+    from uuid import UUID
+
+    from application.use_cases.finance.set_user_exchange_rate import SetUserExchangeRateCommand
+
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
+    uc = get_set_user_exchange_rate_use_case()
+    result = uc.execute(
+        SetUserExchangeRateCommand(
+            user_id=UUID(user_id_str),
+            year=payload.year,
+            month=payload.month,
+            usd_ves=payload.usd_ves,
+            usd_mxn=payload.usd_mxn,
+        )
+    )
+    return HTTPStatus.OK, result.model_dump()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# F10 — Recurring transactions
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@router.get(
+    "/recurring",
+    response={
+        HTTPStatus.OK: list[RecurringTransactionSchema],
+        HTTPStatus.UNAUTHORIZED: ErrorResponse,
+    },
+    summary="List recurring transaction definitions",
+)
+def list_recurring_transactions(request):
+    from uuid import UUID
+
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
+    uc = get_list_recurring_transactions_use_case()
+    rts = uc.execute(UUID(user_id_str))
+    return HTTPStatus.OK, [r.model_dump() for r in rts]
+
+
+@router.post(
+    "/recurring",
+    response={
+        HTTPStatus.CREATED: RecurringTransactionSchema,
+        HTTPStatus.UNAUTHORIZED: ErrorResponse,
+        HTTPStatus.NOT_FOUND: ErrorResponse,
+    },
+    summary="Create a recurring transaction definition",
+)
+def create_recurring_transaction(request, payload: CreateRecurringTransactionRequest):
+    from uuid import UUID
+
+    from application.use_cases.finance.create_recurring_transaction import (
+        CreateRecurringTransactionCommand,
+    )
+
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
+    uc = get_create_recurring_transaction_use_case()
+    try:
+        result = uc.execute(
+            CreateRecurringTransactionCommand(
+                user_id=UUID(user_id_str),
+                account_id=payload.account_id,
+                type=payload.type,
+                amount=payload.amount,
+                currency=payload.currency,
+                description=payload.description,
+                frequency=payload.frequency,
+                day=payload.day,
+                category_id=payload.category_id,
+            )
+        )
+    except AccountNotFoundError as exc:
+        return HTTPStatus.NOT_FOUND, ErrorResponse(detail=str(exc))
+    return HTTPStatus.CREATED, result.model_dump()
+
+
+@router.delete(
+    "/recurring/{rt_id}",
+    response={
+        HTTPStatus.OK: RecurringTransactionDeletedSchema,
+        HTTPStatus.UNAUTHORIZED: ErrorResponse,
+        HTTPStatus.NOT_FOUND: ErrorResponse,
+        HTTPStatus.FORBIDDEN: ErrorResponse,
+    },
+    summary="Delete a recurring transaction definition",
+)
+def delete_recurring_transaction(request, rt_id: UUID):
+    from application.use_cases.finance.delete_recurring_transaction import (
+        DeleteRecurringTransactionCommand,
+    )
+
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
+    uc = get_delete_recurring_transaction_use_case()
+    try:
+        uc.execute(DeleteRecurringTransactionCommand(user_id=UUID(user_id_str), rt_id=rt_id))
+    except RecurringTransactionNotFoundError as exc:
+        return HTTPStatus.NOT_FOUND, ErrorResponse(detail=str(exc))
+    except RecurringTransactionAccessForbiddenError as exc:
+        return HTTPStatus.FORBIDDEN, ErrorResponse(detail=str(exc))
+    return HTTPStatus.OK, RecurringTransactionDeletedSchema(id=rt_id)
+
+
+@router.post(
+    "/recurring/execute",
+    response={
+        HTTPStatus.OK: ExecuteRecurringResponse,
+        HTTPStatus.UNAUTHORIZED: ErrorResponse,
+    },
+    summary="Manually trigger generation of due recurring transactions",
+)
+def execute_recurring_transactions(request):
+    from datetime import date
+    from uuid import UUID
+
+    user_id_str = request.session.get("user_id")
+    if not user_id_str:
+        return HTTPStatus.UNAUTHORIZED, ErrorResponse(detail="Not authenticated.")
+    uc = get_execute_recurring_transactions_use_case()
+    created = uc.execute(date.today())
+    return HTTPStatus.OK, ExecuteRecurringResponse(created=created)

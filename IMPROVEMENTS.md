@@ -1,6 +1,6 @@
 # Mejoras — Life Admin Orchestrator
 
-Última actualización: 2026-05-17.
+Última actualización: 2026-05-15.
 
 ---
 
@@ -25,6 +25,7 @@
 - ✅ **V2** — Página de metas de ahorro mejorada (eliminar depósito, proyección por meta, campos deadline/priority/category)
 - ✅ **V3** — Nueva página `/finance/reports/` — reporte anual con tabla y gráfico Canvas
 - ✅ **V4** — Nueva página `/finance/cashflow/` — calendario de flujo de caja mensual
+- ✅ **V5** — Gráfico de balance histórico por cuenta en `/finance/accounts/` (Canvas, línea, modal)
 - ✅ **E1** — Filtros por cuenta y categoría en vista de transacciones
 - ✅ **E2** — Botón eliminar cuenta con modal de confirmación
 - ✅ **E3** — Nueva página `/finance/invoices/` — facturas pendientes/pagadas, crear y procesar pago
@@ -36,44 +37,24 @@
 - ✅ **D5** — Estados vacíos con CTA por widget en el dashboard
 - ✅ **D6** — Desglose por tipo (cash/banco/wallet) ya presente en net-worth
 
+### Backend técnico (sprint 10)
+- ✅ **DH10** — `UserExchangeRate`: entidad, modelo, migración, CRUD (`GET/PUT /api/finance/exchange-rates`)
+- ✅ **F10** — `RecurringTransaction`: entidad, modelo, migración, CRUD + Celery beat task (`GET/POST/DELETE /api/finance/recurring`, tarea `generate_recurring_transactions_task`)
+- ✅ **F11** — Onboarding de usuario nuevo: `OnboardUserUseCase` crea 2 cuentas, 6 categorías y 1 meta al registrarse
+- ✅ **A1** — Balance cache materializado en `AccountModel.balance_cache` (JSONField), actualizado en cada escritura de transacción; `POST /api/finance/accounts/refresh-balances` para recuperación manual
+- ✅ **A4** — N/A: `GetMonthlyFinancialSummaryUseCase` y `GenerateMonthlyReportUseCase` usan repositorios completamente distintos; no hay duplicación real que extraer
+
 ### Documentación
 - ✅ **DOC1** — README completamente reescrito con stack real, páginas y endpoints
+- ✅ **DOC2** — Guía detallada de la API (`docs/api.md`) con los ~46 endpoints
+- ✅ **DOC3** — 4 ADRs en `docs/adr/` (Clean Architecture, migraciones manuales, Ninja vs DRF, Pydantic v2 entities)
 
 ---
 
-## Leyenda de prioridad
+## Sin pendientes activos
 
-- 🔴 **CRÍTICO** — bug de seguridad o datos incorrectos
-- 🟠 **ALTO** — impacto directo en usabilidad
-- 🟡 **MEDIO** — mejora de coherencia o rendimiento
-- 🟢 **BAJO** — refinamiento técnico o conveniencia
-
----
-
-## Pendiente
-
-### Frontend
-
-| ID | Prioridad | Feature | Descripción |
-|----|-----------|---------|-------------|
-| V5 | 🟡 | **Historial de balance de cuenta** | Agregar gráfico de línea en `/finance/accounts/` mostrando la evolución del balance mes a mes por cuenta. Endpoint disponible: `GET /api/finance/accounts/{id}/balance-history`. |
-
-### Backend técnico
-
-| ID | Prioridad | Problema | Descripción |
-|----|-----------|----------|-------------|
-| DH10 | 🟡 | Rates de referencia multi-moneda | Endpoint de configuración de rates del usuario (USD/VES del mes) para conversiones más precisas en reportes. Actualmente usa el `exchange_rate` de la última transacción. |
-| A1 | 🟡 | Balance cache en AccountModel | `AccountModel` recalcula el balance sumando todas las transacciones en cada request. Con historial grande se vuelve lento. Agregar `balance_cache` materializado actualizado en cada escritura. Requiere migración cuidadosa. |
-| A4 | 🟡 | FinanceQueryService compartido | `GetMonthlyFinancialSummaryUseCase` y `GenerateMonthlyReportUseCase` calculan los mismos agregados de forma independiente. Extraer capa de consulta compartida para eliminar duplicación. |
-| F11 | 🟢 | Onboarding de usuario nuevo | Al registrarse, crear cuentas por defecto, categorías de gasto y una meta de ahorro para que el dashboard no esté vacío en el primer uso. |
-| F10 | 🟢 | Transacciones recurrentes | Definir transacciones periódicas (ej. renta mensual) y generarlas automáticamente vía Celery beat. Requiere nueva entidad `RecurringTransaction` y tarea programada. |
-
-### Documentación
-
-| ID | Prioridad | Tarea | Descripción |
-|----|-----------|-------|-------------|
-| DOC2 | 🟢 | Guía detallada de la API | Referencia completa de los ~50 endpoints: params, body, respuesta, casos de error. El Swagger en `/api/docs` cubre esto parcialmente. |
-| DOC3 | 🟢 | ADR de decisiones de arquitectura | Documentar decisiones clave: Clean Architecture, hand-written migrations, Ninja vs DRF, Pydantic v2 frozen entities. Archivo `docs/adr/`. |
+Todos los ítems del backlog han sido implementados o descartados con justificación.
+Para nuevas mejoras, abrir una sección "Pendiente" con el formato de tabla habitual.
 
 ---
 

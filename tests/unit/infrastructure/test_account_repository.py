@@ -1,19 +1,20 @@
-"""Tests for account repository balance calculation."""
+"""Tests for account repository balance calculation (A1 — cache-backed)."""
 
+import uuid
 from datetime import date
 from decimal import Decimal
 
 from django.test import TestCase
 
-from domain.entities.finance import AccountType, Currency, TransactionType
+from domain.entities.finance import Account, AccountType, Currency, Transaction, TransactionType
 
 
 class TestAccountBalanceCalculation(TestCase):
-    """Test that account balance is calculated correctly."""
+    """Test that account balance is calculated correctly via the balance cache."""
 
     def setUp(self):
-        # Create a test user and account
         from infrastructure.django_app.models.user import UserModel
+        from infrastructure.repositories.finance import DjangoAccountRepository
 
         self.user = UserModel.objects.create(
             first_name="Test",
@@ -22,31 +23,33 @@ class TestAccountBalanceCalculation(TestCase):
             hashed_password="hashed_password",
         )
 
-        from infrastructure.django_app.models.finance import AccountModel
-
-        self.account_model = AccountModel.objects.create(
+        account = Account(
+            id=uuid.uuid4(),
             user_id=self.user.id,
             name="Test Account",
-            type=AccountType.WALLET.value,
-            supported_currencies=[Currency.USD.value, Currency.VES.value],
-            default_currencies=[Currency.USD.value],
+            type=AccountType.WALLET,
+            supported_currencies=[Currency.USD, Currency.VES],
+            default_currencies=[Currency.USD],
         )
-        self.account_id = self.account_model.id
+        DjangoAccountRepository().save(account)
+        self.account_id = account.id
 
     def _create_transaction(self, tx_type, amount, currency, date_value=None, related_id=None):
-        """Helper to create a transaction in the database."""
-        from infrastructure.django_app.models.finance import TransactionModel
+        """Create a transaction through the repo so the balance cache is refreshed."""
+        from infrastructure.repositories.finance import DjangoTransactionRepository
 
-        TransactionModel.objects.create(
+        tx = Transaction(
+            id=uuid.uuid4(),
             user_id=self.user.id,
             account_id=self.account_id,
-            type=tx_type.value,
+            type=tx_type,
             amount=amount,
-            currency=currency.value,
+            currency=currency,
             exchange_rate=Decimal("1.0"),
             date=date_value or date.today(),
             related_transaction_id=related_id,
         )
+        DjangoTransactionRepository().save(tx)
 
     def test_balance_with_income_only(self):
         """Balance should equal income amount."""

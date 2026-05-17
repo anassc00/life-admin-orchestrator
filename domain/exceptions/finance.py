@@ -174,3 +174,14 @@ class SavingsDepositNotFoundError(Exception):
 class SavingsDepositAccessForbiddenError(Exception):
     def __init__(self) -> None:
         super().__init__("This savings deposit does not belong to you.")
+
+
+class RecurringTransactionNotFoundError(Exception):
+    def __init__(self, rt_id: UUID | None = None) -> None:
+        msg = f"Recurring transaction '{rt_id}' not found." if rt_id else "Recurring transaction not found."
+        super().__init__(msg)
+
+
+class RecurringTransactionAccessForbiddenError(Exception):
+    def __init__(self) -> None:
+        super().__init__("This recurring transaction does not belong to you.")

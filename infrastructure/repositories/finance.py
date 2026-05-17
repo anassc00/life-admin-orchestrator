@@ -12,9 +12,11 @@ from domain.entities.finance import (
     Currency,
     Expense,
     ExpenseCategory,
+    Frequency,
     IncomeCategory,
     Invoice,
     PlannedItem,
+    RecurringTransaction,
     SavingsDeposit,
     SavingsDistributionItem,
     SavingsDistributionPlan,
@@ -22,6 +24,7 @@ from domain.entities.finance import (
     SavingsGoalCategory,
     Transaction,
     TransactionType,
+    UserExchangeRate,
 )
 from domain.repositories.finance import (
     AccountRepository,
@@ -29,10 +32,12 @@ from domain.repositories.finance import (
     ExpenseCategoryRepository,
     ExpenseRepository,
     InvoiceRepository,
+    RecurringTransactionRepository,
     SavingsDepositRepository,
     SavingsDistributionRepository,
     SavingsGoalRepository,
     TransactionRepository,
+    UserExchangeRateRepository,
 )
 from infrastructure.django_app.models.finance import (
     AccountModel,
@@ -41,11 +46,13 @@ from infrastructure.django_app.models.finance import (
     ExpenseModel,
     InvoiceModel,
     PlannedItemModel,
+    RecurringTransactionModel,
     SavingsDepositModel,
     SavingsDistributionItemModel,
     SavingsDistributionPlanModel,
     SavingsGoalModel,
     TransactionModel,
+    UserExchangeRateModel,
 )
 
 
@@ -64,7 +71,7 @@ class DjangoAccountRepository(AccountRepository):
         AccountModel.objects.filter(pk=account_id).delete()
 
     def save(self, account: Account) -> None:
-        AccountModel.objects.update_or_create(
+        _, created = AccountModel.objects.update_or_create(
             pk=account.id,
             defaults={
                 "user_id": account.user_id,
@@ -74,35 +81,17 @@ class DjangoAccountRepository(AccountRepository):
                 "default_currencies": [c.value for c in account.default_currencies],
             },
         )
+        if created:
+            # A1 — initialise cache for new accounts so list_by_user never returns stale data
+            cache = {c.value: "0.00" for c in account.supported_currencies}
+            AccountModel.objects.filter(pk=account.id).update(balance_cache=cache)
 
     def list_by_user(self, user_id: UUID) -> list[Account]:
-        accounts = []
-        for record in AccountModel.objects.filter(user_id=user_id):
-            # Calculate current balance for each supported currency
-            balance = {}
-            supported_currencies = [Currency(c) for c in record.supported_currencies]
-
-            for currency in supported_currencies:
-                # Get all transactions for this account in this currency
-                txs = TransactionModel.objects.filter(
-                    account_id=record.id,
-                    currency=currency.value,
-                )
-
-                # Calculate balance: incomes + exchange_in - expenses - exchange_out (excluding savings)
-                income = txs.filter(
-                    type__in=[TransactionType.INCOME.value, TransactionType.EXCHANGE_IN.value]
-                ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-
-                expense = txs.filter(
-                    type__in=[TransactionType.EXPENSE.value, TransactionType.EXCHANGE_OUT.value]
-                ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-
-                balance[currency.value] = str((income - expense).quantize(Decimal("0.01")))
-
-            account = self._to_entity(record, balance)
-            accounts.append(account)
-        return accounts
+        # A1 — read from pre-computed balance_cache instead of aggregating on every request
+        return [
+            self._to_entity(record, record.balance_cache or {})
+            for record in AccountModel.objects.filter(user_id=user_id)
+        ]
 
     @staticmethod
     def _to_entity(record: AccountModel, balance: dict[str, str] = None) -> Account:
@@ -130,6 +119,7 @@ class DjangoTransactionRepository(TransactionRepository):
             pk=tx.id,
             defaults=self._to_record(tx),
         )
+        self._refresh_balance_cache(tx.account_id)
 
     def save_exchange_pair(self, tx_out: Transaction, tx_in: Transaction) -> None:
         with transaction.atomic():
@@ -137,13 +127,52 @@ class DjangoTransactionRepository(TransactionRepository):
                 pk=tx_out.id, defaults=self._to_record(tx_out)
             )
             TransactionModel.objects.update_or_create(pk=tx_in.id, defaults=self._to_record(tx_in))
+        self._refresh_balance_cache(tx_out.account_id)
+        self._refresh_balance_cache(tx_in.account_id)
 
     def delete(self, transaction_id: UUID) -> None:
+        record = TransactionModel.objects.filter(pk=transaction_id).first()
+        account_id = record.account_id if record else None
         TransactionModel.objects.filter(pk=transaction_id).delete()
+        if account_id:
+            self._refresh_balance_cache(account_id)
 
     def delete_pair(self, tx_id: UUID, related_id: UUID) -> None:
+        r1 = TransactionModel.objects.filter(pk=tx_id).first()
+        r2 = TransactionModel.objects.filter(pk=related_id).first()
+        acc1 = r1.account_id if r1 else None
+        acc2 = r2.account_id if r2 else None
         with transaction.atomic():
             TransactionModel.objects.filter(pk__in=[tx_id, related_id]).delete()
+        if acc1:
+            self._refresh_balance_cache(acc1)
+        if acc2 and acc2 != acc1:
+            self._refresh_balance_cache(acc2)
+
+    @staticmethod
+    def _refresh_balance_cache(account_id: UUID) -> None:
+        """Recalculate and persist the balance cache for one account."""
+        try:
+            account = AccountModel.objects.get(pk=account_id)
+        except AccountModel.DoesNotExist:
+            return
+        cache: dict[str, str] = {}
+        for currency in account.supported_currencies:
+            txs = TransactionModel.objects.filter(account_id=account_id, currency=currency)
+            income = (
+                txs.filter(
+                    type__in=[TransactionType.INCOME.value, TransactionType.EXCHANGE_IN.value]
+                ).aggregate(t=Sum("amount"))["t"]
+                or Decimal("0")
+            )
+            expense = (
+                txs.filter(
+                    type__in=[TransactionType.EXPENSE.value, TransactionType.EXCHANGE_OUT.value]
+                ).aggregate(t=Sum("amount"))["t"]
+                or Decimal("0")
+            )
+            cache[currency] = str((income - expense).quantize(Decimal("0.01")))
+        AccountModel.objects.filter(pk=account_id).update(balance_cache=cache)
 
     def list_by_user(
         self,
@@ -816,4 +845,149 @@ class DjangoSavingsDistributionRepository(SavingsDistributionRepository):
             month=record.month,
             total_planned_usd=record.total_planned_usd,
             items=items,
+        )
+
+
+# DH10 — User exchange rates
+
+
+class DjangoUserExchangeRateRepository(UserExchangeRateRepository):
+    def get_by_user_and_period(
+        self, user_id: UUID, year: int, month: int
+    ) -> UserExchangeRate | None:
+        try:
+            record = UserExchangeRateModel.objects.get(user_id=user_id, year=year, month=month)
+            return self._to_entity(record)
+        except UserExchangeRateModel.DoesNotExist:
+            return None
+
+    def save(self, rate: UserExchangeRate) -> None:
+        UserExchangeRateModel.objects.update_or_create(
+            pk=rate.id,
+            defaults={
+                "user_id": rate.user_id,
+                "year": rate.year,
+                "month": rate.month,
+                "usd_ves": rate.usd_ves,
+                "usd_mxn": rate.usd_mxn,
+            },
+        )
+
+    def list_by_user(self, user_id: UUID) -> list[UserExchangeRate]:
+        return [
+            self._to_entity(r)
+            for r in UserExchangeRateModel.objects.filter(user_id=user_id).order_by(
+                "-year", "-month"
+            )
+        ]
+
+    @staticmethod
+    def _to_entity(record: UserExchangeRateModel) -> UserExchangeRate:
+        return UserExchangeRate(
+            id=record.id,
+            user_id=record.user_id,
+            year=record.year,
+            month=record.month,
+            usd_ves=record.usd_ves,
+            usd_mxn=record.usd_mxn,
+        )
+
+
+# F10 — Recurring transactions
+
+
+class DjangoRecurringTransactionRepository(RecurringTransactionRepository):
+    def get_by_id(self, rt_id: UUID) -> RecurringTransaction | None:
+        try:
+            record = RecurringTransactionModel.objects.get(pk=rt_id)
+            return self._to_entity(record)
+        except RecurringTransactionModel.DoesNotExist:
+            return None
+
+    def save(self, rt: RecurringTransaction) -> None:
+        RecurringTransactionModel.objects.update_or_create(
+            pk=rt.id,
+            defaults={
+                "user_id": rt.user_id,
+                "account_id": rt.account_id,
+                "type": rt.type.value,
+                "amount": rt.amount,
+                "currency": rt.currency.value,
+                "description": rt.description,
+                "category_id": rt.category_id,
+                "frequency": rt.frequency.value,
+                "day": rt.day,
+                "is_active": rt.is_active,
+                "last_generated": rt.last_generated,
+            },
+        )
+
+    def list_by_user(self, user_id: UUID) -> list[RecurringTransaction]:
+        return [
+            self._to_entity(r)
+            for r in RecurringTransactionModel.objects.filter(user_id=user_id).order_by(
+                "description"
+            )
+        ]
+
+    def delete(self, rt_id: UUID) -> None:
+        RecurringTransactionModel.objects.filter(pk=rt_id).delete()
+
+    def list_active_due(self, as_of_date: "date") -> list[RecurringTransaction]:
+        """Return active recurring transactions whose next fire date is <= as_of_date."""
+        from datetime import date as date_type
+
+        records = RecurringTransactionModel.objects.filter(is_active=True)
+        due = []
+        for record in records:
+            next_fire = self._next_fire_date(record, as_of_date)
+            if next_fire <= as_of_date:
+                due.append(self._to_entity(record))
+        return due
+
+    @staticmethod
+    def _next_fire_date(record: RecurringTransactionModel, as_of_date: "date") -> "date":
+        """Calculate the next fire date for a recurring transaction."""
+        from datetime import date as date_type, timedelta
+        import calendar
+
+        if record.frequency == "monthly":
+            # Day of month; clamp to last day of month
+            last_gen = record.last_generated
+            if last_gen is None:
+                # Never generated → fire on the configured day of current month
+                year, month = as_of_date.year, as_of_date.month
+            else:
+                # Next month after last generation
+                year = last_gen.year + (1 if last_gen.month == 12 else 0)
+                month = 1 if last_gen.month == 12 else last_gen.month + 1
+            max_day = calendar.monthrange(year, month)[1]
+            day = min(record.day, max_day)
+            return date_type(year, month, day)
+        else:  # weekly
+            # day = 0 (Mon) … 6 (Sun)
+            last_gen = record.last_generated
+            if last_gen is None:
+                ref = as_of_date
+            else:
+                ref = last_gen + timedelta(days=1)
+            # Find next occurrence of the configured weekday on or after ref
+            days_ahead = (record.day - ref.weekday()) % 7
+            return ref + timedelta(days=days_ahead)
+
+    @staticmethod
+    def _to_entity(record: RecurringTransactionModel) -> RecurringTransaction:
+        return RecurringTransaction(
+            id=record.id,
+            user_id=record.user_id,
+            account_id=record.account_id,
+            type=TransactionType(record.type),
+            amount=record.amount,
+            currency=Currency(record.currency),
+            description=record.description,
+            category_id=record.category_id,
+            frequency=Frequency(record.frequency),
+            day=record.day,
+            is_active=record.is_active,
+            last_generated=record.last_generated,
         )
