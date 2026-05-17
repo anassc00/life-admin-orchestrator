@@ -72,3 +72,11 @@ def finance_cashflow_page(request: HttpRequest) -> HttpResponse:
 
 def finance_invoices_page(request: HttpRequest) -> HttpResponse:
     return _protected(request, "finance_invoices.html")
+
+
+def finance_recurring_page(request: HttpRequest) -> HttpResponse:
+    return _protected(request, "finance_recurring.html")
+
+
+def finance_exchange_rates_page(request: HttpRequest) -> HttpResponse:
+    return _protected(request, "finance_exchange_rates.html")

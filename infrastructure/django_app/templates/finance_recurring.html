@@ -1,0 +1,391 @@
+{% extends 'base.html' %}
+{% block title %}Transacciones Recurrentes — Life Admin{% endblock %}
+{% block extra_style %}
+    .main { flex: 1; display: flex; flex-direction: column; padding: 2.5rem 2rem; gap: 1.5rem; min-width: 0; }
+    .page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .page-title-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #7c6ff7; margin-bottom: 0.3rem; }
+    h1 { font-size: 1.4rem; font-weight: 700; color: #fff; }
+    .header-actions { display: flex; gap: 0.65rem; align-items: center; }
+
+    .btn-primary { background: #7c6ff7; border: none; color: #fff; font-size: 0.85rem; font-weight: 700; padding: 0.5rem 1.1rem; border-radius: 0.55rem; cursor: pointer; transition: background 0.2s; text-decoration: none; display: inline-block; }
+    .btn-primary:hover { background: #6a5fe5; }
+    .btn-secondary { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #9090b0; font-size: 0.83rem; font-weight: 600; padding: 0.45rem 0.9rem; border-radius: 0.55rem; cursor: pointer; transition: all 0.15s; }
+    .btn-secondary:hover { color: #e0e0f0; background: rgba(255,255,255,0.1); }
+
+    /* Table */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    thead th { text-align: left; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: #6060a0; padding: 0.5rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.07); white-space: nowrap; }
+    tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.12s; }
+    tbody tr:hover { background: rgba(255,255,255,0.03); }
+    tbody td { padding: 0.75rem; color: #c0c0e0; vertical-align: middle; }
+    td.name-col { color: #e0e0f0; font-weight: 600; }
+    td.amount-col { font-weight: 700; color: #c0b8ff; white-space: nowrap; }
+
+    .type-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 0.18rem 0.6rem; border-radius: 0.9rem; white-space: nowrap; }
+    .badge-income { background: rgba(52,211,153,0.12); color: #34d399; border: 1px solid rgba(52,211,153,0.25); }
+    .badge-expense { background: rgba(248,113,113,0.12); color: #f87171; border: 1px solid rgba(248,113,113,0.25); }
+    .badge-savings { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.25); }
+    .badge-inactive { background: rgba(100,100,140,0.12); color: #6060a0; border: 1px solid rgba(100,100,140,0.25); }
+
+    .freq-badge { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.55rem; border-radius: 0.9rem; background: rgba(124,111,247,0.12); color: #9890e0; border: 1px solid rgba(124,111,247,0.22); white-space: nowrap; }
+
+    .btn-delete { background: transparent; border: 1px solid rgba(248,113,113,0.25); color: #f87171; font-size: 0.75rem; font-weight: 600; padding: 0.28rem 0.7rem; border-radius: 0.45rem; cursor: pointer; transition: all 0.15s; }
+    .btn-delete:hover { background: rgba(248,113,113,0.12); }
+
+    .empty-state { padding: 3rem 1rem; text-align: center; color: #6060a0; font-size: 0.88rem; }
+
+    /* Modal */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .modal-backdrop.open { opacity: 1; pointer-events: auto; }
+    .modal { background: #1a1730; border: 1px solid rgba(255,255,255,0.1); border-radius: 1rem; padding: 1.75rem; width: 100%; max-width: 430px; transform: translateY(12px); transition: transform 0.2s; }
+    .modal-backdrop.open .modal { transform: translateY(0); }
+    .modal-title { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 1.25rem; }
+    .modal label { display: block; font-size: 0.78rem; font-weight: 600; color: #9090b0; margin-bottom: 0.35rem; }
+    .modal input, .modal select { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #e0e0f0; border-radius: 0.55rem; padding: 0.6rem 0.85rem; font-size: 0.92rem; outline: none; transition: border-color 0.2s; font-family: inherit; margin-bottom: 1rem; }
+    .modal input:focus, .modal select:focus { border-color: #7c6ff7; }
+    .modal select option { background: #1a1730; }
+    .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .modal-actions { display: flex; gap: 0.65rem; justify-content: flex-end; margin-top: 0.25rem; }
+    .btn-cancel { background: transparent; border: 1px solid rgba(255,255,255,0.12); color: #9090b0; font-size: 0.85rem; font-weight: 600; padding: 0.5rem 1rem; border-radius: 0.55rem; cursor: pointer; }
+    .btn-cancel:hover { color: #e0e0f0; }
+    .btn-modal-primary { background: #7c6ff7; border: none; color: #fff; font-size: 0.85rem; font-weight: 700; padding: 0.5rem 1.1rem; border-radius: 0.55rem; cursor: pointer; transition: background 0.2s; }
+    .btn-modal-primary:hover { background: #6a5fe5; }
+    .btn-modal-primary:disabled { background: rgba(124,111,247,0.4); cursor: not-allowed; }
+    .modal-error { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); color: #f87171; padding: 0.55rem 0.8rem; border-radius: 0.5rem; font-size: 0.8rem; margin-bottom: 1rem; display: none; }
+
+    /* Toast */
+    #toast { position: fixed; bottom: 1.5rem; right: 1.5rem; padding: 0.7rem 1.1rem; border-radius: 0.6rem; font-size: 0.83rem; font-weight: 600; opacity: 0; transform: translateY(8px); transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 999; background: rgba(52,211,153,0.15); border: 1px solid rgba(52,211,153,0.35); color: #34d399; }
+    #toast.error { background: rgba(248,113,113,0.15); border-color: rgba(248,113,113,0.35); color: #f87171; }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    .day-hint { font-size: 0.73rem; color: #6060a0; margin-top: -0.75rem; margin-bottom: 1rem; }
+{% endblock %}
+{% block content %}
+    <div class="page-header">
+      <div>
+        <div class="page-title-label">Finanzas</div>
+        <h1>Transacciones Recurrentes</h1>
+      </div>
+      <div class="header-actions">
+        <button class="btn-secondary" id="btn-execute">Generar ahora</button>
+        <button class="btn-primary" id="btn-open-create">+ Nueva recurrente</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Descripción</th>
+            <th>Tipo</th>
+            <th>Monto</th>
+            <th>Frecuencia</th>
+            <th>Día</th>
+            <th>Último gen.</th>
+            <th>Estado</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="rt-body">
+          <tr><td colspan="8" class="empty-state">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Create Modal -->
+    <div class="modal-backdrop" id="modal-create">
+      <div class="modal">
+        <div class="modal-title">Nueva transacción recurrente</div>
+        <div class="modal-error" id="create-error"></div>
+
+        <label for="c-description">Descripción</label>
+        <input id="c-description" type="text" placeholder="Ej: Sueldo, Arriendo..." maxlength="255" />
+
+        <div class="modal-row">
+          <div>
+            <label for="c-type">Tipo</label>
+            <select id="c-type">
+              <option value="income">Ingreso</option>
+              <option value="expense">Gasto</option>
+              <option value="savings">Ahorro</option>
+            </select>
+          </div>
+          <div>
+            <label for="c-account">Cuenta</label>
+            <select id="c-account">
+              <option value="">Selecciona...</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-row">
+          <div>
+            <label for="c-amount">Monto</label>
+            <input id="c-amount" type="number" step="0.01" min="0.01" placeholder="0.00" />
+          </div>
+          <div>
+            <label for="c-currency">Moneda</label>
+            <select id="c-currency">
+              <option value="USD">USD</option>
+              <option value="USDT">USDT</option>
+              <option value="VES">VES</option>
+              <option value="MXN">MXN</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-row">
+          <div>
+            <label for="c-frequency">Frecuencia</label>
+            <select id="c-frequency">
+              <option value="monthly">Mensual</option>
+              <option value="weekly">Semanal</option>
+            </select>
+          </div>
+          <div>
+            <label for="c-day" id="c-day-label">Día del mes (1–28)</label>
+            <input id="c-day" type="number" min="1" max="28" placeholder="15" />
+          </div>
+        </div>
+        <div class="day-hint" id="c-day-hint">Para frecuencia mensual: día del mes (1–28). Para semanal: 0=lunes, 1=martes … 6=domingo.</div>
+
+        <div class="modal-actions">
+          <button class="btn-cancel" id="btn-cancel-create">Cancelar</button>
+          <button class="btn-modal-primary" id="btn-save-create">Crear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Confirm Modal -->
+    <div class="modal-backdrop" id="modal-delete">
+      <div class="modal">
+        <div class="modal-title">Eliminar transacción recurrente</div>
+        <p style="color:#9090b0;font-size:0.88rem;margin-bottom:1.5rem;">¿Estás seguro? Esta acción no se puede deshacer. Las transacciones ya generadas no se eliminarán.</p>
+        <div class="modal-actions">
+          <button class="btn-cancel" id="btn-cancel-delete">Cancelar</button>
+          <button class="btn-modal-primary" id="btn-confirm-delete" style="background:#f87171">Eliminar</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast"></div>
+{% endblock %}
+{% block extra_script %}
+<script>
+    let allRecurring = [];
+    let allAccounts = [];
+    let deletingId = null;
+
+    const DAY_NAMES = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+
+    // ── Load ─────────────────────────────────────────────────────────
+    async function loadData() {
+      try {
+        const [rtRes, accRes] = await Promise.all([
+          fetch('/api/finance/recurring'),
+          fetch('/api/finance/accounts'),
+        ]);
+        if (rtRes.status === 401 || accRes.status === 401) { window.location.href = '/login/'; return; }
+        allRecurring = await rtRes.json();
+        allAccounts  = await accRes.json();
+        renderTable();
+        populateAccountSelect();
+      } catch {
+        document.getElementById('rt-body').innerHTML = '<tr><td colspan="8" class="empty-state">Error de conexión.</td></tr>';
+      }
+    }
+
+    function accountName(id) {
+      const acc = allAccounts.find(a => a.account_id === id);
+      return acc ? acc.name : id;
+    }
+
+    function typeBadge(type, isActive) {
+      if (!isActive) return `<span class="type-badge badge-inactive">Inactiva</span>`;
+      const map = { income: ['badge-income','Ingreso'], expense: ['badge-expense','Gasto'], savings: ['badge-savings','Ahorro'] };
+      const [cls, label] = map[type] || ['badge-inactive', type];
+      return `<span class="type-badge ${cls}">${label}</span>`;
+    }
+
+    function freqLabel(freq, day) {
+      if (freq === 'monthly') return `<span class="freq-badge">Mensual · día ${day}</span>`;
+      return `<span class="freq-badge">Semanal · ${DAY_NAMES[day] || day}</span>`;
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('rt-body');
+      if (!allRecurring.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Sin transacciones recurrentes. Crea una con el botón.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = allRecurring.map(rt => `
+        <tr>
+          <td class="name-col">${escHtml(rt.description)}<br><span style="font-size:0.72rem;color:#6060a0;font-weight:400">${escHtml(accountName(rt.account_id))}</span></td>
+          <td>${typeBadge(rt.type, rt.is_active)}</td>
+          <td class="amount-col">${parseFloat(rt.amount).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2})} ${rt.currency}</td>
+          <td>${freqLabel(rt.frequency, rt.day)}</td>
+          <td style="color:#9090b0">${rt.frequency === 'monthly' ? rt.day : (DAY_NAMES[rt.day] || rt.day)}</td>
+          <td style="color:#9090b0;font-size:0.8rem">${rt.last_generated || '—'}</td>
+          <td>${rt.is_active ? '<span style="color:#34d399;font-size:0.78rem;font-weight:600">Activa</span>' : '<span style="color:#6060a0;font-size:0.78rem">Inactiva</span>'}</td>
+          <td><button class="btn-delete" data-id="${rt.id}">Eliminar</button></td>
+        </tr>`).join('');
+
+      tbody.querySelectorAll('.btn-delete').forEach(btn => {
+        btn.addEventListener('click', () => openDeleteModal(btn.dataset.id));
+      });
+    }
+
+    function populateAccountSelect() {
+      const sel = document.getElementById('c-account');
+      sel.innerHTML = '<option value="">Selecciona una cuenta...</option>' +
+        allAccounts.map(a => `<option value="${a.account_id}">${escHtml(a.name)} (${a.type})</option>`).join('');
+    }
+
+    // ── Frequency hint ────────────────────────────────────────────────
+    document.getElementById('c-frequency').addEventListener('change', updateDayHint);
+
+    function updateDayHint() {
+      const freq = document.getElementById('c-frequency').value;
+      const hint = document.getElementById('c-day-hint');
+      const input = document.getElementById('c-day');
+      if (freq === 'monthly') {
+        hint.textContent = 'Día del mes en que se genera (1–28).';
+        input.min = 1; input.max = 28; input.placeholder = '15';
+      } else {
+        hint.textContent = '0 = lunes, 1 = martes, 2 = miércoles, 3 = jueves, 4 = viernes, 5 = sábado, 6 = domingo.';
+        input.min = 0; input.max = 6; input.placeholder = '0';
+      }
+    }
+
+    // ── Create modal ──────────────────────────────────────────────────
+    document.getElementById('btn-open-create').addEventListener('click', () => {
+      document.getElementById('create-error').style.display = 'none';
+      document.getElementById('c-description').value = '';
+      document.getElementById('c-type').value = 'expense';
+      document.getElementById('c-account').value = '';
+      document.getElementById('c-amount').value = '';
+      document.getElementById('c-currency').value = 'USD';
+      document.getElementById('c-frequency').value = 'monthly';
+      document.getElementById('c-day').value = '';
+      updateDayHint();
+      openModal('modal-create');
+    });
+
+    document.getElementById('btn-cancel-create').addEventListener('click', () => closeModal('modal-create'));
+    document.getElementById('modal-create').addEventListener('click', e => {
+      if (e.target === document.getElementById('modal-create')) closeModal('modal-create');
+    });
+
+    document.getElementById('btn-save-create').addEventListener('click', async () => {
+      const description = document.getElementById('c-description').value.trim();
+      const type        = document.getElementById('c-type').value;
+      const account_id  = document.getElementById('c-account').value;
+      const amount      = parseFloat(document.getElementById('c-amount').value);
+      const currency    = document.getElementById('c-currency').value;
+      const frequency   = document.getElementById('c-frequency').value;
+      const day         = parseInt(document.getElementById('c-day').value);
+      const errEl       = document.getElementById('create-error');
+      errEl.style.display = 'none';
+
+      if (!description)       { showError(errEl, 'La descripción es obligatoria.'); return; }
+      if (!account_id)        { showError(errEl, 'Selecciona una cuenta.'); return; }
+      if (!(amount > 0))      { showError(errEl, 'Ingresa un monto válido.'); return; }
+      if (isNaN(day))         { showError(errEl, 'Ingresa un día válido.'); return; }
+      if (frequency === 'monthly' && (day < 1 || day > 28)) { showError(errEl, 'El día debe estar entre 1 y 28.'); return; }
+      if (frequency === 'weekly'  && (day < 0 || day > 6))  { showError(errEl, 'El día debe estar entre 0 y 6.'); return; }
+
+      const btn = document.getElementById('btn-save-create');
+      btn.disabled = true; btn.textContent = 'Creando...';
+      try {
+        const res = await fetch('/api/finance/recurring', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+          body: JSON.stringify({ description, type, account_id, amount, currency, frequency, day }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          closeModal('modal-create');
+          await loadData();
+          showToast('Transacción recurrente creada');
+        } else {
+          showError(errEl, data.detail || 'Error al crear.');
+        }
+      } catch { showError(errEl, 'Error de conexión.'); }
+      btn.disabled = false; btn.textContent = 'Crear';
+    });
+
+    // ── Delete modal ──────────────────────────────────────────────────
+    function openDeleteModal(id) {
+      deletingId = id;
+      openModal('modal-delete');
+    }
+
+    document.getElementById('btn-cancel-delete').addEventListener('click', () => { closeModal('modal-delete'); deletingId = null; });
+    document.getElementById('modal-delete').addEventListener('click', e => {
+      if (e.target === document.getElementById('modal-delete')) { closeModal('modal-delete'); deletingId = null; }
+    });
+
+    document.getElementById('btn-confirm-delete').addEventListener('click', async () => {
+      if (!deletingId) return;
+      const btn = document.getElementById('btn-confirm-delete');
+      btn.disabled = true; btn.textContent = 'Eliminando...';
+      try {
+        const res = await fetch(`/api/finance/recurring/${deletingId}`, {
+          method: 'DELETE',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        });
+        if (res.ok) {
+          closeModal('modal-delete');
+          await loadData();
+          showToast('Transacción recurrente eliminada');
+          deletingId = null;
+        } else {
+          const data = await res.json();
+          showToast(data.detail || 'Error al eliminar.', true);
+        }
+      } catch { showToast('Error de conexión.', true); }
+      btn.disabled = false; btn.textContent = 'Eliminar';
+    });
+
+    // ── Execute ───────────────────────────────────────────────────────
+    document.getElementById('btn-execute').addEventListener('click', async () => {
+      const btn = document.getElementById('btn-execute');
+      btn.disabled = true; btn.textContent = 'Generando...';
+      try {
+        const res = await fetch('/api/finance/recurring/execute', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        });
+        const data = await res.json();
+        if (res.ok) {
+          await loadData();
+          showToast(`${data.created} transacción(es) generada(s)`);
+        } else {
+          showToast(data.detail || 'Error al generar.', true);
+        }
+      } catch { showToast('Error de conexión.', true); }
+      btn.disabled = false; btn.textContent = 'Generar ahora';
+    });
+
+    // ── Helpers ───────────────────────────────────────────────────────
+    function openModal(id)  { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+    function showError(el, msg) { el.textContent = msg; el.style.display = 'block'; }
+    function showToast(msg, isError) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.toggle('error', !!isError);
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function getCookie(name) {
+      return document.cookie.split('; ').find(r => r.startsWith(name + '='))?.split('=')[1] || '';
+    }
+
+    loadData();
+</script>
+{% endblock %}
