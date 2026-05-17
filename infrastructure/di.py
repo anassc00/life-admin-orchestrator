@@ -6,6 +6,7 @@ intentionally stateless — they create fresh instances on each call.
 For performance-critical paths, introduce a request-scoped cache here.
 """
 
+from application.use_cases.finance.onboard_user import OnboardUserUseCase
 from application.use_cases.finance.categorize_expense import CategorizeExpenseUseCase
 from application.use_cases.finance.delete_savings_deposit import DeleteSavingsDepositUseCase
 from application.use_cases.finance.copy_budget_plan import CopyBudgetPlanUseCase
@@ -79,6 +80,14 @@ from infrastructure.repositories.user import (
 )
 
 # --- Auth / Users ---
+
+
+def get_onboard_user_use_case() -> OnboardUserUseCase:
+    return OnboardUserUseCase(
+        account_repo=DjangoAccountRepository(),
+        category_repo=DjangoExpenseCategoryRepository(),
+        savings_goal_repo=DjangoSavingsGoalRepository(),
+    )
 
 
 def get_register_user_use_case() -> RegisterUserUseCase:

@@ -99,6 +99,13 @@ def register(request, payload: RegisterRequest):
                 password=payload.password,
             )
         )
+        # Onboard the new user with default data
+        from infrastructure.di import get_onboard_user_use_case
+        try:
+            get_onboard_user_use_case().execute(result.user_id)
+        except Exception:
+            pass  # Onboarding failure must never break registration
+
         if user_count == 0:
             # Auto-login on first-ever registration
             request.session["user_id"] = str(result.user_id)

@@ -48,6 +48,17 @@
     .btn-save:hover { background: #6a5fe5; }
     .btn-save:disabled { background: rgba(124, 111, 247, 0.4); cursor: not-allowed; }
     #modal-error { color: #f87171; font-size: 0.82rem; margin-bottom: 0.75rem; display: none; }
+    .btn-history { background: transparent; border: 1px solid rgba(124,111,247,0.3); color: #9090b0; font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.7rem; border-radius: 0.4rem; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+    .btn-history:hover { color: #c0b8ff; border-color: rgba(124,111,247,0.6); }
+    .history-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 200; }
+    .history-modal-backdrop.open { display: flex; }
+    .history-modal { background: #1a1730; border: 1px solid rgba(124,111,247,0.25); border-radius: 1.25rem; padding: 1.75rem; width: 90%; max-width: 560px; }
+    .history-modal h3 { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 0.25rem; }
+    .history-subtitle { font-size: 0.78rem; color: #6060a0; margin-bottom: 1.25rem; }
+    #balance-chart { width: 100%; height: 180px; display: block; margin-bottom: 1rem; }
+    .history-close { margin-top: 0.75rem; width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #9090b0; font-size: 0.88rem; font-weight: 600; padding: 0.55rem; border-radius: 0.55rem; cursor: pointer; }
+    .history-close:hover { color: #e0e0f0; }
+    .history-loading { text-align: center; color: #6060a0; font-size: 0.85rem; padding: 2rem 0; }
 {% endblock %}
 {% block content %}
     <div class="page-title">Finanzas</div>
@@ -70,10 +81,11 @@
           <th>Divisas soportadas</th>
           <th>Por defecto</th>
           <th></th>
+          <th>Historial</th>
         </tr>
       </thead>
       <tbody id="accounts-body">
-        <tr><td colspan="5" class="empty">Cargando cuentas...</td></tr>
+        <tr><td colspan="6" class="empty">Cargando cuentas...</td></tr>
       </tbody>
     </table>
 
@@ -129,6 +141,16 @@
         </div>
       </div>
     </div>
+
+    <!-- Balance History Modal -->
+    <div class="history-modal-backdrop" id="history-backdrop">
+      <div class="history-modal">
+        <h3 id="history-account-name">Historial de balance</h3>
+        <div class="history-subtitle">Evolución del saldo — últimos 12 meses</div>
+        <canvas id="balance-chart"></canvas>
+        <button class="history-close" onclick="closeBalanceHistory()">Cerrar</button>
+      </div>
+    </div>
 {% endblock %}
 {% block extra_script %}
 <script>
@@ -158,7 +180,7 @@
       const countEl = document.getElementById('account-count');
       countEl.textContent = `${data.length} cuenta${data.length !== 1 ? 's' : ''} registrada${data.length !== 1 ? 's' : ''}`;
       if (!data.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="empty">Sin cuentas. Crea una para empezar.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">Sin cuentas. Crea una para empezar.</td></tr>';
         return;
       }
       tbody.innerHTML = data.map(a => `
@@ -174,6 +196,9 @@
               <button class="btn-edit" onclick="openEdit(this)">Editar</button>
               <button class="btn-delete" onclick="deleteAccount('${a.account_id}', '${a.name.replace(/'/g, &quot;&#39;&quot;)}')">Eliminar</button>
             </div>
+          </td>
+          <td>
+            <button class="btn-history" onclick="openBalanceHistory('${a.account_id}', '${escapeHtml(a.name)}')">Historial</button>
           </td>
         </tr>
       `).join('');
@@ -320,5 +345,121 @@
     });
 
     loadAccounts();
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    async function openBalanceHistory(accountId, accountName) {
+      document.getElementById('history-account-name').textContent = accountName;
+      document.getElementById('history-backdrop').classList.add('open');
+
+      const canvas = document.getElementById('balance-chart');
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = canvas.offsetWidth * dpr;
+      canvas.height = 180 * dpr;
+      ctx.scale(dpr, dpr);
+      const W = canvas.offsetWidth, H = 180;
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#6060a0';
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Cargando...', W/2, H/2);
+
+      try {
+        const res = await fetch(`/api/finance/accounts/${accountId}/balance-history?months=12`);
+        if (!res.ok) { drawChartError(ctx, W, H, 'Sin datos'); return; }
+        const data = await res.json();
+        // data is array of {year, month, balance_usd, currency}
+        const usdData = data.filter(d => d.currency === 'USD' || data.length <= 12);
+        if (!usdData.length) { drawChartError(ctx, W, H, 'Sin historial'); return; }
+        drawBalanceChart(ctx, W, H, usdData);
+      } catch {
+        drawChartError(ctx, W, H, 'Error de conexión');
+      }
+    }
+
+    function drawChartError(ctx, W, H, msg) {
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#6060a0';
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(msg, W/2, H/2);
+    }
+
+    function drawBalanceChart(ctx, W, H, data) {
+      ctx.clearRect(0, 0, W, H);
+      const pad = { top: 20, right: 16, bottom: 32, left: 52 };
+      const chartW = W - pad.left - pad.right;
+      const chartH = H - pad.top - pad.bottom;
+      const values = data.map(d => parseFloat(d.balance_usd) || 0);
+      const minVal = Math.min(0, ...values);
+      const maxVal = Math.max(...values, 1);
+      const range = maxVal - minVal || 1;
+      const MONTHS_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+      // Grid lines
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 1;
+      [0, 0.25, 0.5, 0.75, 1].forEach(t => {
+        const y = pad.top + chartH * (1 - t);
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + chartW, y); ctx.stroke();
+        const val = minVal + range * t;
+        ctx.fillStyle = '#5050a0'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+        ctx.fillText('$' + val.toFixed(0), pad.left - 4, y + 4);
+      });
+
+      // Zero line
+      if (minVal < 0) {
+        const zeroY = pad.top + chartH * (1 - (0 - minVal) / range);
+        ctx.strokeStyle = 'rgba(248,113,113,0.3)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(pad.left, zeroY); ctx.lineTo(pad.left + chartW, zeroY); ctx.stroke();
+      }
+
+      const xStep = chartW / Math.max(data.length - 1, 1);
+
+      // Fill
+      ctx.beginPath();
+      data.forEach((d, i) => {
+        const x = pad.left + i * xStep;
+        const y = pad.top + chartH * (1 - (parseFloat(d.balance_usd) - minVal) / range);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+      ctx.lineTo(pad.left + (data.length - 1) * xStep, pad.top + chartH);
+      ctx.lineTo(pad.left, pad.top + chartH);
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(0, pad.top, 0, pad.top + chartH);
+      grad.addColorStop(0, 'rgba(124,111,247,0.35)');
+      grad.addColorStop(1, 'rgba(124,111,247,0.02)');
+      ctx.fillStyle = grad; ctx.fill();
+
+      // Line
+      ctx.beginPath();
+      data.forEach((d, i) => {
+        const x = pad.left + i * xStep;
+        const y = pad.top + chartH * (1 - (parseFloat(d.balance_usd) - minVal) / range);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = '#7c6ff7'; ctx.lineWidth = 2; ctx.stroke();
+
+      // Dots + labels
+      data.forEach((d, i) => {
+        const x = pad.left + i * xStep;
+        const y = pad.top + chartH * (1 - (parseFloat(d.balance_usd) - minVal) / range);
+        ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = '#a78bfa'; ctx.fill();
+        ctx.fillStyle = '#5050a0'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(MONTHS_ES[(d.month - 1) % 12], x, H - 8);
+      });
+    }
+
+    function closeBalanceHistory() {
+      document.getElementById('history-backdrop').classList.remove('open');
+    }
+
+    document.getElementById('history-backdrop').addEventListener('click', e => {
+      if (e.target === document.getElementById('history-backdrop')) closeBalanceHistory();
+    });
   </script>
 {% endblock %}
