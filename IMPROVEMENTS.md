@@ -1,10 +1,13 @@
-# Mejoras pendientes — Life Admin Orchestrator
+# Mejoras — Life Admin Orchestrator
 
-Auditoría técnica actualizada el 2026-05-15 (cuarta revisión, post-sprints 3–8 + endpoint DELETE deposits).
-Los módulos Calendar, Contacts y Documents fueron eliminados.
+Última actualización: 2026-05-17.
 
-**Backend completado:**
-- ✅ **S1–S4** — `user_id` en Invoice/Expense, ownership checks en ProcessInvoice
+---
+
+## Completado ✅
+
+### Backend (sprints anteriores)
+- ✅ **S1–S4** — `user_id` en Invoice/Expense, ownership checks
 - ✅ **U1–U5** — RBAC, profile update, change password, reset flow
 - ✅ **F1–F9** — Paginación, filtros, base salary único, category_id en edit, delete account, balance history, reverse transaction
 - ✅ **A2, A3** — Índices compuestos, BudgetPlanRepository
@@ -14,119 +17,64 @@ Los módulos Calendar, Contacts y Documents fueron eliminados.
 - ✅ **Sprint 6 (DH1–DH6)** — net-worth, trend, expenses/breakdown, invoices/upcoming, transactions/recent, dashboard snapshot
 - ✅ **Sprint 7 (DH7–DH9)** — Reporte anual, cashflow calendar, extended summary
 - ✅ **Sprint 8 (B8, B9)** — `income_usd` en BudgetPlan + regla 50/30/20, flag `over_budget`
-- ✅ **SD1** — `DELETE /api/finance/savings/deposits/{id}` — eliminar depósito con ownership check
+- ✅ **SD1** — `DELETE /api/finance/savings/deposits/{id}` con ownership check
+- ✅ **A6** — Eliminado código muerto en `signals.py`
+
+### Frontend / UI (sprints 9–11)
+- ✅ **V1** — Página de presupuesto completamente reescrita con API real (plan vs real, ítems editables inline, 50/30/20, copiar mes anterior)
+- ✅ **V2** — Página de metas de ahorro mejorada (eliminar depósito, proyección por meta, campos deadline/priority/category)
+- ✅ **V3** — Nueva página `/finance/reports/` — reporte anual con tabla y gráfico Canvas
+- ✅ **V4** — Nueva página `/finance/cashflow/` — calendario de flujo de caja mensual
+- ✅ **E1** — Filtros por cuenta y categoría en vista de transacciones
+- ✅ **E2** — Botón eliminar cuenta con modal de confirmación
+- ✅ **E3** — Nueva página `/finance/invoices/` — facturas pendientes/pagadas, crear y procesar pago
+- ✅ **E4** — Botón "Revertir" por transacción en historial
+- ✅ **D1** — Widget de proyección en dashboard (meses restantes + badge ⚠️ Atrasada)
+- ✅ **D2** — Gráfico de tasa de ahorro histórica en dashboard (Canvas, línea morada)
+- ✅ **D3** — Visualización 50/30/20 en tarjeta de presupuesto del dashboard
+- ✅ **D4** — Link "Gestionar aportes →" en widget de ahorros del dashboard
+- ✅ **D5** — Estados vacíos con CTA por widget en el dashboard
+- ✅ **D6** — Desglose por tipo (cash/banco/wallet) ya presente en net-worth
+
+### Documentación
+- ✅ **DOC1** — README completamente reescrito con stack real, páginas y endpoints
 
 ---
 
 ## Leyenda de prioridad
 
-- 🔴 **CRÍTICO** — bug de seguridad o datos incorrectos visibles al usuario
-- 🟠 **ALTO** — funcionalidad con backend listo pero sin interfaz, o UX rota
-- 🟡 **MEDIO** — mejora de usabilidad o coherencia visual
-- 🟢 **BAJO** — refinamiento técnico o UX
+- 🔴 **CRÍTICO** — bug de seguridad o datos incorrectos
+- 🟠 **ALTO** — impacto directo en usabilidad
+- 🟡 **MEDIO** — mejora de coherencia o rendimiento
+- 🟢 **BAJO** — refinamiento técnico o conveniencia
 
 ---
 
-## 1. Páginas de gestión faltantes (backend listo, frontend pendiente)
+## Pendiente
 
-Estas funcionalidades tienen endpoints completos pero no tienen ninguna página en el frontend.
+### Frontend
 
-| ID | Prioridad | Feature | Endpoint(s) disponibles | Descripción |
-|----|-----------|---------|--------------------------|-------------|
-| V1 | 🔴 | **Página de presupuesto** (`/finance/planning/`) | `POST/GET /api/finance/budget`, `POST /budget/{id}/items`, `DELETE /budget/{id}/items/{cat}`, `POST /budget/{id}/copy-from-previous`, `GET /api/finance/budget/summary` | La página existe pero está vacía. Mostrar: formulario para crear plan, tabla editable de categorías con monto planeado vs real, botón "Copiar mes anterior", barra de progreso 50/30/20. |
-| V2 | 🟠 | **Página de metas de ahorro** (`/finance/savings/`) | `GET /api/finance/savings/goals`, `POST /api/finance/savings/goals`, `PATCH /api/finance/savings/goals/{id}`, `POST /api/finance/savings/deposits`, `DELETE /api/finance/savings/deposits/{id}`, `GET /api/finance/savings/projection`, `GET /api/finance/savings/dashboard` | Actualmente no hay página de metas. Mostrar: lista de metas con progreso, formulario para crear/editar meta (incluir deadline, priority, category), botón para registrar y eliminar depósito, proyección de fecha de completación. |
-| V3 | 🟠 | **Reporte anual** (`/finance/reports/annual/`) | `GET /api/finance/reports/annual?year=` | Tabla con totales mensuales (ingreso / gasto / ahorro / balance), highlight del mes con mayor gasto y mayor ahorro, categoría dominante por trimestre. |
-| V4 | 🟡 | **Calendario de cashflow** (`/finance/cashflow/`) | `GET /api/finance/cashflow/calendar?year=&month=` | Vista de calendario mensual donde cada día muestra el balance del día (verde si ingreso neto, rojo si gasto neto). Navegación prev/next mes. |
-| V5 | 🟡 | **Historial de balance de cuenta** | `GET /api/finance/accounts/{id}/balance-history` | Gráfico de línea por cuenta con evolución del balance mes a mes. Accesible desde la vista de cuentas o desde el dashboard de cuentas. |
+| ID | Prioridad | Feature | Descripción |
+|----|-----------|---------|-------------|
+| V5 | 🟡 | **Historial de balance de cuenta** | Agregar gráfico de línea en `/finance/accounts/` mostrando la evolución del balance mes a mes por cuenta. Endpoint disponible: `GET /api/finance/accounts/{id}/balance-history`. |
 
----
-
-## 2. Mejoras visuales al dashboard existente
-
-El dashboard (`/dashboard/`) ya carga 10 secciones pero le faltan estos refinamientos:
-
-| ID | Prioridad | Mejora | Descripción |
-|----|-----------|--------|-------------|
-| D1 | 🟠 | **Widget de proyección de metas** | Agregar al dashboard el endpoint `GET /api/finance/savings/projection` para mostrar cuántos meses faltan para cada meta activa. Mostrar badge "En camino" / "Atrasada" según si la proyección llega antes o después del deadline. |
-| D2 | 🟠 | **Gráfico de tasa de ahorro histórica** | Llamar `GET /api/finance/savings/rate?months=6` y dibujar una línea o barras simples con la tasa % de los últimos 6 meses en la sección de ahorros del dashboard. |
-| D3 | 🟡 | **Visualización 50/30/20 en el dashboard** | Si el mes tiene un `BudgetPlan` con `income_usd`, mostrar los tres cubos (necesidades / deseos / ahorro) con la asignación recomendada vs la real. Endpoint: `GET /api/finance/budget/summary`. |
-| D4 | 🟡 | **Botón "Eliminar depósito" en widget de metas** | Cada depósito listado en el widget de metas debería tener un botón de eliminar que llame `DELETE /api/finance/savings/deposits/{id}` y recargue el widget. Responde la pregunta que generó esta tarea. |
-| D5 | 🟡 | **Estado vacío por sección** | Cuando un widget no tiene datos (sin metas, sin presupuesto, sin facturas) mostrar un mensaje de acción: "Crea tu primera meta →", "Define tu presupuesto →", etc. en lugar de simplemente vacío. |
-| D6 | 🟢 | **Tasa de cambio y balance multi-moneda visible** | Mostrar en el widget de patrimonio neto el balance por moneda (USD, VES, MXN) antes de la conversión, no solo el total en USD. El endpoint `GET /api/finance/net-worth` ya devuelve el desglose. |
-
----
-
-## 3. Mejoras a vistas existentes
-
-| ID | Prioridad | Vista | Mejora | Descripción |
-|----|-----------|-------|--------|-------------|
-| E1 | 🟠 | Transacciones | Filtros avanzados en la UI | El endpoint `GET /api/finance/transactions` ya soporta `account_id`, `type`, `category_id`, `min_amount`, `max_amount`. Agregar controles de filtro en la vista de transacciones. |
-| E2 | 🟠 | Cuentas | Botón eliminar cuenta | El endpoint `DELETE /api/finance/accounts/{id}` existe. Agregar botón en la vista de cuentas con confirmación modal. Mostrar error si la cuenta tiene transacciones. |
-| E3 | 🟡 | Facturas | Lista de facturas completa | Existe `GET /api/finance/invoices` pero no hay página de listado de todas las facturas. Solo se ven las próximas en el dashboard. Crear vista `/finance/invoices/` con tabla y acción "Marcar como pagada". |
-| E4 | 🟡 | Transacciones | Acción "Revertir" en la UI | El endpoint `POST /api/finance/transactions/{id}/reverse` existe. Agregar botón en la fila de transacción con confirmación. |
-
----
-
-## 4. Backend técnico pendiente
+### Backend técnico
 
 | ID | Prioridad | Problema | Descripción |
 |----|-----------|----------|-------------|
-| A1 | 🟡 | Balance cache en AccountModel | `AccountModel` recalcula el balance sumando todas las transacciones en cada request. Con historial grande se vuelve lento. Agregar `balance_cache` materializado que se actualiza en cada escritura. |
-| A4 | 🟡 | FinanceQueryService compartido | `GetMonthlyFinancialSummaryUseCase` y `GenerateMonthlyReportUseCase` calculan los mismos agregados. Extraer una capa de consulta compartida para eliminar duplicación. |
-| A6 | 🟢 | Eliminar signals.py muerto | `signals.py` tiene un handler `post_save`/`post_delete` con solo `pass`. Es código muerto. Eliminar. |
-| F10 | 🟢 | Transacciones recurrentes | Definir una transacción periódica y generarla automáticamente vía Celery beat. Requiere nueva entidad `RecurringTransaction`. |
-| F11 | 🟢 | Onboarding de usuario nuevo | Al registrarse, crear cuentas, categorías y una meta de ahorro por defecto para que el dashboard no esté vacío en el primer uso. |
-| DH10 | 🟡 | Rates de referencia multi-moneda | Endpoint de configuración de rates del usuario (USD/VES del mes) para conversiones más precisas en reportes. |
+| DH10 | 🟡 | Rates de referencia multi-moneda | Endpoint de configuración de rates del usuario (USD/VES del mes) para conversiones más precisas en reportes. Actualmente usa el `exchange_rate` de la última transacción. |
+| A1 | 🟡 | Balance cache en AccountModel | `AccountModel` recalcula el balance sumando todas las transacciones en cada request. Con historial grande se vuelve lento. Agregar `balance_cache` materializado actualizado en cada escritura. Requiere migración cuidadosa. |
+| A4 | 🟡 | FinanceQueryService compartido | `GetMonthlyFinancialSummaryUseCase` y `GenerateMonthlyReportUseCase` calculan los mismos agregados de forma independiente. Extraer capa de consulta compartida para eliminar duplicación. |
+| F11 | 🟢 | Onboarding de usuario nuevo | Al registrarse, crear cuentas por defecto, categorías de gasto y una meta de ahorro para que el dashboard no esté vacío en el primer uso. |
+| F10 | 🟢 | Transacciones recurrentes | Definir transacciones periódicas (ej. renta mensual) y generarlas automáticamente vía Celery beat. Requiere nueva entidad `RecurringTransaction` y tarea programada. |
 
----
-
-## 5. Documentación final
+### Documentación
 
 | ID | Prioridad | Tarea | Descripción |
 |----|-----------|-------|-------------|
-| DOC1 | 🟡 | **README principal** | Actualizar `README.md` con: stack actual, comandos para correr el proyecto, estructura de carpetas con Clean Architecture, lista de endpoints disponibles con descripción breve. |
-| DOC2 | 🟡 | **Guía de la API** | Generar o escribir una referencia de los ~50 endpoints actuales: método, ruta, params, respuesta, casos de error. Puede ser un Markdown o apuntar al Swagger que Django Ninja expone en `/api/docs`. |
-| DOC3 | 🟢 | **ADR de decisiones de arquitectura** | Documentar las decisiones clave tomadas: por qué Clean Architecture, por qué mano a mano migrations, por qué Ninja vs DRF, por qué Pydantic v2 frozen entities. Un archivo `docs/adr/` con entradas cortas. |
+| DOC2 | 🟢 | Guía detallada de la API | Referencia completa de los ~50 endpoints: params, body, respuesta, casos de error. El Swagger en `/api/docs` cubre esto parcialmente. |
+| DOC3 | 🟢 | ADR de decisiones de arquitectura | Documentar decisiones clave: Clean Architecture, hand-written migrations, Ninja vs DRF, Pydantic v2 frozen entities. Archivo `docs/adr/`. |
 
 ---
 
-## Hoja de ruta sugerida
-
-### Sprint 9 — Páginas faltantes de alto impacto
-> **Objetivo:** Dar acceso desde la UI a toda la funcionalidad de backend ya implementada.
-
-| Orden | ID | Descripción |
-|-------|----|-------------|
-| 1 | V2 | Página de metas de ahorro (la más consultada) |
-| 2 | D4 | Botón eliminar depósito en dashboard (responde el bug reportado hoy) |
-| 3 | V1 | Página de presupuesto mensual |
-| 4 | D1 | Widget de proyección de metas en dashboard |
-
-### Sprint 10 — Reportes y refinamiento visual
-> **Objetivo:** Páginas de análisis y mejoras de UX en el dashboard.
-
-| Orden | ID | Descripción |
-|-------|----|-------------|
-| 1 | V3 | Página de reporte anual |
-| 2 | V4 | Calendario de cashflow |
-| 3 | D2 | Gráfico de tasa de ahorro histórica en dashboard |
-| 4 | D5 | Estados vacíos por widget |
-
-### Sprint 11 — Mejoras a vistas existentes
-| Orden | ID | Descripción |
-|-------|----|-------------|
-| 1 | E1 | Filtros avanzados en transacciones |
-| 2 | E2 | Botón eliminar cuenta |
-| 3 | E3 | Lista completa de facturas |
-| 4 | E4 | Acción revertir transacción |
-
-### Sprint 12 — Documentación
-| Orden | ID | Descripción |
-|-------|----|-------------|
-| 1 | DOC1 | README principal actualizado |
-| 2 | DOC2 | Guía de la API |
-| 3 | DOC3 | ADR de arquitectura |
-
----
-
-*Para implementar un sprint, referenciar los IDs (ej. "implementa Sprint 9").*
+*Para implementar un ítem, referenciarlo por ID (ej. "implementa V5").*
